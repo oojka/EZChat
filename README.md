@@ -1,64 +1,64 @@
-# EZChat - 轻量级实时聊天系统
+# EZChat - 实时聊天系统
 
 <div align="center">
 
-![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen?style=flat-square&logo=springboot)
-![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vue.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
+![Logo](https://img.shields.io/badge/EZChat-v1.0-blue?style=flat-square)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-green?style=flat-square)
+![Vue](https://img.shields.io/badge/Vue-3.5.25-brightgreen?style=flat-square)
+![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
-*一个基于 WebSocket 的现代化实时聊天应用，支持多房间、图片消息、多语言和暗黑模式*
+一个基于 WebSocket 的现代化实时聊天系统，支持多人群聊、图片消息、在线状态同步等功能。
 
 </div>
 
 ---
 
-## 📖 项目简介
+## 📌 项目定位
 
-EZChat 是一个功能完整的实时聊天系统，采用前后端分离架构。用户可以创建或加入聊天室，发送文本和图片消息，并实时查看在线状态。系统支持正式用户注册和访客模式，提供简洁优雅的用户体验。
+**EZChat** 是一个企业级实时聊天系统，采用前后端分离架构，基于 WebSocket 实现消息实时推送。系统支持：
 
-### ✨ 核心特性
-
-- 🚀 **实时通讯**：基于 WebSocket 实现毫秒级消息推送
-- 🏠 **多房间管理**：支持创建/加入聊天室，密码保护可选
-- 👥 **双重身份**：正式用户（JWT 认证）+ 访客模式（临时加入）
-- 🖼️ **富媒体支持**：文本消息 + 图片上传（MinIO 对象存储）
-- 🌍 **国际化**：内置中文、英文、日语、韩语、繁体中文支持
-- 🌙 **暗黑模式**：自动适配系统主题偏好
-- 📱 **响应式设计**：移动端友好的 UI 布局
+- 🚀 **实时通信** - WebSocket 长连接，毫秒级消息送达
+- 👥 **多人群聊** - 支持创建聊天室、邀请成员、权限管理
+- 📷 **富媒体消息** - 文本、图片（含缩略图生成）、Emoji 表情
+- 🌐 **国际化** - 内置中文/英文/日文/韩文/繁体中文 5 语言支持
+- 🔐 **安全认证** - JWT Token 鉴权 + 前端限流机制
+- 🌓 **主题切换** - 亮色/暗色模式自动适配
 
 ---
 
 ## 🛠️ 技术栈
 
-### 后端 (Spring Boot)
+### 后端 (Backend)
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Java | 21 | 开发语言 |
-| Spring Boot | 3.3.4 | 核心框架 |
-| Spring WebSocket | 3.3.4 | WebSocket 支持 |
-| MyBatis | 3.0.3 | 持久层框架 |
-| MySQL | 8.x | 关系型数据库 |
-| JWT (jjwt) | 0.11.5 | 身份认证 |
-| MinIO | 自定义 Starter | 对象存储 (图片) |
-| Thumbnailator | 0.4.20 | 图片缩略图生成 |
-| Lombok | 1.18.34 | 简化 POJO 开发 |
+| 技术           | 版本    | 说明                          |
+| -------------- | ------- | ----------------------------- |
+| Java           | 21      | 核心语言，使用 Records 等新特性 |
+| Spring Boot    | 3.3.4   | 企业级应用框架                |
+| Spring WebSocket | -     | WebSocket 支持                |
+| MyBatis        | 3.0.3   | 持久层框架                    |
+| MySQL          | -       | 关系型数据库                  |
+| JWT            | 0.11.5  | Token 认证                    |
+| MinIO          | 自定义   | 对象存储（图片文件）          |
+| Thumbnailator  | 0.4.20  | 图片缩略图生成                |
+| Lombok         | 1.18.34 | 代码简化                      |
 
-### 前端 (Vue 3)
+**架构模式**: Controller → Service → Mapper (三层架构)
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Vue | 3.5.25 | 前端框架 |
-| TypeScript | 5.9 | 类型安全 |
-| Vite | 7.2.4 | 构建工具 |
-| Pinia | 3.0.4 | 状态管理 |
-| Vue Router | 4.6.3 | 路由管理 |
-| Element Plus | 2.12.0 | UI 组件库 |
-| Vue I18n | 11.2.7 | 国际化 |
-| Axios | 1.13.2 | HTTP 客户端 |
-| ESLint + Prettier | - | 代码规范 |
+### 前端 (Frontend)
+
+| 技术           | 版本    | 说明                          |
+| -------------- | ------- | ----------------------------- |
+| Vue            | 3.5.25  | 渐进式 JavaScript 框架        |
+| TypeScript     | 5.9.0   | 类型安全                      |
+| Pinia          | 3.0.4   | 状态管理（Vuex 5）            |
+| Vue Router     | 4.6.3   | 路由管理                      |
+| Element Plus   | 2.12.0  | UI 组件库                     |
+| Axios          | 1.13.2  | HTTP 客户端                   |
+| Vue I18n       | 11.2.7  | 国际化                        |
+| Vite           | 7.2.4   | 构建工具                      |
+
+**编码规范**: Composition API + `<script setup>` + TypeScript
 
 ---
 
@@ -66,391 +66,350 @@ EZChat 是一个功能完整的实时聊天系统，采用前后端分离架构�
 
 ```
 EZChat/
-├── backend/                          # 后端模块
-│   ├── EZChat-parent/                # Maven 父工程
-│   │   └── pom.xml                   # 统一依赖管理
-│   ├── EZChat-app/                   # 主应用模块
+├── backend/                        # 后端代码目录
+│   ├── EZChat-parent/              # Maven 父工程
+│   │   └── pom.xml                 # 依赖版本管理
+│   ├── EZChat-app/                 # 主应用模块
 │   │   ├── src/main/java/hal/th50743/
-│   │   │   ├── config/               # 配置类 (WebSocket, CORS)
-│   │   │   ├── controller/           # REST API 控制器
-│   │   │   ├── service/              # 业务逻辑层
-│   │   │   ├── mapper/               # MyBatis 数据访问层
-│   │   │   ├── pojo/                 # 实体类/VO/DTO
-│   │   │   ├── ws/                   # WebSocket 服务端
-│   │   │   ├── utils/                # 工具类 (JWT, 图片处理)
-│   │   │   ├── exception/            # 全局异常处理
-│   │   │   └── interceptor/          # 拦截器 (Token 校验)
-│   │   └── src/main/resources/
-│   │       ├── application.yml       # 应用配置 (需配置环境变量)
-│   │       └── hal/th50743/mapper/   # MyBatis XML 映射文件
-│   └── dependencies/                 # 自定义依赖
-│       └── MinioOSSOperator/         # MinIO 自动配置 Starter
+│   │   │   ├── config/             # 配置类（WebSocket, CORS）
+│   │   │   ├── controller/         # 控制器层（API 接口）
+│   │   │   ├── service/            # 服务层（业务逻辑）
+│   │   │   ├── mapper/             # 持久层（MyBatis）
+│   │   │   ├── pojo/               # 实体类、VO、DTO
+│   │   │   ├── ws/                 # WebSocket 服务端点
+│   │   │   ├── utils/              # 工具类（JWT、图片处理）
+│   │   │   ├── exception/          # 全局异常处理
+│   │   │   └── interceptor/        # 拦截器（Token 校验）
+│   │   ├── src/main/resources/
+│   │   │   ├── application.yml     # 配置文件（需配置环境变量）
+│   │   │   └── hal/th50743/mapper/ # MyBatis XML
+│   │   └── pom.xml
+│   └── dependencies/               # 自定义依赖
+│       └── MinioOSSOperator/       # MinIO 集成 Starter
 │
-├── frontend/                         # 前端模块
-│   └── vue-ezchat/
+├── frontend/                       # 前端代码目录
+│   └── vue-ezchat/                 # Vue 3 项目
 │       ├── src/
-│       │   ├── api/                  # API 请求封装
-│       │   ├── components/           # 可复用组件
-│       │   ├── views/                # 页面视图
-│       │   │   ├── index/            # 登录/注册页
-│       │   │   ├── layout/           # 主布局 (侧边栏)
-│       │   │   ├── chat/             # 聊天室页面
-│       │   │   ├── welcome/          # 欢迎页
-│       │   │   └── error/            # 错误页
-│       │   ├── stores/               # Pinia 状态管理
-│       │   ├── router/               # 路由配置
-│       │   ├── hooks/                # Vue Composables
-│       │   ├── utils/                # 工具函数
-│       │   ├── i18n/                 # 国际化翻译文件
-│       │   ├── type/                 # TypeScript 类型定义
-│       │   └── WS/                   # WebSocket 客户端
-│       ├── public/                   # 静态资源
-│       ├── vite.config.ts            # Vite 配置
-│       └── package.json              # 依赖声明
+│       │   ├── api/                # API 请求封装
+│       │   ├── stores/             # Pinia 状态管理
+│       │   ├── views/              # 页面组件
+│       │   │   ├── index/          # 登录/注册页
+│       │   │   ├── layout/         # 布局容器（侧边栏）
+│       │   │   ├── chat/           # 聊天室主界面
+│       │   │   ├── welcome/        # 欢迎页
+│       │   │   └── error/          # 错误页
+│       │   ├── components/         # 通用组件
+│       │   ├── hooks/              # 组合式函数（Composables）
+│       │   ├── WS/                 # WebSocket 客户端封装
+│       │   ├── i18n/               # 国际化配置
+│       │   ├── utils/              # 工具函数
+│       │   ├── router/             # 路由配置
+│       │   └── type/               # TypeScript 类型定义
+│       ├── package.json
+│       ├── vite.config.ts
+│       └── CODE_REVIEW.md          # 代码审查报告
 │
-├── .gitignore                        # Git 忽略规则
-├── .cursorignore                     # Cursor AI 忽略规则
-├── .cursorrules                      # Cursor AI 编码规范
-└── README.md                         # 项目文档
+├── .cursorrules                    # AI 编码规范配置
+├── .cursorignore                   # AI 忽略文件
+├── .gitignore                      # Git 忽略配置
+└── README.md                       # 本文件
 ```
 
 ---
 
-## 🚀 快速开始
+## 🚀 快速启动
 
 ### 环境要求
 
-| 工具 | 版本要求 |
-|------|---------|
-| JDK | 21+ |
-| Maven | 3.6+ |
-| Node.js | 20.19+ / 22.12+ |
-| MySQL | 8.0+ |
-| MinIO | 任意版本 (可选) |
+- **Java**: 21 或更高版本
+- **Node.js**: 20.19.0+ 或 22.12.0+
+- **MySQL**: 5.7+ 或 8.0+
+- **MinIO**: 用于对象存储（可选，或使用阿里云 OSS）
 
-### 1️⃣ 克隆项目
+---
+
+### 1️⃣ 后端启动（IntelliJ IDEA）
+
+#### 步骤 1: 配置环境变量
+
+在 IDEA 中配置以下环境变量（`Run > Edit Configurations > Environment Variables`）：
 
 ```bash
-git clone https://github.com/oojka/EZChat.git
-cd EZChat
-```
-
-### 2️⃣ 数据库初始化
-
-1. 创建数据库：
-```sql
-CREATE DATABASE ezchat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-2. 导入表结构（请联系项目维护者获取 SQL 文件）
-
-### 3️⃣ 后端启动 (IntelliJ IDEA)
-
-#### 配置环境变量
-
-在 IDEA 的 **Run/Debug Configurations** 中设置以下环境变量：
-
-```properties
-# 数据库配置
-DB_URL=jdbc:mysql://localhost:3306/ezchat?useSSL=false&serverTimezone=Asia/Tokyo
+DB_URL=jdbc:mysql://localhost:3306/ezchat?useSSL=false&serverTimezone=Asia/Shanghai
 DB_USERNAME=root
 DB_PASSWORD=your_password
 
-# JWT 配置
-JWT_SECRET=your_jwt_secret_key_at_least_256_bits
-JWT_EXPIRATION=86400000
-
-# MinIO 对象存储配置 (可选)
 OSS_ENDPOINT=http://localhost:9000
 OSS_ACCESS_KEY=minioadmin
 OSS_SECRET_KEY=minioadmin
 OSS_BUCKET_NAME=ezchat
 OSS_PATH=/images
+
+JWT_SECRET=your-256-bit-secret-key-here
+JWT_EXPIRATION=86400000
 ```
 
-#### 启动步骤
+#### 步骤 2: 初始化数据库
 
-1. 在 IDEA 中打开 `backend/EZChat-parent` 作为 Maven 项目
-2. 等待 Maven 依赖下载完成
-3. 找到 `backend/EZChat-app/src/main/java/hal/th50743/EzChatAppApplication.java`
-4. 右键选择 **Run 'EzChatAppApplication'**
-5. 确认控制台输出 `Started EzChatAppApplication` 表示启动成功
+执行 SQL 脚本：
+```bash
+mysql -u root -p < backend/EZChat-app/src/main/resources/sql/init.sql
+```
 
-**默认端口：** `http://localhost:8080`
+#### 步骤 3: 安装 MinIO 依赖
 
-### 4️⃣ 前端启动 (Cursor / VS Code)
+进入 `backend/dependencies/MinioOSSOperator` 目录，执行：
+```bash
+cd backend/dependencies/MinioOSSOperator
+mvn clean install
+```
 
-#### 安装依赖
+#### 步骤 4: 启动后端
+
+1. 在 IDEA 中打开项目根目录 `/home/dev/EZChat`
+2. 右键 `backend/EZChat-app/src/main/java/hal/th50743/EzChatAppApplication.java`
+3. 点击 `Run 'EzChatAppApplication'`
+4. 后端将在 `http://localhost:8080` 启动
+
+---
+
+### 2️⃣ 前端启动（Vite Dev Server）
+
+#### 步骤 1: 安装依赖
 
 ```bash
 cd frontend/vue-ezchat
 npm install
 ```
 
-#### 启动开发服务器
+#### 步骤 2: 启动开发服务器
 
 ```bash
 npm run dev
 ```
 
-访问 `http://localhost:5173` 即可使用系统。
+前端将在 `http://localhost:5173` 启动，Vite 已配置代理规则：
+- `/api` → `http://localhost:8080`
+- `/websocket` → `ws://localhost:8080/websocket`
 
-#### 其他命令
+#### 步骤 3: 访问应用
+
+浏览器打开 `http://localhost:5173` 即可使用。
+
+---
+
+### 3️⃣ 生产构建
 
 ```bash
-npm run build       # 生产构建
-npm run type-check  # TypeScript 类型检查
-npm run lint        # ESLint 代码检查
-npm run format      # Prettier 格式化
+# 后端打包
+cd backend/EZChat-app
+mvn clean package
+
+# 前端打包
+cd frontend/vue-ezchat
+npm run build
 ```
 
 ---
 
-## 🎯 开发协作规范
+## 💡 开发协作规范
 
-### 双 IDE 工作流 (Dual-IDE Workflow)
+### 双刀流模式
 
-本项目采用 **"IntelliJ IDEA 运行程序 + Cursor AI 编写代码"** 的混合模式：
+本项目采用 **"IntelliJ IDEA 运行程序 + Cursor AI 编写代码"** 的双 IDE 协作模式：
 
-| IDE | 职责 |
-|-----|------|
-| **IntelliJ IDEA** | 后端 Spring Boot 程序运行、调试、数据库管理 |
-| **Cursor AI** | 全栈代码编写、AI 辅助重构、前端开发 |
+1. **IDEA 职责**: 后端运行、调试、数据库管理
+2. **Cursor 职责**: 代码编写、重构、AI 辅助
 
-#### ⚠️ 重要：文件同步
+### 🔄 文件同步
 
-当在 Cursor 中修改代码后，**必须**在 IDEA 中执行以下操作同步磁盘：
+**⚠️ 重要**: 在 Cursor 中修改代码后，必须在 IDEA 中执行同步操作：
 
-- **快捷键：** `Ctrl + Alt + Y` (Windows/Linux) / `Cmd + Option + Y` (macOS)
-- **菜单路径：** File → Reload All from Disk
-
-> 否则 IDEA 可能读取旧代码导致编译错误或运行异常！
-
-### AI 编码规范 (.cursorrules)
-
-项目根目录已配置 `.cursorrules` 文件，Cursor AI 会自动遵循以下原则：
-
-- ✅ **思考语言：** 英语（保证逻辑深度）
-- ✅ **回复语言：** 简体中文（提升沟通效率）
-- ✅ **架构规范：**
-  - 后端严格遵循 `Controller → Service → Mapper` 三层架构
-  - 前端使用 `<script setup lang="ts">` + Composition API
-  - Vue 组件超过 300 行时主动建议拆分
-- ✅ **类型同步：** 修改后端 POJO 时同步更新前端 TS Interface
-
-### Git 提交规范
-
-```bash
-# 格式：<type>(<scope>): <subject>
-
-feat(chat): 添加聊天室消息撤回功能
-fix(auth): 修复 JWT 过期时间计算错误
-refactor(frontend): 优化 WebSocket 重连逻辑
-docs(readme): 更新环境配置说明
-chore(deps): 升级 Spring Boot 至 3.4.0
 ```
+快捷键: Ctrl + Alt + Y (Windows/Linux)
+或菜单: File > Synchronize
+```
+
+否则 IDEA 可能读取到旧版本文件导致运行异常。
 
 ---
 
-## 📡 核心功能模块
+## 🤖 AI 编码规范
 
-### 1. 用户认证
+项目根目录已配置 `.cursorrules` 文件，AI 助手将遵循以下规范：
 
-- **正式用户：** 用户名/密码注册 → JWT Token 认证
-- **访客模式：** 临时昵称 + 房间密码快速加入
+### 思考与回复
+- **思考语言**: 英语（逻辑深度优先）
+- **回复语言**: 简体中文
 
-### 2. 聊天室管理
+### 代码规范
+- **前端**: 强制使用 `<script setup lang="ts">` + Composition API
+- **后端**: 严格遵循 Controller → Service → Mapper 三层架构
+- **解耦原则**: Vue 组件超过 300 行或 Java 方法过于复杂时，AI 会主动建议重构
 
-- 创建房间（自定义头像、名称、密码）
-- 邀请链接生成（1-30天有效期）
-- 房间列表展示（最后活跃时间排序）
-
-### 3. 实时通讯
-
-- **WebSocket 连接：** `/websocket/{token}`
-- **心跳机制：** 客户端每 30 秒发送 `PING`
-- **消息类型：**
-  - `MESSAGE`：聊天消息
-  - `USER_STATUS`：用户在线状态变更
-  - `ACK`：消息送达确认
-
-### 4. 图片消息
-
-- 上传至 MinIO 对象存储
-- 自动生成缩略图（Thumbnailator）
-- 支持 JPEG/PNG 格式（< 10MB）
+### 同步策略
+- 修改 POJO/Entity 时，AI 会提醒同步更新前端 TypeScript 接口
+- 每次代码变更后，AI 会提示在 IDEA 中执行 `Ctrl+Alt+Y` 同步
 
 ---
 
-## 🌐 API 接口概览
+## 📖 核心功能说明
 
-### 认证相关
+### 用户系统
+- 正式用户注册/登录（JWT 认证）
+- 游客模式（临时访问聊天室）
+- 头像上传（自动生成缩略图）
 
-```http
-POST /auth/register     # 用户注册
-POST /auth/login        # 用户登录
-POST /auth/guest        # 访客登录
-```
+### 聊天系统
+- 创建聊天室（可设置密码、过期时间）
+- 加入聊天室（邀请链接/聊天码）
+- 实时消息推送（文本 + 图片）
+- 在线状态同步
+- 消息已读标记
+- 表情选择器
 
-### 聊天室相关
-
-```http
-GET  /chat/init         # 获取用户聊天列表
-POST /chat/join         # 加入聊天室
-GET  /chat/{chatCode}   # 获取聊天室详情
-```
-
-### 消息相关
-
-```http
-GET  /message/{chatCode}          # 获取聊天历史
-GET  /message/{chatCode}/{time}   # 分页加载更早消息
-```
-
-### 用户相关
-
-```http
-GET  /user/{uid}        # 获取用户信息
-POST /upload/image      # 上传图片
-```
+### WebSocket 机制
+- 心跳保活（30s 间隔）
+- 自动重连（5s 延迟）
+- 消息 ACK 确认
+- 断线提醒
 
 ---
 
 ## 🔧 配置说明
 
-### 后端配置 (application.yml)
+### 前端配置
 
-所有敏感信息通过环境变量注入，避免硬编码：
-
-```yaml
-spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-
-jwt:
-  secret: ${JWT_SECRET}           # 至少 256 位
-  expiration: ${JWT_EXPIRATION}   # 毫秒（如 86400000 = 24小时）
-
-minio:
-  endpoint: ${OSS_ENDPOINT}
-  accessKey: ${OSS_ACCESS_KEY}
-  secretKey: ${OSS_SECRET_KEY}
-  bucketName: ${OSS_BUCKET_NAME}
-```
-
-### 前端配置 (vite.config.ts)
-
-开发环境自动代理后端 API：
-
+**API 代理** (`vite.config.ts`):
 ```typescript
-server: {
-  host: '0.0.0.0',
-  port: 5173,
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8080',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/api/, ''),
-    },
+proxy: {
+  '/api': {
+    target: 'http://localhost:8080',
+    changeOrigin: true,
+    rewrite: (path) => path.replace(/^\/api/, ''),
   },
 }
+```
+
+**WebSocket 端口** (`src/stores/configStore.ts`):
+```typescript
+const API_PORT = 8080  // 后端端口
+```
+
+### 后端配置
+
+**跨域设置** (`WebConfig.java`):
+```java
+registry.addMapping("/**")
+    .allowedOriginPatterns("*")
+    .allowedMethods("*")
+```
+
+**文件上传限制** (`application.yml`):
+```yaml
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
 ```
 
 ---
 
 ## 🐛 常见问题
 
-### Q1: 后端启动报错 "Cannot resolve symbol 'MinioOSSOperator'"
+### 1. WebSocket 连接失败
 
-**解决方案：** 先安装自定义 MinIO Starter
+**原因**: 后端未启动或端口不一致
 
+**解决**:
 ```bash
-cd backend/dependencies/MinioOSSOperator
-mvn clean install
+# 检查后端是否运行
+curl http://localhost:8080/api/health
+
+# 检查 WebSocket 端口配置
+# frontend/vue-ezchat/src/stores/configStore.ts
+const API_PORT = 8080
 ```
 
-### Q2: 前端运行 `npm install` 失败
+### 2. 图片上传失败
 
-**解决方案：** 清理缓存后重试
+**原因**: MinIO 未启动或配置错误
 
+**解决**:
 ```bash
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install
+# 启动 MinIO（Docker）
+docker run -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  minio/minio server /data --console-address ":9001"
+
+# 访问 MinIO 控制台: http://localhost:9001
+# 创建 bucket: ezchat
 ```
 
-### Q3: WebSocket 连接失败
+### 3. 前端代理失效
 
-**检查项：**
-1. 后端是否正常运行（`http://localhost:8080/websocket/{token}` 可访问）
-2. JWT Token 是否有效
-3. 浏览器控制台是否有 CORS 错误
+**原因**: Vite 配置未生效
 
-### Q4: 图片上传失败
+**解决**:
+```bash
+# 重启开发服务器
+npm run dev
 
-**检查项：**
-1. MinIO 服务是否启动
-2. 环境变量 `OSS_ENDPOINT` 等配置是否正确
-3. Bucket 是否已创建且设置为公共读取
+# 检查请求是否带 /api 前缀
+# 例如: axios.get('/api/user/info')
+```
+
+### 4. IDEA 文件不同步
+
+**原因**: Cursor 修改后未同步
+
+**解决**:
+```
+在 IDEA 中按 Ctrl+Alt+Y
+或手动: File > Synchronize
+```
 
 ---
 
-## 📝 开发路线图
+## 📝 开发进度
 
-- [ ] 消息撤回功能
-- [ ] 文件上传支持（PDF、Word）
-- [ ] 语音消息
-- [ ] 聊天室管理员权限
+- [x] 用户认证系统
+- [x] 聊天室管理
+- [x] 实时消息推送
+- [x] 图片消息支持
+- [x] 国际化支持
+- [x] 暗色模式
+- [ ] 消息撤回
+- [ ] 文件传输
+- [ ] 语音/视频通话
 - [ ] 消息搜索
-- [ ] 端到端加密
-- [ ] 移动端 App (React Native)
 
 ---
 
-## 🤝 贡献指南
+## 📄 许可证
 
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'feat: Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。
 
 ---
 
-## 📄 开源协议
+## 👥 贡献者
 
-本项目采用 [MIT License](LICENSE) 开源协议。
-
----
-
-## 👨‍💻 作者
-
-**oojka**
-
-- GitHub: [@oojka](https://github.com/oojka)
-- Email: kakoukaire@gmail.com
+感谢所有为本项目做出贡献的开发者！
 
 ---
 
-## 🙏 致谢
+## 📧 联系方式
 
-- [Spring Boot](https://spring.io/projects/spring-boot)
-- [Vue.js](https://vuejs.org/)
-- [Element Plus](https://element-plus.org/)
-- [MinIO](https://min.io/)
-- [Cursor AI](https://cursor.sh/)
+- **项目地址**: [GitHub](https://github.com/oojka/EZChat)
+- **问题反馈**: [Issues](https://github.com/oojka/EZChat/issues)
 
 ---
 
 <div align="center">
 
-**如果这个项目对你有帮助，请给一个 ⭐️ Star 支持一下！**
-
-Made with ❤️ by oojka
+**⭐ 如果觉得项目不错，欢迎 Star ⭐**
 
 </div>
 
