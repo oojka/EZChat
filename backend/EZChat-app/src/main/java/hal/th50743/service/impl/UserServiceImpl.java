@@ -1,0 +1,207 @@
+package hal.th50743.service.impl;
+
+import hal.th50743.exception.BusinessException;
+import hal.th50743.exception.ErrorCode;
+import hal.th50743.mapper.ChatMapper;
+import hal.th50743.mapper.ChatMemberMapper;
+import hal.th50743.mapper.UserMapper;
+import hal.th50743.pojo.*;
+import hal.th50743.service.UserService;
+import hal.th50743.utils.CurrentHolder;
+import io.minio.MinioOSSOperator;
+import io.minio.MinioOSSResult;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Objects;
+
+import static hal.th50743.utils.FileNameFormater.getSafeName;
+import static hal.th50743.utils.UidGenerator.generateUid;
+
+/**
+ * 用户服务实现类
+ * <p>
+ * 负责用户信息的查询、更新、注册及头像上传。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+
+    private final UserMapper userMapper;
+    private final MinioOSSOperator minioOSSOperator;
+    private final ChatMemberMapper chatMemberMapper;
+    private final ChatMapper chatMapper;
+
+    /**
+     * 获取用户信息
+     * 权限控制：仅限本人或共同群聊成员查看
+     *
+     * @param uId 用户唯一标识
+     * @return UserVO 用户视图对象
+     */
+    @Override
+    public UserVO getUserInfoByUId(String uId) {
+        // 直接获取用户实体，减少 ID 转换的往返查询
+        User user = userMapper.getUserByUId(uId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        Integer reqId = CurrentHolder.getCurrentId();
+        Integer targetId = user.getId();
+
+        // 权限校验：1.是否是本人 2.是否有共同群组（防止任意遍历用户信息）
+        boolean isSelf = Objects.equals(reqId, targetId);
+        boolean isColleague = chatMemberMapper.isValidGetInfoReq(reqId, targetId);
+
+        if (!isSelf && !isColleague) {
+            log.warn("[越权访问] 用户 {} 尝试获取非好友/非群员 {} 的信息", reqId, uId);
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Permission denied: You do not have permission to view this user's profile");
+        }
+
+        return new UserVO(
+                user.getUId(),
+                user.getNickname(),
+                new Image(user.getAvatarObject(),
+                        minioOSSOperator.toUrl(user.getAvatarObject()),
+                        minioOSSOperator.toThumbUrl(user.getAvatarObject())),
+                user.getBio()
+        );
+    }
+
+    /**
+     * 注册用户：包含 UId 冲突重试机制
+     *
+     * @param user 用户对象
+     * @return User 注册后的用户对象
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public User add(User user) {
+        log.info("开始注册新用户: {}", user.getNickname());
+        // 设置最大重试次数为 5 次
+        for (int i = 1; i <= 5; i++) {
+            // 生成 10 位随机公开 UId
+            String randomUid = generateUid(10);
+            user.setUId(randomUid);
+
+            try {
+                userMapper.add(user);
+                log.info("用户注册成功: uId={}, internalId={}", user.getUId(), user.getId());
+                return user; // 插入成功，直接返回结果，结束方法
+            } catch (DuplicateKeyException e) {
+                log.warn("UId 冲突: {}, 正在进行第 {} 次重试", randomUid, i);
+
+                // 如果是最后一次尝试仍然失败，则抛出异常
+                if (i == 5) {
+                    log.error("UId 生成严重冲突，已达重试上限");
+                    throw new IllegalStateException("Failed to generate unique user ID after multiple attempts");
+                }
+            }
+        }
+        return user;
+    }
+
+    /**
+     * 根据 UId 获取用户 ID
+     *
+     * @param uId 用户唯一标识
+     * @return 用户 ID
+     */
+    @Override
+    public Integer getIdByUId(String uId) {
+        return userMapper.getIdByUId(uId);
+    }
+
+    /**
+     * 个人资料更新
+     *
+     * @param userReq 用户更新请求对象
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void update(UserReq userReq) {
+        User u = new User();
+        u.setId(userReq.getUserId());
+        u.setUId(userReq.getUId());
+        u.setNickname(userReq.getNickname());
+        if (userReq.getAvatar() != null) {
+            u.setAvatarObject(userReq.getAvatar().getObjectName());
+        }
+        u.setBio(userReq.getBio());
+        u.setUpdateTime(LocalDateTime.now());
+        log.info("更新用户资料: {}", u);
+        userMapper.update(u);
+    }
+
+    /**
+     * 头像上传至 MinIO
+     *
+     * @param file 头像文件
+     * @return Image 图片对象
+     */
+    @Override
+    public Image uploadAvatar(MultipartFile file) {
+        // 1. 基础校验：防止空文件
+        if (file == null || file.isEmpty()) {
+            log.warn("Upload attempt with empty file");
+            // 抛出业务异常，提示“文件为空”
+            throw new BusinessException(ErrorCode.FILE_EMPTY);
+        }
+
+        // 2. 获取文件名用于日志
+        String originalFilename = file.getOriginalFilename();
+        log.info("Starting file upload. Name: {}, Size: {} bytes", originalFilename, file.getSize());
+
+        MinioOSSResult result;
+        try {
+            // 3. 执行上传
+            result = minioOSSOperator.upload(
+                    file.getBytes(),
+                    getSafeName(originalFilename),
+                    file.getContentType(),
+                    true,
+                    400,
+                    400
+            );
+        } catch (IOException e) {
+            // 4. 捕获 IO 异常并记录堆栈信息
+            log.error("File upload failed due to IO error. Filename: {}", originalFilename, e);
+            // 抛出业务异常，提示“上传失败”
+            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
+        } catch (Exception e) {
+            // 5. 捕获 MinIO 可能抛出的其他运行时异常
+            log.error("Unexpected error during file upload. Filename: {}", originalFilename, e);
+            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
+        }
+
+        // 6. 返回结果
+        log.info("File upload successful. ObjectName: {}", result.getObjectName());
+        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl());
+    }
+
+    /**
+     * 活跃状态与已读时间同步
+     *
+     * @param userId          用户ID
+     * @param currentChatCode 当前聊天室代码
+     * @param now             当前时间
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void updateLastSeenAt(Integer userId, String currentChatCode, LocalDateTime now) {
+        Integer chatId = chatMapper.getChatIdByChatCode(currentChatCode);
+        if (chatId != null) {
+            chatMemberMapper.updateLastSeenAt(userId, chatId, now);
+        }
+        // 同步更新用户表的最后活跃时间
+        userMapper.updateLastSeenAt(userId, now);
+    }
+}

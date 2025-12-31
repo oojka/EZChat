@@ -1,0 +1,91 @@
+/* =========================================
+   自定义 EZ Dialog (ElMessageBox)
+   ========================================= */
+.ez-logout-dialog {
+  border-radius: var(--radius-lg) !important;
+  padding: 24px !important;
+  box-shadow: var(--shadow-glass) !important;
+  border: 1px solid var(--border-glass) !important;
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  max-width: 400px !important;
+  transition: all 0.3s ease;
+}
+
+.ez-logout-dialog .el-message-box__header { padding-bottom: 12px; text-align: left; }
+.ez-logout-dialog .el-message-box__title { font-size: 18px; font-weight: 800; color: var(--text-900); }
+.ez-logout-dialog .el-message-box__content { font-size: 15px; color: var(--text-700); padding: 10px 0 24px; text-align: center; }
+.ez-logout-dialog .el-message-box__btns { display: flex; justify-content: space-between; gap: 16px; width: 100%; padding-top: 0; }
+
+.ez-logout-dialog .ez-dialog-btn {
+  border-radius: var(--radius-base); padding: 10px 0; font-weight: 700; height: 44px; flex: 1; margin: 0 !important;
+  border: 1px solid var(--el-border-color-light); background: var(--bg-page); color: var(--text-700);
+}
+.ez-logout-dialog .ez-dialog-btn:hover { background: var(--bg-card); color: var(--text-900); }
+.ez-logout-dialog .el-button--danger { background: #fee2e2 !important; border: none !important; color: #dc2626 !important; }
+html.dark .ez-logout-dialog .el-button--danger { background: #450a0a !important; color: #f87171 !important; }
+
+/* =========================================
+   自定义 EZ Notification
+   ========================================= */
+.ez-notification {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border-glass) !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  box-shadow: var(--shadow-glass) !important;
+  padding: 20px !important;
+  transition: all 0.3s ease;
+  font-family: "Inter", "SF Pro Display", "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.ez-notification.welcome { min-width: 340px !important; border: 1px solid var(--primary-light) !important; }
+.ez-notification.success { border-left: 4px solid #10b981 !important; }
+.ez-notification.warning { border-left: 4px solid #f59e0b !important; }
+.ez-notification.error { border-left: 4px solid #ef4444 !important; }
+.ez-notification.info { border-left: 4px solid var(--primary) !important; }
+
+.ez-notification .el-notification__title { font-weight: 900 !important; color: var(--text-900) !important; font-size: 16px !important; }
+.ez-notification .el-notification__closeBtn { color: var(--text-400) !important; }
+
+/* 消息通知内部样式 */
+.ez-notify-content { display: flex; align-items: flex-start; gap: 14px; cursor: pointer; }
+.ez-notify-avatar { width: 44px; height: 44px; border-radius: var(--radius-base); object-fit: cover; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.ez-notify-info { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+.ez-notify-sender { font-size: 14px; font-weight: 700; color: var(--text-900); }
+.ez-notify-preview { font-size: 13px; color: var(--text-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 欢迎通知内部样式 */
+.ez-welcome-content { display: flex; align-items: center; gap: 20px; padding: 4px 0; }
+.ez-welcome-avatar {
+  width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: cover;
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+.ez-notification.welcome:hover .ez-welcome-avatar { transform: scale(1.05) rotate(-5deg); }
+.ez-welcome-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.ez-welcome-nickname { font-size: 18px; font-weight: 900; color: var(--text-900); letter-spacing: -0.5px; }
+.ez-welcome-message { font-size: 13px; color: var(--text-500); line-height: 1.6; font-weight: 500; }
+
+html.dark .ez-notification {
+  background: rgba(30, 31, 32, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+html.dark .ez-notification.welcome {
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+/* 强制置顶配置 */
+.el-notification, .el-message, .el-overlay-message-box {
+  z-index: 999999 !important;
+}
+
+/* 暗黑模式下的 Element Plus 基础组件微调 */
+html.dark .el-button--primary.is-plain {
+  background: rgba(64, 158, 255, 0.1);
+  border-color: rgba(64, 158, 255, 0.2);
+}

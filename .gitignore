@@ -1,0 +1,30 @@
+# === Frontend (Vite/Vue) ===
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.vite/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files (keep example)
+.env
+.env.*
+!.env.example
+
+# === Backend (Maven/Spring Boot) ===
+**/target/
+*.class
+
+# === IDE / OS ===
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# === Cursor / tooling ===
+.cursorignore
+.cursorrules
