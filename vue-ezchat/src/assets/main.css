@@ -1,0 +1,96 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================================
+   1. Global Design Tokens (Light Mode)
+   ========================================= */
+:root {
+  --primary: #409eff;
+  --primary-light: #e0f2fe;
+  --primary-dark: #337ecc;
+
+  --text-900: #0f172a;
+  --text-700: #334155;
+  --text-500: #64748b;
+  --text-400: #94a3b8;
+
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-aside: #ffffff;
+
+  --bg-glass: rgba(255, 255, 255, 0.65);
+  --blur-glass: blur(24px) saturate(180%);
+  --border-glass: rgba(255, 255, 255, 0.5);
+  --shadow-glass: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+
+  --radius-base: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* =========================================
+   2. Dark Mode Overrides (Neutral Gemini Style)
+   ========================================= */
+html.dark {
+  /* 核心优化：使用更稳重的钴蓝色 */
+  --primary: #3b82f6;
+  --primary-light: #131314;
+
+  --text-900: #f1f3f4;
+  --text-700: #e8eaed;
+  --text-500: #9aa0a6;
+  --text-400: #70757a;
+
+  --bg-page: #131314;
+  --bg-card: #1e1f20;
+  --bg-aside: #131314;
+
+  --bg-glass: rgba(30, 31, 32, 0.75);
+  --blur-glass: blur(24px) saturate(200%);
+  --border-glass: rgba(255, 255, 255, 0.06);
+  --shadow-glass: 0 16px 48px 0 rgba(0, 0, 0, 0.6);
+
+  /* Element Plus Dark Vars */
+  --el-bg-color: #131314;
+  --el-bg-color-overlay: #1e1f20;
+  --el-text-color-primary: #f1f3f4;
+  --el-border-color-light: #3c4043;
+  --el-fill-color-blank: #131314;
+  --el-mask-color: rgba(0, 0, 0, 0.9);
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-900);
+  transition: background-color 0.5s var(--ease-out-expo), color 0.5s var(--ease-out-expo);
+  font-family: 'Inter', 'PingFang SC', sans-serif;
+}
+
+/* =========================================
+   3. Global Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* =========================================
+   4. Element Plus Overrides */
+.el-message {
+  border-radius: 50px !important;
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-glass) !important;
+}
+
+html.dark .el-badge__content--danger {
+  background-color: #ea4335 !important;
+  box-shadow: 0 0 12px rgba(234, 67, 53, 0.2);
+}

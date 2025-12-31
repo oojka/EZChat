@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.ChatMapper">
+
+    <select id="getChatIdByChatCode" resultType="java.lang.Integer">
+        SELECT id FROM chats WHERE chat_code = #{chatCode}
+    </select>
+
+    <select id="getChatVOListByUserId" resultType="hal.th50743.pojo.ChatVO">
+        SELECT c.chat_code,
+               c.chat_name,
+               u.u_id owner_u_id,
+               c.join_enabled,
+               c.create_time,
+               c.update_time,
+               c.avatar_name,
+               (SELECT COUNT(*) FROM chat_members cm WHERE cm.chat_id = c.id) member_count
+        FROM chats c JOIN users u ON c.owner_id = u.id
+        WHERE EXISTS(
+            SELECT * FROM chat_members m
+            WHERE c.id = m.chat_id
+            AND m.user_id = #{userId} )
+    </select>
+
+    <select id="isValidChatId" resultType="java.lang.Boolean">
+        SELECT IF(COUNT(*) > 0, 1, 0)
+        FROM chat_members
+        WHERE chat_id = #{chatId} AND user_id = #{userId}
+    </select>
+    <select id="getChatVOByChatId" resultType="hal.th50743.pojo.ChatVO">
+        SELECT c.chat_code,
+               c.chat_name,
+               u.u_id owner_u_id,
+               c.join_enabled,
+               c.create_time,
+               c.update_time,
+               c.avatar_name,
+               (SELECT COUNT(*) FROM chat_members cm WHERE cm.chat_id = c.id) member_count
+        FROM chats c JOIN users u ON c.owner_id = u.id
+        WHERE c.id = #{chatId}
+    </select>
+</mapper>

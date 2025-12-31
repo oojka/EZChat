@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.ChatMemberMapper">
+    <update id="updateLastSeenAt">
+        UPDATE chat_members
+        SET last_seen_at = #{now}
+        WHERE user_id = #{userId}
+        AND chat_id = #{chatId}
+    </update>
+
+    <select id="getChatMembersById" resultType="java.lang.Integer">
+        SELECT DISTINCT u.id
+        FROM users u
+        JOIN chat_members m ON u.id = m.user_id
+        WHERE m.chat_id IN (
+        SELECT chat_id
+        FROM chat_members
+        WHERE user_id = #{Id} )
+    </select>
+
+    <select id="getChatMembersByUserIdAndChatId" resultType="java.lang.Integer">
+        SELECT user_id
+        FROM chat_members
+        WHERE chat_id = #{chatId}
+          AND EXISTS (
+            SELECT *
+            FROM chat_members
+            WHERE user_id = #{userId}
+              AND chat_id = #{chatId}
+        );
+    </select>
+
+    <select id="getChatMemberListByUserId" resultType="hal.th50743.pojo.ChatMember">
+        SELECT m.chat_id,
+               c.chat_code,
+               m.user_id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               m.last_seen_at,
+               m.create_time,
+               m.update_time FROM chats c
+            JOIN ( chat_members m JOIN users u ON m.user_id = u.id )
+            ON c.id = m.chat_id
+        WHERE m.chat_id IN (SELECT chat_id
+        FROM chat_members cm WHERE cm.user_id = #{userId})
+    </select>
+
+    <select id="getChatMemberListByChatId" resultType="hal.th50743.pojo.ChatMember">
+        SELECT m.chat_id,
+               c.chat_code,
+               m.user_id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               m.last_seen_at,
+               m.create_time,
+               m.update_time
+        FROM chats c
+                 JOIN chat_members m ON c.id = m.chat_id
+                 JOIN users u ON m.user_id = u.id
+        WHERE c.id = #{chatId}
+    </select>
+
+    <select id="isValidGetInfoReq" resultType="java.lang.Boolean">
+        SELECT IF(COUNT(*) > 0, 1, 0)
+        FROM chat_members
+        WHERE user_id = #{reqId}
+          AND chat_id IN (
+              SELECT chat_id
+              FROM chat_members
+              WHERE user_id = #{id}
+            )
+    </select>
+
+
+</mapper>

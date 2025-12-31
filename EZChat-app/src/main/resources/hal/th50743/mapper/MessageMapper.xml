@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.MessageMapper">
+
+    <insert id="addMessage">
+        INSERT INTO messages (sender_id, chat_id, text, create_time, update_time, object_names)
+        VALUES
+            (#{senderId}, #{chatId}, #{text},
+             #{createTime}, #{updateTime}, #{objectNames})
+    </insert>
+
+    <select id="getUnreadCountMapByUserId" resultType="java.util.Map">
+        SELECT
+            c.chat_code AS chatCode,
+            COUNT(m.id) AS unreadCount
+        FROM chats c
+            JOIN chat_members cm ON c.id = cm.chat_id
+            AND cm.user_id = #{userId}
+            JOIN messages m ON c.id = m.chat_id
+        WHERE
+            m.sender_id != #{userId}
+          AND m.create_time > IFNULL(cm.last_seen_at, '1970-01-01 00:00:00')
+        GROUP BY c.chat_code
+    </select>
+
+    <select id="getUnreadCountMapByUserIdAndChatId" resultType="java.lang.Integer">
+        SELECT
+            COUNT(m.id)
+        FROM chat_members cm
+                 JOIN messages m ON cm.chat_id = m.chat_id
+        WHERE cm.user_id = #{userId}
+          AND cm.chat_id = #{chatId}
+          AND m.sender_id != #{userId}
+          AND m.create_time > IFNULL(cm.last_seen_at, '1970-01-01 00:00:00')
+    </select>
+
+
+    <select id="getLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
+        SELECT u.u_id AS sender,
+               ciM.chat_code AS chatCode,
+               m.text,
+               m.object_names AS objectNames,
+               m.create_time AS createTime
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        JOIN ( SELECT m2.chat_id, c.chat_code, MAX(m2.create_time) max_create_time
+               FROM messages m2 JOIN chat_members cm
+               ON m2.chat_id = cm.chat_id
+               JOIN chats c ON m2.chat_id = c.id
+               WHERE cm.user_id = #{userId}
+               GROUP BY m2.chat_id, c.chat_code ) ciM
+            ON m.chat_id = ciM.chat_id AND m.create_time = ciM.max_create_time
+    </select>
+
+    <select id="getLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
+        SELECT u.u_id AS sender,
+               c.chat_code AS chatCode,
+               m.text,
+               m.object_names AS objectNames,
+               m.create_time AS createTime
+        FROM messages m
+                 JOIN chats c ON m.chat_id = c.id
+                 JOIN users u ON m.sender_id = u.id
+        WHERE m.chat_id = #{chatId}
+        ORDER BY m.create_time DESC
+        LIMIT 1
+    </select>
+
+
+    <select id="getMessageListByChatIdAndTimeStamp" resultType="hal.th50743.pojo.MessageVO">
+        SELECT u.u_id AS sender,
+               c.chat_code AS chatCode,
+               m.text,
+               m.object_names AS objectNames,
+               m.create_time AS createTime
+        FROM messages m
+        JOIN chats c ON m.chat_id = c.id
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.chat_id = #{chatId}
+        <if test="timeStamp != null">
+            AND m.create_time &gt; #{timeStamp}
+        </if>
+        ORDER BY m.create_time DESC
+        LIMIT 50
+    </select>
+
+</mapper>

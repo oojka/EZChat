@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.UserMapper">
+    <insert id="add"
+            parameterType="hal.th50743.pojo.User"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+        INSERT INTO users (u_id, nickname, avatar_object, bio, last_seen_at, create_time, update_time)
+        VALUES (#{uId}, #{nickname}, #{avatarObject}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
+    </insert>
+
+    <insert id="addFormalUser">
+        INSERT INTO formal_users (user_id, username, password_hash, create_time, update_time, last_login_time)
+        VALUES (#{userId}, #{username}, #{passwordHash}, #{createTime}, #{updateTime}, #{lastLoginTime})
+    </insert>
+
+    <update id="update">
+        UPDATE users
+        <set>
+            <if test="nickname != null and nickname != ''">nickname = #{nickname},</if>
+            <if test="avatarObject != null and avatarObject != ''">avatar_object = #{avatarObject},</if>
+            <if test="bio != null and bio != ''">bio = #{bio},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+    <update id="updateLastSeenAt">
+        UPDATE users
+        SET last_seen_at = #{now}
+        WHERE id = #{userId}
+    </update>
+
+
+    <select id="selectByUsernameAndPassword" resultType="hal.th50743.pojo.User">
+        SELECT u.id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               u.bio,
+               u.last_seen_at,
+               u.create_time,
+               u.update_time,
+               f.username
+        FROM formal_users f JOIN users u ON f.user_id = u.id
+        WHERE f.username = #{username} AND f.password_hash = #{password}
+    </select>
+    <select id="selectByUId" resultType="hal.th50743.pojo.User">
+        SELECT u.id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               u.bio,
+               u.last_seen_at,
+               u.create_time,
+               u.update_time,
+               f.username
+        FROM users u LEFT JOIN formal_users f ON u.id = f.user_id
+        WHERE u_id = #{userUId}
+    </select>
+
+    <select id="getIdByUId" resultType="java.lang.Integer">
+        SELECT id FROM users WHERE u_id = #{uId}
+    </select>
+
+    <select id="getUserVOById" resultType="hal.th50743.pojo.User">
+        SELECT u.id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               u.bio,
+               u.last_seen_at,
+               u.create_time,
+               u.update_time,
+               f.username
+        FROM users u LEFT JOIN formal_users f ON u.id = f.user_id
+        WHERE u.id = #{id}
+
+    </select>
+
+    <select id="getUserByUId" resultType="hal.th50743.pojo.User">
+        SELECT u.id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               u.bio,
+               u.last_seen_at,
+               u.create_time,
+               u.update_time,
+               f.username
+        FROM users u
+                 LEFT JOIN formal_users f ON u.id = f.user_id
+        WHERE u.u_id = #{uId}
+    </select>
+
+</mapper>

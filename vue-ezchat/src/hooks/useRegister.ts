@@ -1,0 +1,90 @@
+import {computed, ref} from 'vue'
+import {type RegisterInfo, type Result} from '@/type'
+import {ElMessage} from 'element-plus'
+import {registerApi} from '@/api/Auth.ts'
+import {useI18n} from 'vue-i18n'
+import {getPasswordReg, USERNAME_REG} from '@/utils/validators.ts'
+
+export function useRegister() {
+  const { t } = useI18n()
+  const registerFormRef = ref()
+
+  // 仅保留无法通过正则实现的“两次密码一致”校验
+  const validateConfirmPassword = (rule: any, value: any, callback: any) => {
+    if (!value) callback(new Error(t('validation.confirm_password_required')))
+    else if (value !== registerForm.value.password) callback(new Error(t('validation.password_mismatch')))
+    else callback()
+  }
+
+  // 表单校验规则：直接使用 pattern，去掉函数包装
+  const registerFormRules = computed(() => ({
+    nickname: [
+      { required: true, message: t('validation.nickname_required'), trigger: 'blur' },
+      { min: 2, max: 20, message: t('validation.nickname_length'), trigger: 'blur' },
+    ],
+    username: [
+      { required: true, message: t('validation.username_required'), trigger: 'blur' },
+      { pattern: USERNAME_REG, message: t('validation.username_format'), trigger: 'blur' }
+    ],
+    password: [
+      { required: true, message: t('validation.password_required'), trigger: 'blur' },
+      { pattern: getPasswordReg({ min: 8, max: 20, level: 'basic' }), message: t('validation.password_format'), trigger: 'blur' }
+    ],
+    confirmPassword: [
+      { required: true, validator: validateConfirmPassword, trigger: 'blur' },
+    ],
+    avatar: [
+      {
+        required: true,
+        validator: (rule: any, value: any, callback: any) => {
+          if (!value?.objectUrl) callback(new Error(t('validation.avatar_required')))
+          else callback()
+        },
+        trigger: 'change',
+      },
+    ],
+  }))
+
+  const registerForm = ref<RegisterInfo>({
+    nickname: '', username: '', password: '', confirmPassword: '',
+    avatar: { objectName: '', objectUrl: '', objectThumbUrl: '' },
+  })
+
+  const beforeAvatarUpload = (rawFile: { type: string; size: number }) => {
+    if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
+      ElMessage.error(t('validation.image_format')); return false
+    } else if (rawFile.size / 1024 / 1024 > 10) {
+      ElMessage.error(t('validation.image_size')); return false
+    }
+    return true
+  }
+
+  const handleAvatarSuccess = (response: Result) => {
+    registerForm.value.avatar = response.data
+    if (registerFormRef.value) registerFormRef.value.validateField('avatar')
+  }
+
+  const resetRegisterForm = () => {
+    registerForm.value = {
+      nickname: '', username: '', password: '', confirmPassword: '',
+      avatar: { objectName: '', objectUrl: '', objectThumbUrl: '' },
+    }
+    if (registerFormRef.value) registerFormRef.value.resetFields()
+  }
+
+  const register = async () => {
+    if (!registerFormRef.value) return
+    try {
+      const valid = await registerFormRef.value.validate()
+      if (valid) return await registerApi(registerForm.value)
+    } catch (error) {
+      console.error('[ERROR] [Register] Validation or API Error:', error)
+    }
+    return false
+  }
+
+  return {
+    registerForm, register, registerFormRules, registerFormRef,
+    beforeAvatarUpload, handleAvatarSuccess, resetRegisterForm,
+  }
+}
