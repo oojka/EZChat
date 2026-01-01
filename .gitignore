@@ -26,5 +26,8 @@ yarn-error.log*
 .DS_Store
 
 # === Cursor / tooling ===
+# Keep these committed (project rules):
+.prompt.md
 .cursorignore
 .cursorrules
+.cursor/
