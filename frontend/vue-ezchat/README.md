@@ -1,6 +1,8 @@
-# vue-ezchat
+## vue-ezchat（前端）
 
-This template should help get you started developing with Vue 3 in Vite.
+本目录是 EZChat 的前端工程（Vue 3 + Vite + TypeScript + Element Plus）。
+
+更完整的项目说明与后端/数据库/MinIO 约定请看仓库根目录的 `README.md`。
 
 ## Recommended IDE Setup
 

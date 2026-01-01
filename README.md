@@ -23,7 +23,7 @@
 - 💬 **多房间聊天**：支持创建、加入多个聊天室
 - 🔐 **安全认证**：JWT Token 身份验证与会话管理
 - 👥 **在线状态**：实时显示成员在线/离线状态
-- 🖼️ **图片分享**：支持图片上传与自动缩略图生成
+- 🖼️ **图片分享**：支持图片上传；缩略图仅在图片超出阈值时生成，并在缺失时自动回退到原图
 - 🌍 **国际化**：支持中文、英文、日语、韩语、繁体中文
 - 🎨 **暗黑模式**：自适应系统主题，支持手动切换
 - 📱 **响应式设计**：完美适配桌面与移动端
@@ -95,8 +95,9 @@ cd EZChat
 -- 创建数据库
 CREATE DATABASE ezchat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- 导入 SQL 文件（假设在项目根目录）
-mysql -u root -p ezchat < database/schema.sql
+-- 导入初始化 SQL（包含 DDL + 测试数据生成存储过程）
+-- ⚠️ 注意：会 TRUNCATE 多张表，请勿用于生产库
+mysql -u root -p ezchat < backend/EZChat-app/src/main/resources/sql/init.sql
 ```
 
 #### 3️⃣ 配置后端环境变量
@@ -172,6 +173,26 @@ npm run dev                  # 启动开发服务器
   - 严格遵循 Controller → Service → Mapper 分层
   - 使用 Java 21 特性（Records、Text Blocks）
   - 修改 POJO 时同步更新前端 TypeScript 接口
+
+---
+
+## 🔑 重要约定（当前工程状态）
+
+### uid 字段统一
+- 前后端统一使用 **`uid`**（小写）作为用户对外标识字段（包括 JWT claims 的 key）
+- 数据库 `users` 表列名为 **`uid`**（不再使用 `u_id`）
+
+### 鉴权 Token 传递
+- HTTP API：请求头使用 **`token`**（不是 `Authorization: Bearer ...`）
+- WebSocket：连接 URL 使用 `/websocket/{token}`
+
+### MinIO 图片与缩略图策略
+- 上传：仅当图片尺寸超过阈值（maxWidth/maxHeight）时才生成并上传 `thumb_*.jpg`
+- 取图：`getImageUrls()` 会在缩略图对象不存在时，将 `thumbUrl` 回退为原图 `url`，避免前端请求必 404
+
+### 前端头像显示回退
+- 聊天消息头像实现 **Thumbnail → Original → Text** 三段式回退（缩略图加载失败自动切到原图，再失败显示文字）
+- `index.html` 已设置 `<meta name="referrer" content="no-referrer" />` 用于降低外链防盗链导致的 403 风险
 
 ---
 
