@@ -52,16 +52,107 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 - **Frontend**：Node.js `^20.19.0 || >=22.12.0`、npm 10+  
   **Frontend**: Node.js `^20.19.0 || >=22.12.0`, npm 10+
 
+### 数据库结构 / Database schema
+
+本项目数据库初始化脚本位于 `backend/EZChat-app/src/main/resources/sql/init.sql`，当前结构使用 **MySQL 8** + **utf8mb4**。  
+Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL 8 + utf8mb4).
+
+> ⚠️ 重要 / Important  
+> `init.sql` 会 `DROP TABLE IF EXISTS` 并在存储过程中 `TRUNCATE` 多张表，然后生成大量测试数据（多语言昵称、房间、消息）。请勿用于生产库。  
+> `init.sql` drops tables, truncates data inside stored procedure, and generates lots of test data. Do NOT use in production.
+
+#### 表一览 / Tables
+
+- `users`：所有用户（访客/正式用户共用）/ all users (guest + formal)
+- `formal_users`：正式用户账号体系（用户名/密码哈希）/ credentials for formal users
+- `chats`：聊天室（群/单聊统一存储）/ chat rooms
+- `chat_members`：聊天室成员关系 + 最后阅读时间 / membership + last_seen_at
+- `messages`：消息主体 / messages
+- `files`：消息附带文件元数据（当前结构预留）/ file metadata (reserved)
+
+#### 字段要点 / Key fields (summary)
+
+`users`
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `id` (PK) | 用户内部ID | internal user id |
+| `uid` (UNIQUE, char(10)) | 用户对外ID（系统统一使用） | public user id (used across system) |
+| `nickname` | 昵称 | nickname |
+| `avatar_object` | MinIO 对象名（object name） | MinIO object name for avatar |
+| `bio` | 简介 | bio |
+| `last_seen_at` | 最后在线时间 | last seen at |
+| `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
+
+`formal_users`
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `user_id` (PK) | 对应 `users.id` | references `users.id` |
+| `username` (UNIQUE) | 登录用户名 | login username |
+| `password_hash` | 密码哈希（BCrypt） | password hash (BCrypt) |
+| `last_login_time` | 最后登录时间 | last login time |
+
+`chats`
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `id` (PK) | 聊天室内部ID | internal chat id |
+| `chat_code` (UNIQUE, char(8)) | 聊天室对外ID | public chat code |
+| `chat_name` | 聊天室名称 | chat name |
+| `owner_id` | 群主 `users.id` | owner `users.id` |
+| `chat_password_hash` | 进群密码哈希 | room password hash |
+| `join_enabled` | 是否允许加入 | whether join is enabled |
+| `avatar_name` | 聊天室头像对象名 | chat avatar object name |
+| `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
+
+`chat_members`
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `chat_id` (PK part) | 对应 `chats.id` | references `chats.id` |
+| `user_id` (PK part) | 对应 `users.id` | references `users.id` |
+| `last_seen_at` | 最后阅读该房间时间 | last seen time for this chat |
+
+`messages`
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `id` (PK) | 消息内部ID | internal message id |
+| `sender_id` | 发送者 `users.id` | sender `users.id` |
+| `chat_id` | 房间 `chats.id` | chat `chats.id` |
+| `text` | 文本内容（可空） | text content (nullable) |
+| `object_names` | MinIO 对象名列表（JSON 字符串） | list of MinIO object names (JSON string) |
+| `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
+
+`files`
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `id` (PK) | 文件内部ID | internal file id |
+| `message_id` | 对应 `messages.id` | references `messages.id` |
+| `file_name` | 原始文件名 | original filename |
+| `content_type` | MIME 类型 | MIME type |
+| `file_path` | 存储路径（预留/历史） | storage path (reserved/legacy) |
+
+#### 测试数据生成 / Test data generation
+
+`init.sql` 会创建并执行存储过程 `generate_japanese_test_data()`，默认会：
+
+`init.sql` creates and calls `generate_japanese_test_data()`, which by default:
+
+- 插入约 **120** 个用户（多语言昵称）/ inserts ~**120** users (multilingual nicknames)
+- 插入约 **120** 个正式用户凭证 / inserts ~**120** formal user credentials
+- 创建约 **25** 个聊天室 / creates ~**25** chats
+- 为每个房间生成 **100+** 条消息 / generates **100+** messages per chat
+- 大量 `chat_members` 关系（含全员入群逻辑）/ many memberships (including full-join logic)
+
 ### 1) 初始化数据库 / Initialize database
 
 ```bash
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS ezchat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 mysql -u root -p ezchat < backend/EZChat-app/src/main/resources/sql/init.sql
 ```
-
-> 注意 / Note  
-> `init.sql` 可能包含清表/测试数据逻辑，请勿用于生产库。  
-> `init.sql` may clear tables / generate test data. Do NOT use in production.
 
 ### 2) 配置环境变量 / Set environment variables
 
