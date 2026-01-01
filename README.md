@@ -151,6 +151,46 @@ Vite dev proxy rules:
 - `GET  /user/{uid}`
 - `POST /user`
 
+### 统一响应与异常处理 / Unified response & exception handling
+
+后端所有 REST 接口统一返回 `hal.th50743.pojo.Result`：  
+All REST APIs return `hal.th50743.pojo.Result`:
+
+- **字段 / Fields**
+  - `status`: `1`=success, `0`=failure
+  - `code`: 业务码 / business error code（成功固定为 `200`）
+  - `message`: 说明信息 / message
+  - `data`: 业务数据 / payload
+
+最小示例 / Minimal examples:
+
+```json
+{ "status": 1, "code": 200, "message": "success", "data": { } }
+```
+
+```json
+{ "status": 0, "code": 42001, "message": "Chat room not found", "data": null }
+```
+
+- **ErrorCode 分段 / ErrorCode ranges**（见 `hal.th50743.exception.ErrorCode`）
+  - `40xxx`: Client errors（Bad request/Unauthorized/Forbidden/Not found）
+  - `41xxx`: User 相关业务错误 / user business errors
+  - `42xxx`: Chat/Message 相关业务错误 / chat & message business errors
+  - `43xxx`: File 相关业务错误 / file business errors
+  - `50xxx`: Server errors / system errors
+
+- **全局异常处理 / GlobalExceptionHandler**（`hal.th50743.exception.GlobalExceptionHandler`）
+  - **BusinessException** → `Result.error(code, message)`
+  - **DuplicateKeyException** → `Result.error(DATABASE_ERROR, "... is already exist")`（会尝试从异常信息解析字段）
+  - **DataIntegrityViolationException** → 若包含 `Data truncation`，返回 `BAD_REQUEST` + `"Input value too long"`，否则 `DATABASE_ERROR`
+  - **Exception (fallback)** → `Result.error(SYSTEM_ERROR)`
+
+- **HTTP 状态码约定 / HTTP status convention**
+  - **大多数业务错误**：仍返回 HTTP `200`，通过 `status=0` + `code` 表达失败。  
+    Most business failures still return HTTP `200` and use `status=0` + `code`.
+  - **鉴权失败**：`TokenInterceptor` 会直接返回 HTTP `401`（并中断请求）。  
+    Auth failures are returned as HTTP `401` by `TokenInterceptor`.
+
 ---
 
 ## 项目结构 / Project Structure
