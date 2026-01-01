@@ -10,6 +10,7 @@ const { t } = useI18n()
 const {
   inputContent, sendSettings, uploadHeaders, beforePictureUpload,
   handlePictureSuccess, removeImage, send, resetInput, handleExceed,
+  isImageProcessing,
 } = useChatInput()
 
 const route = useRoute()
@@ -85,6 +86,8 @@ onMounted(() => editorRef.value?.focus())
         <el-upload class="picture-uploader" action="/api/message/upload" :headers="uploadHeaders" multiple :limit="15" :show-file-list="false" :on-success="handlePictureSuccess" :before-upload="beforePictureUpload" :on-exceed="handleExceed">
           <template #trigger><div class="tool-btn"><el-icon><Picture /></el-icon></div></template>
         </el-upload>
+
+        <span v-if="isImageProcessing" class="processing-tip">Processing image...</span>
       </div>
     </div>
 
@@ -124,6 +127,7 @@ onMounted(() => editorRef.value?.focus())
 .input-container { display: flex; flex-direction: column; height: 100%; padding: 8px 16px; box-sizing: border-box; background-color: var(--bg-card); border-top: 1px solid var(--el-border-color-light); transition: all 0.3s ease; }
 .toolbar { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; }
 .tool-left { display: flex; align-items: center; gap: 4px; }
+.processing-tip { margin-left: 6px; font-size: 12px; color: var(--text-400); }
 .picture-uploader { display: inline-block; line-height: 0; }
 .tool-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; border-radius: var(--radius-sm); color: var(--text-500); background: transparent; }
 .tool-btn:hover { color: var(--text-900); background-color: var(--bg-page); }

@@ -53,6 +53,9 @@ interface PasswordOptions {
 
 /**
  * 动态生成密码正则表达式
+ *
+ * 业务目的：不同页面/不同场景可以配置不同强度（例如注册更强、加入房间可稍弱）。
+ *
  * @param options 校验配置 (min, max, level)
  */
 export const getPasswordReg = (options: PasswordOptions = {}): RegExp => {
@@ -83,6 +86,8 @@ export const getPasswordReg = (options: PasswordOptions = {}): RegExp => {
 
 /**
  * 校验用户名 (内置非空检查)
+ *
+ * @param val 输入值
  */
 export const isValidUsername = (val: unknown): boolean => {
   return !!val && USERNAME_REG.test(val)
@@ -90,6 +95,9 @@ export const isValidUsername = (val: unknown): boolean => {
 
 /**
  * 校验密码 (内置非空检查)
+ *
+ * @param val 输入值
+ * @param options 强度配置
  */
 export const isValidPassword = (val: unknown, options?: PasswordOptions): boolean => {
   if (typeof val !== 'string') return false

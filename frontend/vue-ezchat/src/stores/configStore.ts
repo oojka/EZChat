@@ -11,6 +11,11 @@ export const useConfigStore = defineStore(
     // 后端服务端口常量
     const API_PORT = 8080
 
+    /**
+     * 判断是否本地开发环境（localhost / 127.0.0.1）
+     *
+     * 业务原因：本地开发通常需要直连 :8080；生产环境更推荐走同源反代（避免 https → http 混合内容）。
+     */
     const isDevLocal = () => {
       const host = window.location.hostname
       return host === 'localhost' || host === '127.0.0.1'

@@ -10,16 +10,15 @@ import hal.th50743.mapper.MessageMapper;
 import hal.th50743.pojo.*;
 import hal.th50743.service.ChatService;
 import hal.th50743.service.MessageService;
+import hal.th50743.service.OssMediaService;
 import hal.th50743.utils.ImageUtils;
 import io.minio.MinioOSSOperator;
-import io.minio.MinioOSSResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -37,6 +36,7 @@ public class MessageServiceImpl implements MessageService {
     private final ChatMemberMapper chatMemberMapper;
     private final MessageMapper messageMapper;
     private final MinioOSSOperator minioOSSOperator;
+    private final OssMediaService ossMediaService;
 
     // ObjectMapper是线程安全的，可以作为成员变量
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -96,11 +96,17 @@ public class MessageServiceImpl implements MessageService {
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to serialize object names list: " + e.getMessage());
             }
         }
+        // Message type: 0=text, 1=image, 2=mixed
+        boolean hasText = text != null && !text.isBlank();
+        boolean hasImages = images != null && !images.isEmpty();
+        int type = hasText && hasImages ? 2 : (hasImages ? 1 : 0);
+
         // 创建消息对象
         Message msg = new Message(
                 null,
                 userId,
                 chatId,
+                type,
                 text,
                 objectNamesJson, // 存储JSON字符串
                 LocalDateTime.now(),
@@ -166,21 +172,7 @@ public class MessageServiceImpl implements MessageService {
      */
     @Override
     public Image upload(MultipartFile file) {
-        log.info("upload file");
-        MinioOSSResult result = null;
-        try {
-            result = minioOSSOperator.upload(
-                    file.getBytes(),
-                    file.getOriginalFilename(),
-                    file.getContentType(),
-                    false, // 消息图片存私有区域
-                    400,
-                    400
-            );
-        } catch (IOException e) {
-            log.error("File upload failed: ", e);
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
-        }
-        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl());
+        // 业务目的：消息图片上传统一交给 OSS 媒体服务处理（含图片规范化/缩略图/私有访问）
+        return ossMediaService.uploadMessageImage(file);
     }
 }

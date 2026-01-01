@@ -10,6 +10,14 @@ import type {Image, Message} from '@/type'
 import {useConfigStore} from '@/stores/configStore.ts'
 import i18n from '@/i18n'
 
+/**
+ * WebsocketStore：管理 WebSocket 连接与分发
+ *
+ * 设计原则：
+ * - WS 连接属于“应用级单例”，避免多页面/多组件重复建连
+ * - 业务消息分发给 RoomStore / MessageStore / UserStore
+ * - 主动断开（logout）时不应该触发重连（由底层 useWebsocket 控制）
+ */
 type OutgoingMessage = {
   chatCode: string
   text: string
@@ -28,12 +36,16 @@ export const useWebsocketStore = defineStore('websocket', () => {
   let statusTimer: ReturnType<typeof setTimeout> | null = null
 
   watch(status, (newStatus) => {
+    // 业务目的：避免 WS 状态快速抖动导致 UI 提示闪烁
     if (statusTimer) clearTimeout(statusTimer)
     statusTimer = setTimeout(() => {
       delayedStatus.value = newStatus
     }, 500)
   })
 
+  /**
+   * 给 UI 展示用的连接状态（含颜色/徽标类型）
+   */
   const wsDisplayState = computed(() => {
     switch (delayedStatus.value) {
       case 'OPEN':
@@ -47,6 +59,11 @@ export const useWebsocketStore = defineStore('websocket', () => {
     }
   })
 
+  /**
+   * 初始化 WebSocket 连接
+   *
+   * @param token JWT token（拼接到 `/websocket/{token}`）
+   */
   const initWS = (token: string) => {
     if (!token || isInitialized.value) return
 
@@ -61,22 +78,27 @@ export const useWebsocketStore = defineStore('websocket', () => {
 
     connect(fullUrl, {
       onMessage: (data: any) => {
+        // 业务消息：聊天消息（MESSAGE）
         if (typeof data === 'string') return
         const messageStore = useMessageStore()
         messageStore.receiveMessage(data as Message).then(() => {})
       },
       onUserStatus: (uid: string, isOnline: boolean) => {
+        // 系统消息：在线状态变更（USER_STATUS）
         roomStore.updateMemberStatus(uid, isOnline)
       },
       onAck: (tempId: string) => {
+        // 系统消息：服务端 ACK，标记本地“发送中”消息为 sent
         const messageStore = useMessageStore()
         messageStore.handleAck(tempId)
       },
       getHeartbeatPayload: () => {
+        // 心跳携带 chatCode：让后端在断线时能记录 lastSeenAt
         return 'PING' + roomStore.currentRoomCode
       },
       onClose: async (event: CloseEvent) => {
         isInitialized.value = false
+        // 认证失败/过期：不再重连，直接退出登录并回到首页
         if (event.code === 4001 || event.code === 4002) {
           close()
           ElMessage.error(t('auth.session_expired'))
@@ -90,6 +112,11 @@ export const useWebsocketStore = defineStore('websocket', () => {
   }
 
   // 仅暴露底层的 send 方法，业务逻辑移交 messageStore
+  /**
+   * 发送 WS 消息（业务层应统一通过 messageStore 调用）
+   *
+   * @param data 发往服务端的消息载荷
+   */
   const sendData = (data: OutgoingMessage) => {
     try {
       send(data)

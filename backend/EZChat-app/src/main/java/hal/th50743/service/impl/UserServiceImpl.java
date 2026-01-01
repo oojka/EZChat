@@ -6,6 +6,7 @@ import hal.th50743.mapper.ChatMapper;
 import hal.th50743.mapper.ChatMemberMapper;
 import hal.th50743.mapper.UserMapper;
 import hal.th50743.pojo.*;
+import hal.th50743.service.OssMediaService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
 import hal.th50743.utils.UserVOConverter;
@@ -39,6 +40,7 @@ public class UserServiceImpl implements UserService {
     private final MinioOSSOperator minioOSSOperator;
     private final ChatMemberMapper chatMemberMapper;
     private final ChatMapper chatMapper;
+    private final OssMediaService ossMediaService;
 
     /**
      * 获取用户信息
@@ -144,42 +146,8 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public Image uploadAvatar(MultipartFile file) {
-        // 1. 基础校验：防止空文件
-        if (file == null || file.isEmpty()) {
-            log.warn("Upload attempt with empty file");
-            // 抛出业务异常，提示“文件为空”
-            throw new BusinessException(ErrorCode.FILE_EMPTY);
-        }
-
-        // 2. 获取文件名用于日志
-        String originalFilename = file.getOriginalFilename();
-        log.info("Starting file upload. Name: {}, Size: {} bytes", originalFilename, file.getSize());
-
-        MinioOSSResult result;
-        try {
-            // 3. 执行上传
-            result = minioOSSOperator.upload(
-                    file.getBytes(),
-                    getSafeName(originalFilename),
-                    file.getContentType(),
-                    true,
-                    400,
-                    400
-            );
-        } catch (IOException e) {
-            // 4. 捕获 IO 异常并记录堆栈信息
-            log.error("File upload failed due to IO error. Filename: {}", originalFilename, e);
-            // 抛出业务异常，提示“上传失败”
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
-        } catch (Exception e) {
-            // 5. 捕获 MinIO 可能抛出的其他运行时异常
-            log.error("Unexpected error during file upload. Filename: {}", originalFilename, e);
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
-        }
-
-        // 6. 返回结果
-        log.info("File upload successful. ObjectName: {}", result.getObjectName());
-        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl());
+        // 业务目的：头像上传统一交给 OSS 媒体服务处理（含图片规范化/缩略图/public 访问）
+        return ossMediaService.uploadAvatar(file);
     }
 
     /**

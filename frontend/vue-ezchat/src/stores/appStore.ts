@@ -6,7 +6,29 @@ import {useWebsocketStore} from '@/stores/websocketStore.ts'
 import router from '@/router'
 import i18n from '@/i18n'
 
+// 支持的语言列表（as const 用于推导联合类型）
+const SUPPORTED_LOCALES = ['ja', 'en', 'zh', 'ko', 'zh-tw'] as const
+type SupportedLocale = typeof SUPPORTED_LOCALES[number]
+
+/**
+ * 类型守卫：判断字符串是否为支持的 locale
+ *
+ * @param val 任意字符串
+ */
+const isSupportedLocale = (val: string): val is SupportedLocale => {
+  return (SUPPORTED_LOCALES as readonly string[]).includes(val)
+}
+
+/**
+ * AppStore：管理“应用级”状态
+ *
+ * 包括：
+ * - 全局 Loading（刷新/路由切换时的遮罩与文案）
+ * - 主题（暗黑模式）与语言（i18n locale）初始化与切换
+ * - 应用初始化流程（恢复登录态 → 拉取房间列表 → 建立 WS）
+ */
 export const useAppStore = defineStore('app', () => {
+  // 全局 Loading 状态：用于控制页面骨架/遮罩
   const isAppLoading = ref(false)
   const showLoadingSpinner = ref(true)
   const loadingText = ref('初期化...')
@@ -14,6 +36,13 @@ export const useAppStore = defineStore('app', () => {
   // =========================================
   // 1. 自动检测暗黑模式
   // =========================================
+  /**
+   * 获取初始主题
+   *
+   * 优先级：
+   * 1) localStorage 的用户显式选择
+   * 2) 系统 prefers-color-scheme
+   */
   const getInitialTheme = () => {
     const savedTheme = localStorage.getItem('theme')
     if (savedTheme) return savedTheme === 'dark'
@@ -23,6 +52,7 @@ export const useAppStore = defineStore('app', () => {
   const isDark = ref(getInitialTheme())
 
   watch(isDark, (val) => {
+    // 将主题状态写入 html class，Element Plus 暗黑变量会自动生效
     if (val) {
       document.documentElement.classList.add('dark')
       localStorage.setItem('theme', 'dark')
@@ -33,6 +63,7 @@ export const useAppStore = defineStore('app', () => {
   }, { immediate: true })
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    // 用户未手动选择主题时，才跟随系统变化（避免“系统变化覆盖用户选择”）
     if (!localStorage.getItem('theme')) {
       isDark.value = e.matches
     }
@@ -41,15 +72,22 @@ export const useAppStore = defineStore('app', () => {
   // =========================================
   // 2. 自动检测语言
   // =========================================
+  /**
+   * 初始化语言
+   *
+   * 业务目的：首次访问时根据浏览器语言自动选择 locale，并落盘，保证后续刷新一致。
+   */
   const initLanguage = () => {
     const savedLocale = localStorage.getItem('locale')
-    if (savedLocale) {
+    // 1) 优先使用用户保存的语言；若不在白名单内则忽略，避免写入非法 locale 导致 i18n 异常
+    if (savedLocale && isSupportedLocale(savedLocale)) {
       i18n.global.locale.value = savedLocale
       return
     }
 
     const browserLang = navigator.language.toLowerCase()
-    let targetLang = 'en' // 默认回退到英语
+    // 2) 否则按浏览器语言推断，并保证类型为 SupportedLocale
+    let targetLang: SupportedLocale = 'en' // 默认回退到英语
 
     if (browserLang.includes('zh-tw') || browserLang.includes('zh-hk')) targetLang = 'zh-tw'
     else if (browserLang.includes('zh')) targetLang = 'zh'
@@ -63,6 +101,11 @@ export const useAppStore = defineStore('app', () => {
 
   initLanguage()
 
+  /**
+   * 切换主题（暗黑/明亮）
+   *
+   * 业务目的：支持更丝滑的切换动效；若浏览器不支持 View Transitions，则降级为直接切换。
+   */
   const toggleTheme = async () => {
     if (!document.startViewTransition) {
       isDark.value = !isDark.value
@@ -78,11 +121,19 @@ export const useAppStore = defineStore('app', () => {
    * 切换语言（非错误页使用）：使用 View Transitions API 做同款淡入淡出。
    * 错误页如需保持“强制白天模式”布局稳定，可继续使用直接赋值 locale 的方式。
    */
+  /**
+   * 切换语言
+   *
+   * @param lang 目标语言（如 zh/en/ja/ko/zh-tw）
+   */
   const changeLanguage = async (lang: string) => {
-    if (!lang || i18n.global.locale.value === lang) return
+    // 只允许切换到支持的语言，避免写入非法 locale
+    if (!lang || !isSupportedLocale(lang) || i18n.global.locale.value === lang) return
 
     const apply = async () => {
+      // 1) 切换 locale
       i18n.global.locale.value = lang
+      // 2) 落盘，确保刷新后仍保持该语言
       localStorage.setItem('locale', lang)
       await nextTick()
     }
@@ -97,21 +148,36 @@ export const useAppStore = defineStore('app', () => {
 
   const createRoomVisible = ref(false)
 
+  /**
+   * 应用初始化（页面刷新/登录后进入聊天页）
+   *
+   * 业务流程：
+   * 1) 恢复登录态（localStorage → userStore）
+   * 2) 如果没有 token，则回到首页
+   * 3) 并行拉取房间列表，并建立 WebSocket 连接
+   *
+   * @param token 可选：登录成功后直接传入 token，减少一次读取
+   * @param type 初始化触发来源（login/refresh）用于控制 Loading 表现
+   */
   const initializeApp = async (token?: string ,type: 'login' | 'refresh' = 'refresh') => {
     const userStore = useUserStore()
     const roomStore = useRoomStore()
     const websocketStore = useWebsocketStore()
 
     try {
+      // refresh 才展示全局加载；login 场景通常已有页面过渡
       if (type === 'refresh') isAppLoading.value = true
+      // 1) 恢复登录用户信息（会读取 localStorage）
       await userStore.initLoginUserInfo()
       const finalToken = token || userStore.loginUser.token
 
       if (!finalToken) {
+        // 未登录：强制回到首页
         if (router.currentRoute.value.path !== '/') await router.replace('/')
         return
       }
 
+      // 2) 并行任务：拉取房间列表 + 建立 WS（WS 状态已 OPEN 时不重复建连）
       const tasks = []
       tasks.push(roomStore.initRoomList())
       if (websocketStore.status !== 'OPEN') websocketStore.initWS(finalToken)
@@ -120,6 +186,7 @@ export const useAppStore = defineStore('app', () => {
     } catch (error) {
       console.error('[ERROR] [AppStore] Initialization failed:', error)
     } finally {
+      // 3) 小延迟收起 Loading：避免极短请求导致 UI 闪烁
       setTimeout(() => {
         isAppLoading.value = false
         showLoadingSpinner.value = true

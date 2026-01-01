@@ -23,6 +23,9 @@ export class Cooldown {
 
   /**
    * 尝试执行操作
+   *
+   * 业务目的：对高频操作做“窗口期限流 + 超限封锁”，避免误触/恶意刷接口导致后端压力或 UI 失控。
+   *
    * @returns boolean 是否允许执行
    */
   canExecute(): boolean {
@@ -54,6 +57,8 @@ export class Cooldown {
 
   /**
    * 获取需要等待的剩余时间（秒）
+   *
+   * 业务目的：用于 UI 提示“还需等待 X 秒”。
    */
   getRemainingTime(): number {
     const now = Date.now()
@@ -63,6 +68,8 @@ export class Cooldown {
 
   /**
    * 重置所有状态
+   *
+   * 业务目的：在用户明确完成/取消某些操作后，允许重新计数。
    */
   reset() {
     this.attempts = 0

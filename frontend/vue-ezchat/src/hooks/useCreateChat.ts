@@ -2,6 +2,7 @@ import { reactive, ref, watch } from 'vue'
 import type {Image} from '@/type'
 import {ElMessage, type FormInstance, type FormRules, type UploadProps, type FormItemRule} from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import { compressImage } from '@/utils/imageCompressor'
 
 export const useCreateChat = () => {
   const { t } = useI18n()
@@ -87,7 +88,7 @@ export const useCreateChat = () => {
   const createFormRef = ref<FormInstance>()
 
   // 1. 头像上传逻辑
-  const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
+  const beforeAvatarUpload: UploadProps['beforeUpload'] = async (rawFile) => {
     const isImage = rawFile.type === 'image/jpeg' || rawFile.type === 'image/png'
     const isLt2M = rawFile.size / 1024 / 1024 < 2
 
@@ -99,7 +100,8 @@ export const useCreateChat = () => {
       ElMessage.error(t('validation.image_size'))
       return false
     }
-    return true
+    // 前端压缩：失败则回退原图
+    return await compressImage(rawFile as File)
   }
 
   const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {

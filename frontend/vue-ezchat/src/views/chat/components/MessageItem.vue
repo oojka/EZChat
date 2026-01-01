@@ -93,14 +93,14 @@ const renderedText = computed(() => {
         </div>
 
         <div class="message-stack">
-          <!-- 文字气泡 -->
-          <div v-if="msg.text" class="message-text-bubble">
+          <!-- 文字气泡：type=0(Text) 或 type=2(Mixed) -->
+          <div v-if="msg.type !== 1 && msg.text" class="message-text-bubble">
             <span class="message-text" v-html="renderedText"></span>
           </div>
 
-          <!-- 图片组 -->
+          <!-- 图片组：type=1(Image) 或 type=2(Mixed) -->
           <div
-            v-if="msg.images?.length"
+            v-if="msg.type !== 0 && msg.images?.length"
             class="message-img-container"
             :class="{ 'multi-imgs': msg.images.length > 1 }"
           >

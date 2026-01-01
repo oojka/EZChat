@@ -4,6 +4,7 @@ import {ElMessage} from 'element-plus'
 import {registerApi} from '@/api/Auth.ts'
 import {useI18n} from 'vue-i18n'
 import {getPasswordReg, USERNAME_REG} from '@/utils/validators.ts'
+import { compressImage } from '@/utils/imageCompressor'
 
 export function useRegister() {
   const { t } = useI18n()
@@ -50,13 +51,14 @@ export function useRegister() {
     avatar: { objectName: '', objectUrl: '', objectThumbUrl: '' },
   })
 
-  const beforeAvatarUpload = (rawFile: { type: string; size: number }) => {
+  const beforeAvatarUpload = async (rawFile: File) => {
     if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
       ElMessage.error(t('validation.image_format')); return false
     } else if (rawFile.size / 1024 / 1024 > 10) {
       ElMessage.error(t('validation.image_size')); return false
     }
-    return true
+    // 前端压缩：失败则回退原图
+    return await compressImage(rawFile)
   }
 
   const handleAvatarSuccess = (response: Result) => {

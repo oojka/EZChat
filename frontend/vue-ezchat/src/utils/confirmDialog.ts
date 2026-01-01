@@ -2,6 +2,11 @@ import {ElMessageBox} from 'element-plus'
 
 export type DialogType = 'success' | 'warning' | 'info' | 'error' | 'primary' | 'danger'
 
+/**
+ * 确认弹窗配置
+ *
+ * 业务目的：统一确认弹窗的样式与行为（确认/取消回调），避免页面各处重复写 ElMessageBox 配置。
+ */
 interface ConfirmDialogOptions {
   title?: string
   message: string
@@ -24,7 +29,7 @@ export const showConfirmDialog = ({
   onConfirm,
   onCancel,
 }: ConfirmDialogOptions) => {
-  // 映射 type 到 Element Plus 的按钮样式
+  // 1) 映射 type 到 Element Plus 的按钮样式（用于统一自定义按钮外观）
   let confirmButtonClass = 'ez-dialog-btn'
   if (type === 'danger') {
     confirmButtonClass += ' el-button--danger'
@@ -36,13 +41,14 @@ export const showConfirmDialog = ({
     confirmButtonClass += ' el-button--primary'
   }
 
-  // 映射 type 到 ElMessageBox 的 type (icon)
+  // 2) 映射 type 到 ElMessageBox 的 type(icon)，保证弹窗图标语义一致
   let messageBoxType: 'success' | 'warning' | 'info' | 'error' = 'warning'
   if (type === 'success') messageBoxType = 'success'
   if (type === 'error' || type === 'danger') messageBoxType = 'error'
   if (type === 'info') messageBoxType = 'info'
   if (type === 'primary') messageBoxType = 'info'
 
+  // 3) 弹窗本体：确认走 onConfirm，取消走 onCancel（可选）
   ElMessageBox.confirm(message, title, {
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,

@@ -5,6 +5,7 @@ import type {Message} from '@/type'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useMessageStore} from '@/stores/messageStore.ts' // 引入 messageStore
 import {Cooldown} from '@/utils/cooldown.ts'
+import { compressImage } from '@/utils/imageCompressor'
 
 const updateLock = new Cooldown(5000, 10, 10000)
 
@@ -18,6 +19,7 @@ export const useChatInput = () => {
   const inputContent = ref<Message>({
     sender: '', // 发送时填充
     chatCode: '',
+    type: 0,
     text: '',
     images: [], // 存储已上传成功的图片对象
     createTime: '',
@@ -29,8 +31,11 @@ export const useChatInput = () => {
     sendOnEnter: true, // 是否回车发送
   })
 
+  // 上传前图片压缩的轻量状态（用于 UI 提示）
+  const isImageProcessing = ref(false)
+
   // 1. 上传前校验：格式与大小
-  const beforePictureUpload: UploadProps['beforeUpload'] = (rawFile) => {
+  const beforePictureUpload: UploadProps['beforeUpload'] = async (rawFile) => {
     const isImage =
       rawFile.type === 'image/jpeg' || rawFile.type === 'image/png' || rawFile.type === 'image/gif'
     const isLtSize = rawFile.size / 1024 / 1024 < 10 // 限制 10MB
@@ -48,7 +53,13 @@ export const useChatInput = () => {
       ElMessage.warning(`操作が頻繁すぎます。あと ${sec} 秒待ってください。`)
       return false
     }
-    return true
+    // 2) 压缩图片（失败则回退原图），并把 File 返回给 el-upload 替换上传内容
+    try {
+      isImageProcessing.value = true
+      return await compressImage(rawFile as File)
+    } finally {
+      isImageProcessing.value = false
+    }
   }
 
   const handlePictureSuccess: UploadProps['onSuccess'] = (response) => {
@@ -101,6 +112,7 @@ export const useChatInput = () => {
     removeImage,
     send,
     resetInput, // 导出重置方法
-    handleExceed
+    handleExceed,
+    isImageProcessing,
   }
 }

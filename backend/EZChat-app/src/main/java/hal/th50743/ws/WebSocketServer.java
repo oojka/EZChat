@@ -133,9 +133,14 @@ public class WebSocketServer {
             List<Integer> sendList = messageService.handleWSMessage(this.userId, msg);
 
             // 5. 构建广播消息
+            boolean hasText = msg.getText() != null && !msg.getText().isBlank();
+            boolean hasImages = msg.getImages() != null && !msg.getImages().isEmpty();
+            int messageType = hasText && hasImages ? 2 : (hasImages ? 1 : 0);
+
             MessageVO messageVO = new MessageVO(
                     this.uid,
                     msg.getChatCode(),
+                    messageType,
                     msg.getText(),
                     null,
                     msg.getImages(),

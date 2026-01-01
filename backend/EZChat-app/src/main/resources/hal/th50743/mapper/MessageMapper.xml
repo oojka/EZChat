@@ -5,9 +5,9 @@
 <mapper namespace="hal.th50743.mapper.MessageMapper">
 
     <insert id="addMessage">
-        INSERT INTO messages (sender_id, chat_id, text, create_time, update_time, object_names)
+        INSERT INTO messages (sender_id, chat_id, type, text, create_time, update_time, object_names)
         VALUES
-            (#{senderId}, #{chatId}, #{text},
+            (#{senderId}, #{chatId}, #{type}, #{text},
              #{createTime}, #{updateTime}, #{objectNames})
     </insert>
 
@@ -40,6 +40,7 @@
     <select id="getLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                ciM.chat_code AS chatCode,
+               m.type AS type,
                m.text,
                m.object_names AS objectNames,
                m.create_time AS createTime
@@ -57,6 +58,7 @@
     <select id="getLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
+               m.type AS type,
                m.text,
                m.object_names AS objectNames,
                m.create_time AS createTime
@@ -72,6 +74,7 @@
     <select id="getMessageListByChatIdAndTimeStamp" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
+               m.type AS type,
                m.text,
                m.object_names AS objectNames,
                m.create_time AS createTime

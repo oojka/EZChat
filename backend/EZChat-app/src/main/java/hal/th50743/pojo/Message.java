@@ -19,6 +19,10 @@ public class Message {
     private Integer id;
     private Integer senderId;
     private Integer chatId;
+    /**
+     * 0: Text, 1: Image, 2: Mixed
+     */
+    private Integer type;
     private String text;
     
     /**

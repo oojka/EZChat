@@ -80,6 +80,10 @@ export interface User {
 export interface Message {
   sender: string
   chatCode: string
+  /**
+   * 0: Text, 1: Image, 2: Mixed
+   */
+  type: number
   text: string
   images: Image[]
   createTime: string

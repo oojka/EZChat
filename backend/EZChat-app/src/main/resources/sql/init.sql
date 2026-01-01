@@ -65,6 +65,7 @@ create table formal_users
         primary key,
     username        varchar(50)                        not null comment '登录用户名，唯一',
     password_hash   varchar(255)                       not null comment '登录密码的哈希值（例如BCrypt）',
+    token           varchar(255)                       null comment '长期 Token（可选，用于长期登录/Remember Me）',
     create_time     datetime default CURRENT_TIMESTAMP not null comment '成为正式用户的时间（建议按UTC存储）',
     update_time     datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '记录最后修改时间（建议按UTC存储）',
     last_login_time datetime default CURRENT_TIMESTAMP not null,
@@ -80,6 +81,7 @@ create table messages
         primary key,
     sender_id    int unsigned                       not null comment '发送方用户内部ID，对应users.id',
     chat_id      int unsigned                       not null comment '所属聊天内部ID，对应chats.id',
+    type         tinyint                            not null default 0 comment '0: Text, 1: Image, 2: Mixed',
     text         longtext                           null comment '消息内容（明文）；文本消息为文本内容，文件消息可存文件说明或预览文本',
     create_time  datetime default CURRENT_TIMESTAMP not null comment '消息创建（发送）时间（建议按UTC存储）',
     update_time  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '消息记录最后修改时间（建议按UTC存储）',
@@ -430,10 +432,11 @@ BEGIN
                     SET msg_type = CASE WHEN RAND() < 0.7 THEN 0 ELSE 1 END;
                     SET image_idx = FLOOR(1 + RAND() * 13);
 
-                    INSERT INTO messages (sender_id, chat_id, text, object_names, create_time)
+                    INSERT INTO messages (sender_id, chat_id, type, text, object_names, create_time)
                     VALUES (
                                rand_user_id,
                                i,
+                               msg_type,
                                CASE
                                    WHEN msg_type = 0 THEN CASE (j % 20)
                                                               WHEN 1 THEN 'おはようございます！ / Good morning!'
