@@ -156,6 +156,7 @@ const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any
           <!-- Step 2: 密码设置 -->
           <div v-else-if="createStep === 2" key="step2" class="step-container step-container-password">
             <PasswordConfig
+              mode="always-visible"
               v-model="createChatForm.joinEnable"
               v-model:password="createChatForm.password"
               v-model:password-confirm="createChatForm.passwordConfirm"
@@ -167,15 +168,11 @@ const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any
 
           <!-- Step 3: 过期时间设置 -->
           <div v-else-if="createStep === 3" key="step3" class="step-container">
-            <div class="form-vertical-stack">
-              <div class="config-glass-card">
-                <DateTimePicker
-                  v-model="selectedDate"
-                  v-model:radio-value="selectedDateRadio"
-                  :disabled-date="disabledDate"
-                />
-              </div>
-            </div>
+            <DateTimePicker
+              v-model="selectedDate"
+              v-model:radio-value="selectedDateRadio"
+              :disabled-date="disabledDate"
+            />
           </div>
 
           <!-- Step 4: 结果反馈 -->
@@ -481,6 +478,7 @@ html.dark :deep(.ez-modern-dialog) {
   box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
   border-radius: var(--radius-base);
   transition: all 0.3s;
+  height: 48px !important;
 }
 
 :deep(.el-input__wrapper.is-focus) {

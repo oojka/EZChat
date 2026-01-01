@@ -74,6 +74,27 @@ export const useAppStore = defineStore('app', () => {
     })
   }
 
+  /**
+   * 切换语言（非错误页使用）：使用 View Transitions API 做同款淡入淡出。
+   * 错误页如需保持“强制白天模式”布局稳定，可继续使用直接赋值 locale 的方式。
+   */
+  const changeLanguage = async (lang: string) => {
+    if (!lang || i18n.global.locale.value === lang) return
+
+    const apply = async () => {
+      i18n.global.locale.value = lang
+      localStorage.setItem('locale', lang)
+      await nextTick()
+    }
+
+    if (!document.startViewTransition) {
+      await apply()
+      return
+    }
+
+    document.startViewTransition(apply)
+  }
+
   const createRoomVisible = ref(false)
 
   const initializeApp = async (token?: string ,type: 'login' | 'refresh' = 'refresh') => {
@@ -113,6 +134,7 @@ export const useAppStore = defineStore('app', () => {
     loadingText,
     isDark,
     toggleTheme,
+    changeLanguage,
     createRoomVisible,
     initializeApp
   }

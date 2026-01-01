@@ -19,7 +19,7 @@ public class ChatVO {
 
     private String chatCode;
     private String chatName;
-    private String ownerUId;
+    private String ownerUid;
     private Image avatar;
     private Integer joinEnabled;
     private LocalDateTime lastActiveAt;

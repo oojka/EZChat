@@ -41,7 +41,7 @@ public class WebSocketServer {
 
     // --- 实例成员变量 (每个连接独有) ---
     private Integer userId;
-    private String uId;
+    private String uid;
     private List<Integer> broadcastList;
     private String currentChatCode;
 
@@ -76,8 +76,8 @@ public class WebSocketServer {
         try {
             // 1. 安全解析 Token (修复：增加异常捕获)
             Claims claims = jwtUtils.parseJwt(token);
-            this.uId = claims.get("uid", String.class);
-            this.userId = Integer.valueOf(userService.getIdByUId(this.uId).toString());
+            this.uid = claims.get("uid", String.class);
+            this.userId = Integer.valueOf(userService.getIdByUid(this.uid).toString());
 
             // 2. 存入在线列表
             onLineUsers.put(this.userId, session);
@@ -86,7 +86,7 @@ public class WebSocketServer {
             // 优化：异步或快速获取，避免阻塞握手，这里暂保持原逻辑
             this.broadcastList = chatService.getChatMembers(this.userId);
 
-            UserStatus u = new UserStatus(this.uId, true, LocalDateTime.now());
+            UserStatus u = new UserStatus(this.uid, true, LocalDateTime.now());
             String message = MessageUtils.setMessage(true, "USER_STATUS", u);
 
             // 广播时不包含自己，但 OnOpen 成功不需要给自己发消息，只广播给好友
@@ -123,18 +123,18 @@ public class WebSocketServer {
 
             // 3. 校验
             if (!isValidMessage(msg)) {
-                log.warn("收到无效消息: uid={}, content={}", this.uId, rowMessage);
+                log.warn("收到无效消息: uid={}, content={}", this.uid, rowMessage);
                 return;
             }
 
-            log.info("收到消息: sender={}, chatCode={}", this.uId, msg.getChatCode());
+            log.info("收到消息: sender={}, chatCode={}", this.uid, msg.getChatCode());
 
             // 4. 业务处理
             List<Integer> sendList = messageService.handleWSMessage(this.userId, msg);
 
             // 5. 构建广播消息
             MessageVO messageVO = new MessageVO(
-                    this.uId,
+                    this.uid,
                     msg.getChatCode(),
                     msg.getText(),
                     null,
@@ -178,7 +178,7 @@ public class WebSocketServer {
             this.broadcastList = chatService.getChatMembers(this.userId);
 
             if (this.broadcastList != null && !this.broadcastList.isEmpty()) {
-                UserStatus u = new UserStatus(this.uId, false, LocalDateTime.now());
+                UserStatus u = new UserStatus(this.uid, false, LocalDateTime.now());
                 send(MessageUtils.setMessage(true, "USER_STATUS", u), this.broadcastList);
             }
             log.info("用户下线: {}", this.userId);
@@ -225,7 +225,7 @@ public class WebSocketServer {
                     session.getBasicRemote().sendText(message);
                 }
             } catch (IOException e) {
-                log.error("自发送失败: uid={}, msg={}", this.uId, message);
+                log.error("自发送失败: uid={}, msg={}", this.uid, message);
             }
         }
     }
@@ -242,7 +242,7 @@ public class WebSocketServer {
     }
 
     private boolean isValidMessage(MessageReq msg) {
-        return msg.getSender() != null && msg.getSender().equals(this.uId) &&
+        return msg.getSender() != null && msg.getSender().equals(this.uid) &&
                 msg.getChatCode() != null && !msg.getChatCode().isEmpty() &&
                 (msg.getText() != null || (msg.getImages() != null && !msg.getImages().isEmpty()));
     }

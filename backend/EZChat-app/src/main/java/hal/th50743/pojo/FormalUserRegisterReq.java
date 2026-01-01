@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class FormalUserRegisterReq {
 
     private Integer userId; //user表的主键ID
-    private String userUId; //关联User表的uId
+    private String userUid; //关联User表的uid
     private String username;
     private String password;
     private String confirmPassword;

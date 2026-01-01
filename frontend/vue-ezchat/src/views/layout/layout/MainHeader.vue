@@ -31,11 +31,6 @@ const handleLogout = () => {
   })
 }
 
-const handleLanguageChange = (lang: string) => {
-  locale.value = lang
-  localStorage.setItem('locale', lang)
-}
-
 const currentLangCode = {
   en: 'EN', ja: 'JP', zh: 'CN', ko: 'KO', 'zh-tw': 'TW'
 }
@@ -57,9 +52,11 @@ const currentLangCode = {
       </el-tooltip>
 
       <!-- 2. 语言切换 -->
-      <el-dropdown trigger="click" @command="handleLanguageChange" placement="bottom-end" popper-class="ez-header-popper">
+      <el-dropdown trigger="click" @command="appStore.changeLanguage" placement="bottom-end" popper-class="ez-header-popper">
         <div class="action-icon-btn">
-          <span class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode] }}</span>
+          <Transition name="el-fade-in-linear" mode="out-in">
+            <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode] }}</span>
+          </Transition>
         </div>
         <template #dropdown>
           <el-dropdown-menu class="ez-dropdown-menu">
@@ -169,11 +166,4 @@ html.dark .setting-btn:hover { box-shadow: 0 0 12px rgba(77, 171, 255, 0.2); }
 .ez-dropdown-menu .el-dropdown-menu__item:hover { background-color: var(--bg-page) !important; color: var(--primary) !important; }
 .ez-dropdown-menu .el-dropdown-menu__item.danger-item { color: var(--text-500) !important; }
 .ez-dropdown-menu .el-dropdown-menu__item.danger-item:hover { color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.1) !important; }
-
-/* --- View Transitions API: 纯净淡入淡出配置 --- */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 0.3s;
-  animation-timing-function: ease-in-out;
-}
 </style>

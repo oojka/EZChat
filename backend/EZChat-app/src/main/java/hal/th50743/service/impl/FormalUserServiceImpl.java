@@ -38,13 +38,13 @@ public class FormalUserServiceImpl implements FormalUserService {
     /**
      * 根据 UId 添加正式用户（转正）
      *
-     * @param formalUserReq 正式用户请求对象（包含 userUId）
+     * @param formalUserReq 正式用户请求对象（包含 userUid）
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addByUId(FormalUser formalUserReq) {
         log.info("add user by UId, user={}", formalUserReq);
-        User user = userMapper.selectByUId(formalUserReq.getUserUId());
+        User user = userMapper.selectByUid(formalUserReq.getUserUid());
         formalUserReq.setUserId(user.getId());
         add(formalUserReq);
     }
@@ -80,7 +80,7 @@ public class FormalUserServiceImpl implements FormalUserService {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "User data inconsistency");
         }
 
-        log.info("登录成功: username={}, uId={}", loginReq.getUsername(), user.getUId());
+        log.info("登录成功: username={}, uid={}", loginReq.getUsername(), user.getUid());
         return user;
     }
 }

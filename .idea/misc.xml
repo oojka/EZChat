@@ -10,6 +10,8 @@
         <option value="$PROJECT_DIR$/dependencies/MinioOSSOperator/minio-oss-spring-boot-starter/pom.xml" />
         <option value="$PROJECT_DIR$/backend/EZChat-app/pom.xml" />
         <option value="$PROJECT_DIR$/backend/EZChat-parent/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/dependencies/MinioOSSOperator/minio-oss-spring-boot-autoconfigure/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/dependencies/MinioOSSOperator/minio-oss-spring-boot-starter/pom.xml" />
       </list>
     </option>
   </component>

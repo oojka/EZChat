@@ -70,6 +70,64 @@ const showPassword = ref(false)
   -ms-user-select: none !important;
 }
 
+/* 正常状态的背景色 */
+.password-input-wrapper :deep(.el-input__wrapper) {
+  background-color: var(--bg-page) !important;
+}
+
+/* 禁用状态的深度定制样式 - 玻璃拟态锁定效果 */
+.password-input-wrapper :deep(.el-input.is-disabled .el-input__wrapper),
+.password-input-wrapper :deep(.el-input__wrapper.is-disabled) {
+  /* 日间模式：柔和的灰色背景，类似锁定的玻璃 */
+  background-color: #f5f7fa !important;
+  cursor: not-allowed !important;
+  /* 移除 hover 时的边框高亮效果 */
+  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+}
+
+/* 禁用状态：文字和占位符透明度 */
+.password-input-wrapper :deep(.el-input.is-disabled .el-input__inner),
+.password-input-wrapper :deep(.el-input__wrapper.is-disabled .el-input__inner) {
+  color: var(--text-900) !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* 禁用状态：左侧图标透明度 */
+.password-input-wrapper :deep(.el-input.is-disabled .el-input__prefix .el-icon),
+.password-input-wrapper :deep(.el-input.is-disabled .el-input__prefix-inner .el-icon) {
+  opacity: 0.5 !important;
+}
+
+/* 禁用状态：占位符透明度 */
+.password-input-wrapper :deep(.el-input.is-disabled .el-input__inner::placeholder),
+.password-input-wrapper :deep(.el-input__wrapper.is-disabled .el-input__inner::placeholder) {
+  opacity: 0.5 !important;
+}
+
+/* 禁用状态：移除 hover 效果 */
+.password-input-wrapper :deep(.el-input.is-disabled:hover .el-input__wrapper),
+.password-input-wrapper :deep(.el-input__wrapper.is-disabled:hover) {
+  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+  border-color: transparent !important;
+}
+
+/* 黑夜模式：禁用状态样式 */
+html.dark .password-input-wrapper :deep(.el-input.is-disabled .el-input__wrapper),
+html.dark .password-input-wrapper :deep(.el-input__wrapper.is-disabled) {
+  /* 黑夜模式：更深的灰色，与 --bg-glass 有明显层级区分 */
+  background-color: #1d1e1f !important;
+  cursor: not-allowed !important;
+  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+}
+
+/* 黑夜模式：禁用状态 hover 移除 */
+html.dark .password-input-wrapper :deep(.el-input.is-disabled:hover .el-input__wrapper),
+html.dark .password-input-wrapper :deep(.el-input__wrapper.is-disabled:hover) {
+  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+  border-color: transparent !important;
+}
+
 .pwd-view-icon {
   cursor: pointer;
   color: var(--text-400);

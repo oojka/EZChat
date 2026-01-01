@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ChatMember {
 
-    private String uId;
+    private String uid;
     private Integer chatId;
     private String chatCode;
     private Integer userId;

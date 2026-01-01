@@ -29,7 +29,7 @@ public interface FormalUserService {
     /**
      * 根据 UId 添加正式用户（转正）
      *
-     * @param formalUser 正式用户对象（包含 userUId）
+     * @param formalUser 正式用户对象（包含 userUid）
      */
     void addByUId(FormalUser formalUser);
 }

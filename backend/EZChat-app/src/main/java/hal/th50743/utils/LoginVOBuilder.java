@@ -25,21 +25,21 @@ public final class LoginVOBuilder {
      * <p>
      * 根据用户ID和用户名生成 JWT Token，并封装成 LoginVO 返回。
      *
-     * @param uId      用户的唯一标识符
+     * @param uid      用户的唯一标识符
      * @param username 用户的用户名
      * @param jwtUtils 用于生成 JWT 的工具类实例
      * @return 包含用户ID、用户名和JWT Token的 LoginVO 对象
      */
-    public static LoginVO build(String uId, String username, JwtUtils jwtUtils) {
+    public static LoginVO build(String uid, String username, JwtUtils jwtUtils) {
         // 1. 创建 Claims，用于生成 JWT Token
         Map<String, Object> claims = new HashMap<>();
-        claims.put("uid", uId);
+        claims.put("uid", uid);
         claims.put("username", username);
 
         // 2. 调用 JwtUtils 生成 JWT Token
         String token = jwtUtils.generateJwt(claims);
 
         // 3. 返回封装好的 LoginVO 对象
-        return new LoginVO(uId, username, token);
+        return new LoginVO(uid, username, token);
     }
 }

@@ -72,7 +72,11 @@ body {
   background-color: var(--bg-page);
   color: var(--text-900);
   transition: background-color 0.5s var(--ease-out-expo), color 0.5s var(--ease-out-expo);
-  font-family: 'Inter', 'PingFang SC', sans-serif;
+  /* Web Font 方案：使用 Noto Sans 确保中日文混排时高度一致、字形大小均匀 */
+  /* Noto Sans JP 涵盖大部分汉字，缺字时回退到 Noto Sans SC，两者拥有完全一致的字高和度量信息 */
+  font-family: "Noto Sans JP", "Noto Sans SC", sans-serif;
+  /* 优化渲染 */
+  -webkit-font-smoothing: antialiased;
 }
 
 /* =========================================
@@ -98,4 +102,14 @@ html.dark ::-webkit-scrollbar-thumb {
 html.dark .el-badge__content--danger {
   background-color: #ea4335 !important;
   box-shadow: 0 0 12px rgba(234, 67, 53, 0.2);
+}
+
+/* =========================================
+   5. View Transitions API (Fade In/Out)
+   - Used by dark-mode toggle and language switch (non-error pages)
+   ========================================= */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+  animation-timing-function: ease-in-out;
 }

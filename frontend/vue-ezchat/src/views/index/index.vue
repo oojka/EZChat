@@ -12,11 +12,6 @@ const { locale, t } = useI18n()
 const appStore = useAppStore()
 const { isDark } = storeToRefs(appStore)
 
-const handleLanguageChange = (lang: string) => {
-  locale.value = lang
-  localStorage.setItem('locale', lang)
-}
-
 const currentLangCode = {
   en: 'EN', ja: 'JP', zh: 'CN', ko: 'KO', 'zh-tw': 'TW'
 }
@@ -65,9 +60,11 @@ const handleLoginUnflip = () => { isLoginFlipped.value = false }
 
       <!-- 右上角功能矩阵 -->
       <div class="index-actions">
-        <el-dropdown trigger="click" @command="handleLanguageChange" placement="bottom-end">
+        <el-dropdown trigger="click" @command="appStore.changeLanguage" placement="bottom-end">
           <div class="action-icon-btn">
-            <span class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode] }}</span>
+            <Transition name="el-fade-in-linear" mode="out-in">
+              <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode] }}</span>
+            </Transition>
           </div>
           <template #dropdown>
             <el-dropdown-menu class="ez-dropdown-menu">

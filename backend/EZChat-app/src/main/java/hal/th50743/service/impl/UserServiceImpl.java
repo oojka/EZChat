@@ -44,13 +44,13 @@ public class UserServiceImpl implements UserService {
      * 获取用户信息
      * 权限控制：仅限本人或共同群聊成员查看
      *
-     * @param uId 用户唯一标识
+     * @param uid 用户唯一标识
      * @return UserVO 用户视图对象
      */
     @Override
-    public UserVO getUserInfoByUId(String uId) {
+    public UserVO getUserInfoByUid(String uid) {
         // 直接获取用户实体，减少 ID 转换的往返查询
-        User user = userMapper.getUserByUId(uId);
+        User user = userMapper.getUserByUid(uid);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
         boolean isColleague = chatMemberMapper.isValidGetInfoReq(reqId, targetId);
 
         if (!isSelf && !isColleague) {
-            log.warn("[越权访问] 用户 {} 尝试获取非好友/非群员 {} 的信息", reqId, uId);
+            log.warn("[越权访问] 用户 {} 尝试获取非好友/非群员 {} 的信息", reqId, uid);
             throw new BusinessException(ErrorCode.FORBIDDEN, "Permission denied: You do not have permission to view this user's profile");
         }
 
@@ -85,11 +85,11 @@ public class UserServiceImpl implements UserService {
         for (int i = 1; i <= 5; i++) {
             // 生成 10 位随机公开 UId
             String randomUid = generateUid(10);
-            user.setUId(randomUid);
+            user.setUid(randomUid);
 
             try {
                 userMapper.add(user);
-                log.info("用户注册成功: uId={}, internalId={}", user.getUId(), user.getId());
+                log.info("用户注册成功: uid={}, internalId={}", user.getUid(), user.getId());
                 return user; // 插入成功，直接返回结果，结束方法
             } catch (DuplicateKeyException e) {
                 log.warn("UId 冲突: {}, 正在进行第 {} 次重试", randomUid, i);
@@ -107,12 +107,12 @@ public class UserServiceImpl implements UserService {
     /**
      * 根据 UId 获取用户 ID
      *
-     * @param uId 用户唯一标识
+     * @param uid 用户唯一标识
      * @return 用户 ID
      */
     @Override
-    public Integer getIdByUId(String uId) {
-        return userMapper.getIdByUId(uId);
+    public Integer getIdByUid(String uid) {
+        return userMapper.getIdByUid(uid);
     }
 
     /**
@@ -125,7 +125,7 @@ public class UserServiceImpl implements UserService {
     public void update(UserReq userReq) {
         User u = new User();
         u.setId(userReq.getUserId());
-        u.setUId(userReq.getUId());
+        u.setUid(userReq.getUid());
         u.setNickname(userReq.getNickname());
         if (userReq.getAvatar() != null) {
             u.setAvatarObject(userReq.getAvatar().getObjectName());

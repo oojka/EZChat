@@ -14,7 +14,7 @@ const { wsDisplayState } = storeToRefs(websocketStore)
   <div class="member-item" :class="{ 'is-me': isMe, 'is-offline': !member.online }">
     <div class="avatar-wrapper">
       <el-badge is-dot :offset="[-2, 34]" :type="isMe ? wsDisplayState.type : (member.online ? 'success' : 'info')" class="status-dot">
-        <el-avatar :size="40" :src="member.avatar.objectThumbUrl" class="member-avatar">
+        <el-avatar :size="40" :src="member.avatar.objectThumbUrl ? member.avatar.objectUrl : member.avatar.objectThumbUrl" class="member-avatar">
           {{ member.nickname?.charAt(0) }}
         </el-avatar>
       </el-badge>

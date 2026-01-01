@@ -38,7 +38,7 @@
 
 
     <select id="getLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
-        SELECT u.u_id AS sender,
+        SELECT u.uid AS sender,
                ciM.chat_code AS chatCode,
                m.text,
                m.object_names AS objectNames,
@@ -55,7 +55,7 @@
     </select>
 
     <select id="getLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
-        SELECT u.u_id AS sender,
+        SELECT u.uid AS sender,
                c.chat_code AS chatCode,
                m.text,
                m.object_names AS objectNames,
@@ -70,7 +70,7 @@
 
 
     <select id="getMessageListByChatIdAndTimeStamp" resultType="hal.th50743.pojo.MessageVO">
-        SELECT u.u_id AS sender,
+        SELECT u.uid AS sender,
                c.chat_code AS chatCode,
                m.text,
                m.object_names AS objectNames,

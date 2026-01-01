@@ -8,8 +8,8 @@
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
-        INSERT INTO users (u_id, nickname, avatar_object, bio, last_seen_at, create_time, update_time)
-        VALUES (#{uId}, #{nickname}, #{avatarObject}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
+        INSERT INTO users (uid, nickname, avatar_object, bio, last_seen_at, create_time, update_time)
+        VALUES (#{uid}, #{nickname}, #{avatarObject}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
     </insert>
 
     <insert id="addFormalUser">
@@ -33,21 +33,6 @@
         WHERE id = #{userId}
     </update>
 
-
-    <select id="selectByUsernameAndPassword" resultType="hal.th50743.pojo.User">
-        SELECT u.id,
-               u.u_id,
-               u.nickname,
-               u.avatar_object,
-               u.bio,
-               u.last_seen_at,
-               u.create_time,
-               u.update_time,
-               f.username
-        FROM formal_users f JOIN users u ON f.user_id = u.id
-        WHERE f.username = #{username} AND f.password_hash = #{password}
-    </select>
-
     <select id="selectFormalUserByUsername" resultType="hal.th50743.pojo.FormalUser">
         SELECT user_id as userId,
                username,
@@ -61,7 +46,7 @@
 
     <select id="selectUserByUsername" resultType="hal.th50743.pojo.User">
         SELECT u.id,
-               u.u_id,
+               u.uid,
                u.nickname,
                u.avatar_object,
                u.bio,
@@ -73,9 +58,9 @@
         WHERE f.username = #{username}
     </select>
 
-    <select id="selectByUId" resultType="hal.th50743.pojo.User">
+    <select id="selectByUid" resultType="hal.th50743.pojo.User">
         SELECT u.id,
-               u.u_id,
+               u.uid,
                u.nickname,
                u.avatar_object,
                u.bio,
@@ -84,16 +69,16 @@
                u.update_time,
                f.username
         FROM users u LEFT JOIN formal_users f ON u.id = f.user_id
-        WHERE u_id = #{userUId}
+        WHERE uid = #{userUid}
     </select>
 
-    <select id="getIdByUId" resultType="java.lang.Integer">
-        SELECT id FROM users WHERE u_id = #{uId}
+    <select id="getIdByUid" resultType="java.lang.Integer">
+        SELECT id FROM users WHERE uid = #{uid}
     </select>
 
     <select id="getUserVOById" resultType="hal.th50743.pojo.User">
         SELECT u.id,
-               u.u_id,
+               u.uid,
                u.nickname,
                u.avatar_object,
                u.bio,
@@ -106,9 +91,9 @@
 
     </select>
 
-    <select id="getUserByUId" resultType="hal.th50743.pojo.User">
+    <select id="getUserByUid" resultType="hal.th50743.pojo.User">
         SELECT u.id,
-               u.u_id,
+               u.uid,
                u.nickname,
                u.avatar_object,
                u.bio,
@@ -118,7 +103,7 @@
                f.username
         FROM users u
                  LEFT JOIN formal_users f ON u.id = f.user_id
-        WHERE u.u_id = #{uId}
+        WHERE u.uid = #{uid}
     </select>
 
 </mapper>

@@ -3,6 +3,8 @@ import {ElMessage} from "element-plus";
 import router from "@/router";
 import {type LoginUser} from "@/type";
 import i18n from "@/i18n";
+import { useAppStore } from "@/stores/appStore";
+import { useRoomStore } from "@/stores/roomStore";
 
 const { t } = i18n.global;
 
@@ -95,7 +97,8 @@ request.interceptors.response.use(
       // 3. 特殊逻辑处理：路由跳转
       if (message) {
         if (message.includes('User is not a member') || message.includes('Chat room not found')) {
-          router.replace('/chat').catch(() => {});
+          const roomStore = useRoomStore();
+          roomStore.initRoomList();
         } else if (message.includes('Incorrect timestamp format')) {
           router.replace('/').catch(() => {});
         }

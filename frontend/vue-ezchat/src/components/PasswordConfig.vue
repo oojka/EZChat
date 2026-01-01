@@ -10,11 +10,13 @@ interface Props {
   passwordConfirm: string
   hasPasswordError?: boolean
   passwordErrorMessage?: string
+  mode?: 'expand' | 'always-visible' // expand: 点击开关展开/收起输入框; always-visible: 默认展开，开关控制输入框是否可输入
 }
 
 const props = withDefaults(defineProps<Props>(), {
   hasPasswordError: false,
   passwordErrorMessage: '',
+  mode: 'expand',
 })
 
 const emit = defineEmits<{
@@ -71,8 +73,9 @@ const handleEnter = () => {
         </p>
       </Transition>
 
-      <!-- 密码输入框（展开时显示） -->
-      <Transition name="password-input-expand">
+      <!-- 密码输入框 -->
+      <!-- expand 模式：展开时显示 -->
+      <Transition v-if="mode === 'expand'" name="password-input-expand">
         <div v-if="joinEnable === 1" class="password-setup-area">
           <div class="password-inputs-grid">
             <el-form-item :label="t('auth.password')" prop="password" :show-message="false">
@@ -100,6 +103,36 @@ const handleEnter = () => {
           </div>
         </div>
       </Transition>
+      
+      <!-- always-visible 模式：始终显示，开关控制是否可输入 -->
+      <div v-else class="password-setup-area">
+        <div class="password-inputs-grid">
+          <el-form-item :label="t('auth.password')" prop="password" :show-message="false">
+            <PasswordInput
+              v-model="passwordValue"
+              :placeholder="t('auth.password')"
+              :disabled="joinEnable === 0"
+              @enter="handleEnter"
+            />
+          </el-form-item>
+          <el-form-item :label="t('auth.confirm_password')" prop="passwordConfirm" :show-message="false">
+            <PasswordInput
+              v-model="passwordConfirmValue"
+              :placeholder="t('auth.confirm_password_placeholder')"
+              :disabled="joinEnable === 0"
+              @enter="handleEnter"
+            />
+          </el-form-item>
+        </div>
+        <!-- 固定高度的错误提示容器 -->
+        <div class="password-error-container">
+          <Transition name="el-fade-in-linear">
+            <span v-show="hasPasswordError" class="password-error-text">
+              {{ passwordErrorMessage }}
+            </span>
+          </Transition>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -168,11 +201,13 @@ const handleEnter = () => {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+  margin-bottom: 0;
 }
 
 .password-error-container {
   height: 20px;
   margin-top: 8px;
+  margin-bottom: 0;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -186,13 +221,23 @@ const handleEnter = () => {
   line-height: 1.2;
 }
 
-/* Password input wrapper */
-:deep(.password-input-wrapper .el-input__wrapper) {
+/* Password input wrapper - 高度设置（背景色样式已移至 PasswordInput.vue） */
+.password-form-center :deep(.password-input-wrapper .el-input__wrapper) {
   height: 48px !important;
 }
 
 :deep(.el-form-item) {
   margin-bottom: 12px;
+}
+
+/* 在 password-inputs-grid 中的 form-item 移除最后一个的 margin-bottom */
+.password-inputs-grid :deep(.el-form-item:last-of-type) {
+  margin-bottom: 0 !important;
+}
+
+/* 确保 password-inputs-grid 内所有 form-item 的内部结构也没有额外的 margin */
+.password-inputs-grid :deep(.el-form-item:last-of-type .el-form-item__content) {
+  margin-bottom: 0 !important;
 }
 
 :deep(.el-form-item__label) {

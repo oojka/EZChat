@@ -76,9 +76,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginVO login(LoginReq loginReq) {
         User res = formalUserService.login(loginReq);
-        if (res != null && res.getUId() != null) {
-            log.info("用户登录成功: {}", res.getUId());
-            return LoginVOBuilder.build(res.getUId(), res.getUsername(), jwtUtils);
+        if (res != null && res.getUid() != null) {
+            log.info("用户登录成功: {}", res.getUid());
+            return LoginVOBuilder.build(res.getUid(), res.getUsername(), jwtUtils);
         }
 
         log.warn("登录失败: 用户名或密码错误 - {}", loginReq.getUsername());
@@ -97,7 +97,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginVO userRegister(FormalUserRegisterReq req) {
         // 情况 A: 纯新用户注册 (无已有临时 UId)
-        if (req.getUserUId() == null) {
+        if (req.getUserUid() == null) {
             if (isRegisterReqInvalid(req)) {
                 log.warn("注册请求参数不完整");
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "Registration info is incomplete");
@@ -114,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
             String avatarObjectName = parseAvatarName(req.getAvatar());
             User userReq = new User(
                     null,
-                    null, // uId 由数据库或雪花算法生成
+                    null, // uid 由数据库或雪花算法生成
                     req.getNickname(),
                     avatarObjectName,
                     null,
@@ -139,8 +139,8 @@ public class AuthServiceImpl implements AuthService {
             );
             formalUserService.add(formalUserReq);
 
-            log.info("新正式用户注册成功: uId={}, username={}", userRes.getUId(), req.getUsername());
-            return LoginVOBuilder.build(userRes.getUId(), req.getUsername(), jwtUtils);
+            log.info("新正式用户注册成功: uid={}, username={}", userRes.getUid(), req.getUsername());
+            return LoginVOBuilder.build(userRes.getUid(), req.getUsername(), jwtUtils);
 
         }
         // 情况 B: 临时用户转为正式用户 (已有临时 UId)
@@ -154,12 +154,12 @@ public class AuthServiceImpl implements AuthService {
                     LocalDateTime.now(),
                     LocalDateTime.now(),
                     LocalDateTime.now(),
-                    req.getUserUId()
+                    req.getUserUid()
             );
 
             formalUserService.addByUId(formalUserReq);
-            log.info("临时用户转正成功: uId={}, newUsername={}", req.getUserUId(), req.getUsername());
-            return LoginVOBuilder.build(req.getUserUId(), req.getUsername(), jwtUtils);
+            log.info("临时用户转正成功: uid={}, newUsername={}", req.getUserUid(), req.getUsername());
+            return LoginVOBuilder.build(req.getUserUid(), req.getUsername(), jwtUtils);
         }
     }
 
@@ -198,15 +198,15 @@ public class AuthServiceImpl implements AuthService {
         JoinChatReq joinChatReq = new JoinChatReq(
                 guestReq.getChatCode(),
                 guestReq.getPassword(),
-                userRes.getUId()
+                userRes.getUid()
         );
 
         Chat chat = chatService.join(joinChatReq);
 
         if (chat != null && chat.getChatCode() != null) {
-            log.info("访客准入并入群成功: uId={}, chatCode={}", userRes.getUId(), chat.getChatCode());
+            log.info("访客准入并入群成功: uid={}, chatCode={}", userRes.getUid(), chat.getChatCode());
             // 访客无 username，此处使用 nickname 作为标识构建 Token
-            return LoginVOBuilder.build(userRes.getUId(), userRes.getNickname(), jwtUtils);
+            return LoginVOBuilder.build(userRes.getUid(), userRes.getNickname(), jwtUtils);
         } else {
             log.error("访客加入聊天室失败: chatCode={}", guestReq.getChatCode());
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to join chat room as guest: chatCode=" + guestReq.getChatCode());

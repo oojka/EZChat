@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class UserReq {
 
     private Integer userId;
-    private String uId;
+    private String uid;
     private String nickname;
     private Image avatar;
     private String bio;

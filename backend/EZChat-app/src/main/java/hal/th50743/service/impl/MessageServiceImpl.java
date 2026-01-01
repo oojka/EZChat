@@ -159,8 +159,8 @@ public class MessageServiceImpl implements MessageService {
     }
 
     /**
-     * 上传文件
-     *
+     * 消息的上传文件
+     * 存在private路径中
      * @param file 文件对象
      * @return Image 图片对象
      */
@@ -173,7 +173,7 @@ public class MessageServiceImpl implements MessageService {
                     file.getBytes(),
                     file.getOriginalFilename(),
                     file.getContentType(),
-                    true,
+                    false, // 消息图片存私有区域
                     400,
                     400
             );

@@ -132,7 +132,17 @@ onMounted(() => editorRef.value?.focus())
 .input-wrapper { flex: 1; min-height: 40px; overflow-y: auto; }
 .input-wrapper::-webkit-scrollbar { width: 4px; }
 .input-wrapper::-webkit-scrollbar-thumb { background: var(--text-400); border-radius: var(--radius-round); opacity: 0.2; }
-.rich-editor { height: 100%; outline: none; font-size: 18px; line-height: 1.5; color: var(--text-900); white-space: pre-wrap; word-break: break-word; }
+.rich-editor {
+  height: 100%;
+  outline: none;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text-900);
+  white-space: pre-wrap;
+  word-break: break-word;
+  /* Web Font 方案：使用 Noto Sans 确保中日文混排时高度一致 */
+  font-family: "Noto Sans JP", "Noto Sans SC", sans-serif;
+}
 .rich-editor:empty::before { content: attr(placeholder); color: var(--text-400); }
 :deep(.input-inline-emoji) {
   display: inline-block;

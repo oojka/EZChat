@@ -11,6 +11,11 @@ export const useConfigStore = defineStore(
     // 后端服务端口常量
     const API_PORT = 8080
 
+    const isDevLocal = () => {
+      const host = window.location.hostname
+      return host === 'localhost' || host === '127.0.0.1'
+    }
+
     /**
      * 1. 基础源地址 (Base Origin)
      * 优先使用环境变量，否则动态捕获当前浏览器地址
@@ -28,10 +33,8 @@ export const useConfigStore = defineStore(
     const apiUrl = computed(() => {
       try {
         const urlObj = new URL(baseUrl.value)
-        // 如果是在开发环境 (localhost)，通常前端 5173，后端 8080
-        // 如果是生产环境，通常是同源的，或者通过 Nginx 代理
-        // 这里保留原逻辑：强制替换端口
-        urlObj.port = API_PORT.toString()
+        // 仅在本地开发时替换端口，生产环境通常走同源反代（避免 https 反代后请求直连 :8080）
+        if (isDevLocal()) urlObj.port = API_PORT.toString()
         urlObj.pathname = '/api'
         return urlObj.toString()
       } catch (e) {
@@ -51,8 +54,8 @@ export const useConfigStore = defineStore(
         // 协议自适应：HTTPS -> wss, HTTP -> ws
         urlObj.protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
 
-        // 设置端口与路径
-        urlObj.port = API_PORT.toString()
+        // 仅在本地开发时替换端口，生产环境走同源反代（避免 wss 直连 :8080 导致握手失败）
+        if (isDevLocal()) urlObj.port = API_PORT.toString()
         urlObj.pathname = '/websocket' // 注意：不带末尾斜杠，也不带 Token
 
         return urlObj.toString()

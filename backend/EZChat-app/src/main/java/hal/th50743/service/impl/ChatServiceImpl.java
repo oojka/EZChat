@@ -86,7 +86,7 @@ public class ChatServiceImpl implements ChatService {
                 if (isOnline) onlineCount++;
 
                 ChatMemberVO vo = new ChatMemberVO();
-                vo.setUId(m.getUId());
+                vo.setUid(m.getUid());
                 vo.setNickname(m.getNickname());
                 vo.setOnline(isOnline);
                 vo.setLastSeenAt(m.getLastSeenAt());
@@ -141,8 +141,8 @@ public class ChatServiceImpl implements ChatService {
         Map<String, UserStatus> uniqueUserStatusMap = new HashMap<>();
         for (ChatMember m : allMembers) {
             m.setChatId(null);
-            uniqueUserStatusMap.putIfAbsent(m.getUId(), new UserStatus(
-                    m.getUId(), onlineUsers.containsKey(m.getUserId()), m.getLastSeenAt()));
+            uniqueUserStatusMap.putIfAbsent(m.getUid(), new UserStatus(
+                    m.getUid(), onlineUsers.containsKey(m.getUserId()), m.getLastSeenAt()));
         }
 
         // 遍历并调用组装逻辑

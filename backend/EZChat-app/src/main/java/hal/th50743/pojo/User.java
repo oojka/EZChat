@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class User {
 
     private Integer id;
-    private String uId;
+    private String uid;
     private String nickname;
     private String avatarObject;
     private String bio;

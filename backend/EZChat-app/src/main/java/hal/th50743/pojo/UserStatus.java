@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class UserStatus {
 
-    private String uId;
+    private String uid;
     private boolean online;
     private LocalDateTime updateTime;
 

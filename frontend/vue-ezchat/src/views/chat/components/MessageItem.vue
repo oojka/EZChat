@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed} from 'vue'
+import {computed, ref, watchEffect} from 'vue'
 import {Loading, Picture as IconPicture, WarningFilled} from '@element-plus/icons-vue'
 import type {ChatRoom, Message} from '@/type'
 import {useUserStore} from '@/stores/userStore.ts'
@@ -20,7 +20,41 @@ const senderInfo = computed(() => {
   return props.currentChat.chatMembers.find((m) => m.uid === props.msg.sender)
 })
 
-const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|\p{Extended_Pictographic})/gu
+// Image fallback strategy (Thumbnail -> Original -> Text)
+const currentAvatarUrl = ref<string>('')
+
+watchEffect(() => {
+  const thumb = senderInfo.value?.avatar?.objectThumbUrl || ''
+  const original = senderInfo.value?.avatar?.objectUrl || ''
+  currentAvatarUrl.value = thumb || original || ''
+})
+
+/**
+ * el-avatar error handler:
+ * - If thumbnail fails, switch to original and return false (retry load, don't show text yet)
+ * - If original fails (or doesn't exist), return true to trigger text fallback
+ */
+const handleAvatarError = () => {
+  const thumb = senderInfo.value?.avatar?.objectThumbUrl || ''
+  const original = senderInfo.value?.avatar?.objectUrl || ''
+
+  if (currentAvatarUrl.value && currentAvatarUrl.value === thumb && original) {
+    currentAvatarUrl.value = original
+    return false
+  }
+
+  return true
+}
+
+// 严格的 Emoji 正则表达式：只匹配真正的 Emoji，排除 CJK 字符、假名和标点符号
+// 匹配范围：
+// - \u00a9 (©), \u00ae (®): 版权和注册商标符号
+// - \ud83c[\udf00-\udfff]: Emoji 标志和符号 (U+1F300-U+1F3FF)
+// - \ud83d[\udc00-\udfff]: 表情符号和手势 (U+1F400-U+1F4FF, U+1F500-U+1F9FF)
+// - \ud83e[\udd00-\uddff]: 补充表情符号 (U+1F900-U+1F9FF)
+// 注意：排除 \u2000-\u3300 范围（包含假名、CJK 标点等）
+// 排除 \p{Extended_Pictographic}（太宽泛，会匹配非 Emoji 字符）
+const emojiRegex = /(\u00a9|\u00ae|\ud83c[\udf00-\udfff]|\ud83d[\udc00-\udfff]|\ud83e[\udd00-\uddff])/gu
 
 const renderedText = computed(() => {
   if (!props.msg.text) return ''
@@ -36,8 +70,15 @@ const renderedText = computed(() => {
 
 <template>
   <li class="message-row" :class="{ 'is-me': isMe }">
-    <el-avatar :size="38" shape="square" class="user-avatar" :src="senderInfo?.avatar?.objectThumbUrl || ''">
-      <template #default v-if="!senderInfo?.avatar?.objectThumbUrl">
+    <el-avatar
+      :key="currentAvatarUrl"
+      :size="38"
+      shape="square"
+      class="user-avatar"
+      :src="currentAvatarUrl"
+      @error="handleAvatarError"
+    >
+      <template #default v-if="!currentAvatarUrl">
         {{ senderInfo?.nickname?.charAt(0) || '?' }}
       </template>
     </el-avatar>
@@ -105,11 +146,25 @@ html.dark .user-avatar { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); border-color
 
 /* --- 文字气泡基础样式 --- */
 .message-text-bubble {
-  padding: 8px 14px; border-radius: var(--radius-md); font-size: 16px; line-height: 1.6; word-break: break-word;
-  position: relative; width: fit-content;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: break-word;
+  position: relative;
+  width: fit-content;
   transition: all 0.3s var(--ease-out-expo);
   /* 核心修复：统一边框宽度，防止切换时抖动 */
   border: 1px solid transparent;
+  /* Web Font 方案：使用 Noto Sans 确保中日文混排时高度一致 */
+  font-family: "Noto Sans JP", "Noto Sans SC", sans-serif !important;
+  /* 优化文本渲染 */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "palt" 1;
+  -webkit-font-feature-settings: "palt" 1;
+  font-optical-sizing: none;
 }
 
 /* 别人发的消息气泡 */
@@ -143,7 +198,20 @@ html.dark .message-row.is-me .message-text-bubble {
   border-color: rgba(255, 255, 255, 0.05);
 }
 
-.message-text { white-space: pre-wrap; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif; display: inline-block; }
+.message-text {
+  white-space: pre-wrap;
+  display: inline-block;
+  /* Web Font 方案：使用 Noto Sans 确保中日文混排时高度一致 */
+  font-family: "Noto Sans JP", "Noto Sans SC", sans-serif !important;
+  line-height: 1.5;
+  /* 优化文本渲染 */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "palt" 1;
+  -webkit-font-feature-settings: "palt" 1;
+  font-optical-sizing: none;
+}
 :deep(.inline-emoji) { font-size: 1.4em; vertical-align: -0.15em; line-height: 1; display: inline-block; margin: 0 1px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
 
 .message-img-container { display: block; }

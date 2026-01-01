@@ -20,13 +20,13 @@ export interface LoginInfo {
 }
 
 export interface LoginUser {
-  uId: string
+  uid: string
   username: string
   token: string
 }
 
 export interface LoginUserInfo {
-  uId: string
+  uid: string
   nickname: string
   avatar: Image
   bio: string
@@ -49,7 +49,7 @@ export interface RegisterInfo {
 export interface ChatRoom {
   chatCode : string //
   chatName : string //
-  ownerUId? : string //
+  ownerUid? : string //
   joinEnabled?: number //
   lastActiveAt : string //
   createTime? : string //
@@ -63,7 +63,7 @@ export interface ChatRoom {
 }
 
 export interface ChatMember {
-  uId: string
+  uid: string
   nickname: string
   avatar: Image
   online: boolean
@@ -71,7 +71,7 @@ export interface ChatMember {
 }
 
 export interface User {
-  uId : string
+  uid : string
   nickname : string
   avatar : Image
   isOnline: 0 | 1
@@ -93,7 +93,7 @@ export interface AppInitInfo {
 }
 
 export interface UserStatus {
-  uId: string
+  uid: string
   online: boolean
   updateTime: string
 }

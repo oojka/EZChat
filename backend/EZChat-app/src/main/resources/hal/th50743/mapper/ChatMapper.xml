@@ -11,7 +11,7 @@
     <select id="getChatVOListByUserId" resultType="hal.th50743.pojo.ChatVO">
         SELECT c.chat_code,
                c.chat_name,
-               u.u_id owner_u_id,
+               u.uid owner_uid,
                c.join_enabled,
                c.create_time,
                c.update_time,
@@ -32,7 +32,7 @@
     <select id="getChatVOByChatId" resultType="hal.th50743.pojo.ChatVO">
         SELECT c.chat_code,
                c.chat_name,
-               u.u_id owner_u_id,
+               u.uid owner_uid,
                c.join_enabled,
                c.create_time,
                c.update_time,

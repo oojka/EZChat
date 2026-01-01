@@ -50,10 +50,10 @@ public class TokenInterceptor implements HandlerInterceptor {
         try {
             // 解析 JWT Token 获取 Claims
             Claims claims = jwtUtils.parseJwt(token);
-            // 从 Claims 中获取用户唯一标识 (uId)
-            String uId = claims.get("uid").toString();
-            // 根据 uId 查询数据库获取用户主键 ID
-            Integer userId = userService.getIdByUId(uId);
+            // 从 Claims 中获取用户唯一标识 (uid)
+            String uid = claims.get("uid").toString();
+            // 根据 uid 查询数据库获取用户主键 ID
+            Integer userId = userService.getIdByUid(uid);
             // 将当前用户的 ID 存入 ThreadLocal，以便在后续的业务逻辑中直接获取
             CurrentHolder.setCurrentId(userId);
         } catch (Exception e) {

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserVO {
 
-    private String uId;
+    private String uid;
     private String nickname;
     private Image avatar;
     private String bio;

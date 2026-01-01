@@ -11,6 +11,6 @@ public class JoinChatReq {
 
     private String chatCode;
     private String password;
-    private String uId;
+    private String uid;
 
 }

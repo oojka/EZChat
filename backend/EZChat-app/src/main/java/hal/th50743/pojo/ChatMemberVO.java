@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ChatMemberVO {
 
-    private String uId;
+    private String uid;
     private String nickname;
     private Image avatar;
     private boolean online;

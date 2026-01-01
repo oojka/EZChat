@@ -55,7 +55,7 @@ public final class UserVOConverter {
 
         // 构建并返回 UserVO（只包含前端需要的字段，不包含敏感信息）
         return new UserVO(
-                user.getUId(),
+                user.getUid(),
                 user.getNickname(),
                 avatar,
                 user.getBio()

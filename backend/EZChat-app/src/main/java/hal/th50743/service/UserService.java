@@ -26,10 +26,10 @@ public interface UserService {
     /**
      * 根据 UId 获取用户 ID
      *
-     * @param uId 用户唯一标识
+     * @param uid 用户唯一标识
      * @return 用户 ID
      */
-    Integer getIdByUId(String uId);
+    Integer getIdByUid(String uid);
 
     /**
      * 更新用户信息
@@ -49,10 +49,10 @@ public interface UserService {
     /**
      * 获取用户信息
      *
-     * @param uId 用户唯一标识
+     * @param uid 用户唯一标识
      * @return 用户视图对象
      */
-    UserVO getUserInfoByUId(String uId);
+    UserVO getUserInfoByUid(String uid);
 
     /**
      * 更新用户最后活跃时间

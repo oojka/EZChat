@@ -18,7 +18,7 @@ public class FormalUser {
     private LocalDateTime updateTime;
     private LocalDateTime lastLoginTime;
 
-    //连表查询User表的uId
-    private String userUId;
+    //连表查询User表的uid
+    private String userUid;
 
 }

@@ -24,13 +24,13 @@ public class UserController {
     /**
      * 获取用户信息
      *
-     * @param uId 用户唯一标识
+     * @param uid 用户唯一标识
      * @return 包含用户信息的统一响应结果
      */
-    @GetMapping("/{uId}")
-    public Result getUserInfo(@PathVariable String uId) {
-        log.info("get user info, uid={}", uId);
-        return Result.success(userService.getUserInfoByUId(uId));
+    @GetMapping("/{uid}")
+    public Result getUserInfo(@PathVariable String uid) {
+        log.info("get user info, uid={}", uid);
+        return Result.success(userService.getUserInfoByUid(uid));
     }
 
     /**

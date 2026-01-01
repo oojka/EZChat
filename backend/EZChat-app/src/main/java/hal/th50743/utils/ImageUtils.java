@@ -5,10 +5,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hal.th50743.pojo.Image;
 import io.minio.MinioOSSOperator;
+import io.minio.MinioOSSResult;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -40,9 +42,13 @@ public final class ImageUtils {
             // 1. 将 JSON 字符串反序列化为对象名列表
             List<String> objectNames = objectMapper.readValue(objectNamesJson, new TypeReference<List<String>>() {});
 
-            // 2. 将对象名列表转换为包含预签名 URL 的 Image 对象列表
+            // 2. 使用 getImageUrls() 方法获取图片 URL（自动处理 public/private 分流）
+            // 有效期设置为 30 分钟，与之前保持一致
             return objectNames.stream()
-                    .map(name -> new Image(name, minioOperator.getPresignedUrl(name, 30), minioOperator.getPresignedThumbUrl(name, 30)))
+                    .map(name -> {
+                        MinioOSSResult result = minioOperator.getImageUrls(name, 30, TimeUnit.MINUTES);
+                        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl());
+                    })
                     .collect(Collectors.toList());
 
         } catch (JsonProcessingException e) {
