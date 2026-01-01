@@ -1,344 +1,210 @@
-# EZ Chat - 现代化实时聊天系统
+# EZChat / EZ Chat
 
-<div align="center">
+一个基于 **Spring Boot 3 + Vue 3** 的现代化实时聊天系统：支持 WebSocket 实时消息、访客/注册登录、在线状态、图片上传与缩略图、国际化与暗黑模式。
 
-![Version](https://img.shields.io/badge/version-1.0--SNAPSHOT-blue)
-![Java](https://img.shields.io/badge/Java-21-orange)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen)
-![Vue](https://img.shields.io/badge/Vue-3.5.25-42b883)
-![License](https://img.shields.io/badge/license-MIT-green)
-
-一个基于 **Spring Boot 3 + Vue 3** 构建的现代化实时聊天系统，支持多房间聊天、图片分享、在线状态同步等功能。
-
-[功能特性](#-功能特性) • [技术栈](#-技术栈) • [快速开始](#-快速开始) • [开发指南](#-开发指南) • [项目结构](#-项目结构)
-
-</div>
+A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket messaging, guest/registered auth, presence, image upload + thumbnails, i18n, and dark mode.
 
 ---
 
-## 📋 功能特性
+## 功能特性 / Features
 
-### 核心功能
-- 🚀 **实时通信**：基于 WebSocket 的双向实时消息推送
-- 💬 **多房间聊天**：支持创建、加入多个聊天室
-- 🔐 **安全认证**：JWT Token 身份验证与会话管理
-- 👥 **在线状态**：实时显示成员在线/离线状态
-- 🖼️ **图片分享**：支持图片上传；缩略图仅在图片超出阈值时生成，并在缺失时自动回退到原图
-- 🌍 **国际化**：支持中文、英文、日语、韩语、繁体中文
-- 🎨 **暗黑模式**：自适应系统主题，支持手动切换
-- 📱 **响应式设计**：完美适配桌面与移动端
-
-### 技术亮点
-- ✨ **类型安全**：前后端全面 TypeScript/Java 类型守护
-- 🔄 **状态管理**：Pinia 集中式状态管理
-- 🎯 **分层架构**：Controller → Service → Mapper 清晰分层
-- 🛡️ **错误处理**：统一异常拦截与友好提示
-- ⚡ **性能优化**：Blob URL 管理、消息虚拟滚动、心跳保活
+- **实时消息 / Real-time**：WebSocket 双向通信（消息广播、心跳、ACK）/ WebSocket messaging with heartbeat & ACK
+- **认证 / Auth**：注册登录 + 访客加入（JWT）/ registered login + guest access (JWT)
+- **聊天室 / Rooms**：通过 chatCode 获取房间信息并进入聊天 / join rooms via chatCode
+- **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
+- **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成）/ uploads with conditional thumbnails
+- **国际化 / i18n**：`zh/en/ja/ko/zh-tw` / multi-language UI
+- **暗黑模式 / Dark mode**：Element Plus 暗黑变量 / Element Plus dark theme vars
 
 ---
 
-## 🛠 技术栈
+## 技术栈 / Tech Stack
 
-### 后端技术
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Java | 21 | 主要开发语言 |
-| Spring Boot | 3.3.4 | 应用框架 |
-| Spring WebSocket | 3.3.4 | WebSocket 支持 |
-| MyBatis | 3.0.3 | ORM 框架 |
-| MySQL | 8.x | 关系型数据库 |
-| JWT | 0.11.5 | Token 认证 |
-| MinIO | 定制 | 对象存储（图片） |
-| Thumbnailator | 0.4.20 | 图片缩略图生成 |
-| Lombok | 1.18.34 | 代码简化 |
+### 后端 / Backend
 
-### 前端技术
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Vue | 3.5.25 | 渐进式框架 |
-| TypeScript | 5.9.0 | 类型安全 |
-| Vite | 7.2.4 | 构建工具 |
-| Pinia | 3.0.4 | 状态管理 |
-| Vue Router | 4.6.3 | 路由管理 |
-| Element Plus | 2.12.0 | UI 组件库 |
-| Vue I18n | 11.2.7 | 国际化 |
-| Axios | 1.13.2 | HTTP 请求 |
+- **Java**: 21
+- **Spring Boot**: 3.3.4
+- **WebSocket**: Jakarta WebSocket + `@ServerEndpoint`
+- **MyBatis**: 3.0.3
+- **MySQL**: 8.x
+- **JWT**: `jjwt` 0.11.5
+- **Object Storage**: MinIO（自研 starter：`minio-oss-spring-boot-starter`）
+- **Thumbnail**: Thumbnailator 0.4.20
+
+### 前端 / Frontend
+
+- **Vue**: 3.5.25
+- **TypeScript**: 5.9.x
+- **Vite**: 7.2.x
+- **Pinia**: 3.0.x
+- **Vue Router**: 4.6.x
+- **Element Plus**: 2.12.x
+- **Axios**: 1.13.x
 
 ---
 
-## 🚀 快速开始
+## 快速开始 / Quick Start
 
-### 环境要求
+### 环境要求 / Prerequisites
 
-#### 后端
-- **JDK**: 21+
-- **Maven**: 3.6+
-- **MySQL**: 8.0+
-- **MinIO**: 最新稳定版（可选，用于图片存储）
+- **Backend**：JDK 21+、Maven 3.6+、MySQL 8.x、MinIO（当前配置下为必需）  
+  **Backend**: JDK 21+, Maven 3.6+, MySQL 8.x, MinIO (required by current config)
+- **Frontend**：Node.js `^20.19.0 || >=22.12.0`、npm 10+  
+  **Frontend**: Node.js `^20.19.0 || >=22.12.0`, npm 10+
 
-#### 前端
-- **Node.js**: 20.19.0+ 或 22.12.0+
-- **npm**: 10.0+
+### 1) 初始化数据库 / Initialize database
 
----
-
-### 📦 安装步骤
-
-#### 1️⃣ 克隆项目
 ```bash
-git clone https://github.com/oojka/EZChat.git
-cd EZChat
-```
-
-#### 2️⃣ 配置数据库
-```sql
--- 创建数据库
-CREATE DATABASE ezchat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 导入初始化 SQL（包含 DDL + 测试数据生成存储过程）
--- ⚠️ 注意：会 TRUNCATE 多张表，请勿用于生产库
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS ezchat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 mysql -u root -p ezchat < backend/EZChat-app/src/main/resources/sql/init.sql
 ```
 
-#### 3️⃣ 配置后端环境变量
-在 `backend/EZChat-app/src/main/resources/application.yml` 同级目录创建 `.env` 或配置环境变量：
+> 注意 / Note  
+> `init.sql` 可能包含清表/测试数据逻辑，请勿用于生产库。  
+> `init.sql` may clear tables / generate test data. Do NOT use in production.
+
+### 2) 配置环境变量 / Set environment variables
+
+后端 `backend/EZChat-app/src/main/resources/application.yml` 全部使用 `${ENV}` 占位符，**必须**注入环境变量（本工程未集成 `.env` 自动加载）。  
+Backend `application.yml` uses `${ENV}` placeholders; you **must** provide env vars (no built-in `.env` loader).
 
 ```bash
-# 数据库配置
-DB_URL=jdbc:mysql://localhost:3306/ezchat?useSSL=false&serverTimezone=Asia/Tokyo
-DB_USERNAME=root
-DB_PASSWORD=your_password
+export DB_URL='jdbc:mysql://localhost:3306/ezchat?useSSL=false&serverTimezone=Asia/Tokyo'
+export DB_USERNAME='root'
+export DB_PASSWORD='your_password'
 
-# JWT 配置
-JWT_SECRET=your_jwt_secret_key_at_least_256_bits
-JWT_EXPIRATION=86400000
+export JWT_SECRET='your_jwt_secret_key_at_least_256_bits'
+export JWT_EXPIRATION='86400000'
 
-# MinIO 配置（可选）
-OSS_ENDPOINT=http://localhost:9000
-OSS_ACCESS_KEY=minioadmin
-OSS_SECRET_KEY=minioadmin
-OSS_BUCKET_NAME=ezchat
-OSS_PATH=/images
+export OSS_ENDPOINT='http://localhost:9000'
+export OSS_ACCESS_KEY='minioadmin'
+export OSS_SECRET_KEY='minioadmin'
+export OSS_BUCKET_NAME='ezchat'
+export OSS_PATH='images'
 ```
 
-#### 4️⃣ 启动后端（在 IntelliJ IDEA 中）
-1. 用 IDEA 打开 `backend/EZChat-parent` 目录
-2. 等待 Maven 依赖下载完成
-3. 找到 `backend/EZChat-app/src/main/java/hal/th50743/EzChatAppApplication.java`
-4. 右键 → **Run 'EzChatAppApplication'**
-5. 看到 `Started EzChatAppApplication` 说明启动成功，默认端口 `8080`
+> 提示 / Tip  
+> 使用 IntelliJ IDEA 启动后端时，请在 Run Configuration 中配置同名环境变量。  
+> If you start backend in IntelliJ IDEA, set the same env vars in Run Configuration.
 
-#### 5️⃣ 启动前端（在 Cursor/Terminal 中）
+### 3) 启动后端 / Start backend
+
+```bash
+cd backend/EZChat-parent
+mvn -q -pl ../EZChat-app spring-boot:run
+```
+
+默认端口 / Default port: **8080**
+
+### 4) 启动前端 / Start frontend
+
 ```bash
 cd frontend/vue-ezchat
-npm install                  # 安装依赖
-npm run dev                  # 启动开发服务器
+npm install
+npm run dev
 ```
 
-访问 `http://localhost:5173` 即可使用。
+访问 / Open: `http://localhost:5173`
 
 ---
 
-## 💻 开发指南
+## 当前工程约定 / Current Project Conventions
 
-### 🎯 双刀流开发模式
+### 开发期代理 / Dev proxy (Vite)
 
-本项目采用 **"IDEA 运行 + Cursor AI 编码"** 的双 IDE 协作模式：
+前端开发期通过 `frontend/vue-ezchat/vite.config.ts` 做代理：  
+Vite dev proxy rules:
 
-1. **IntelliJ IDEA**：专门用于运行后端 Spring Boot 项目
-   - 优势：强大的 Java 调试、Maven 管理、数据库工具
-   
-2. **Cursor AI**：用于前后端代码编写与重构
-   - 优势：AI 辅助编码、代码审查、快速重构
+- **`/api/*` → `http://localhost:8080/*`**（仅开发期前缀；后端实际没有 `/api` 前缀）  
+  **`/api/*` → `http://localhost:8080/*`** (dev-only prefix; backend routes do NOT include `/api`)
+- **`/websocket/*` → `ws://localhost:8080/websocket/*`**
 
-### ⚠️ 重要提醒
+### 鉴权 / Auth token
 
-```diff
-+ 在 Cursor 中修改代码后，切换到 IDEA 时务必执行：
-+ 【Ctrl + Alt + Y】（Windows/Linux）或 【Cmd + Option + Y】（macOS）
-+ 同步磁盘文件，避免 IDEA 使用过期缓存！
-```
+- **HTTP Header**：使用 `token`（不是 `Authorization: Bearer ...`）  
+  **HTTP header key**: `token` (not `Authorization: Bearer ...`)
+- **JWT Claim / 用户标识**：统一使用 `uid`（小写）  
+  **JWT claim / user identifier**: `uid` (lowercase)
+- **拦截规则 / Interceptor**：除 `/auth/**` 外均需要 token  
+  Everything except `/auth/**` requires token
 
-### 🤖 AI 编码规范
+### WebSocket / WebSocket endpoint
 
-项目根目录已配置 `.cursorrules`，AI 助手将自动遵循以下规则：
+- **Server endpoint**：`/websocket/{token}`
+- **Close code**：
+  - `4001`: Token Expired
+  - `4002`: Authentication Failed
 
-- ✅ **思考语言**：英文思考（逻辑深度）
-- ✅ **回复语言**：中文简体（便于沟通）
-- ✅ **前端规范**：
-  - 使用 `<script setup lang="ts">` 语法
-  - 组件超过 300 行自动提示重构
-  - 复杂逻辑提取到 `hooks/` 目录
-- ✅ **后端规范**：
-  - 严格遵循 Controller → Service → Mapper 分层
-  - 使用 Java 21 特性（Records、Text Blocks）
-  - 修改 POJO 时同步更新前端 TypeScript 接口
+### 主要后端路由 / Main backend routes
 
----
+> 说明 / Note：以下路径均是**后端真实路径**（不含 `/api` 前缀）。  
+> These are backend paths (no `/api` prefix).
 
-## 🔑 重要约定（当前工程状态）
-
-### uid 字段统一
-- 前后端统一使用 **`uid`**（小写）作为用户对外标识字段（包括 JWT claims 的 key）
-- 数据库 `users` 表列名为 **`uid`**（不再使用 `u_id`）
-
-### 鉴权 Token 传递
-- HTTP API：请求头使用 **`token`**（不是 `Authorization: Bearer ...`）
-- WebSocket：连接 URL 使用 `/websocket/{token}`
-
-### MinIO 图片与缩略图策略
-- 上传：仅当图片尺寸超过阈值（maxWidth/maxHeight）时才生成并上传 `thumb_*.jpg`
-- 取图：`getImageUrls()` 会在缩略图对象不存在时，将 `thumbUrl` 回退为原图 `url`，避免前端请求必 404
-
-### 前端头像显示回退
-- 聊天消息头像实现 **Thumbnail → Original → Text** 三段式回退（缩略图加载失败自动切到原图，再失败显示文字）
-- `index.html` 已设置 `<meta name="referrer" content="no-referrer" />` 用于降低外链防盗链导致的 403 风险
+- `POST /auth/login`
+- `POST /auth/register`
+- `POST /auth/guest`
+- `POST /auth/register/upload`
+- `GET  /init`
+- `GET  /chat/{chatCode}`
+- `GET  /message?chatCode=...&timeStamp=...`
+- `POST /message/upload`
+- `GET  /user/{uid}`
+- `POST /user`
 
 ---
 
-## 📁 项目结构
+## 项目结构 / Project Structure
 
 ```
 EZChat/
-├── backend/                          # 后端项目
-│   ├── EZChat-parent/                # Maven 父工程
-│   │   └── pom.xml                   # 统一依赖管理
-│   ├── EZChat-app/                   # 主应用模块
+├── backend/
+│   ├── EZChat-parent/                         # Maven parent (aggregator)
+│   ├── EZChat-app/                            # Spring Boot application
 │   │   ├── src/main/java/hal/th50743/
-│   │   │   ├── config/               # 配置类（WebSocket、CORS）
-│   │   │   ├── controller/           # REST API 控制器
-│   │   │   ├── service/              # 业务逻辑层
-│   │   │   ├── mapper/               # MyBatis Mapper
-│   │   │   ├── pojo/                 # 实体类与 VO
-│   │   │   ├── ws/                   # WebSocket 服务端
-│   │   │   ├── utils/                # 工具类（JWT、图片处理）
-│   │   │   ├── exception/            # 异常处理
-│   │   │   └── interceptor/          # 拦截器（Token 验证）
+│   │   │   ├── controller/                    # REST controllers
+│   │   │   ├── service/                       # services
+│   │   │   ├── mapper/                        # MyBatis mappers
+│   │   │   ├── ws/                            # WebSocket server endpoint
+│   │   │   ├── interceptor/                   # token interceptor
+│   │   │   └── utils/                         # utils (JWT, image, etc.)
 │   │   └── src/main/resources/
-│   │       ├── application.yml       # 主配置文件
-│   │       └── hal/th50743/mapper/   # MyBatis XML 映射
-│   └── dependencies/                 # 自定义依赖（MinIO Starter）
-│
-├── frontend/                         # 前端项目
-│   └── vue-ezchat/
-│       ├── src/
-│       │   ├── api/                  # API 请求封装
-│       │   ├── assets/               # 静态资源
-│       │   ├── components/           # 公共组件
-│       │   │   └── dialogs/          # 对话框组件
-│       │   ├── constants/            # 常量配置
-│       │   ├── hooks/                # Vue Composables
-│       │   ├── i18n/                 # 国际化配置
-│       │   │   └── locales/          # 多语言文件
-│       │   ├── router/               # 路由配置
-│       │   ├── stores/               # Pinia 状态管理
-│       │   ├── type/                 # TypeScript 类型定义
-│       │   ├── utils/                # 工具函数
-│       │   ├── views/                # 页面组件
-│       │   │   ├── index/            # 登录注册页
-│       │   │   ├── chat/             # 聊天主界面
-│       │   │   ├── layout/           # 布局组件
-│       │   │   ├── welcome/          # 欢迎页
-│       │   │   └── error/            # 错误页
-│       │   ├── WS/                   # WebSocket 客户端
-│       │   ├── App.vue               # 根组件
-│       │   └── main.ts               # 入口文件
-│       ├── public/                   # 公共静态文件
-│       ├── vite.config.ts            # Vite 配置
-│       ├── tsconfig.json             # TypeScript 配置
-│       └── package.json              # npm 依赖
-│
-├── .cursorrules                      # Cursor AI 编码规范
-├── .cursorignore                     # Cursor 索引忽略
-├── .gitignore                        # Git 忽略规则
-└── README.md                         # 项目说明文档
+│   │       ├── application.yml                # config (env placeholders)
+│   │       └── sql/init.sql                   # DB init script
+│   └── dependencies/MinioOSSOperator/         # custom MinIO starter
+└── frontend/vue-ezchat/
+    ├── src/
+    │   ├── api/                               # API wrappers
+    │   ├── WS/                                # WebSocket client composable
+    │   ├── stores/                            # Pinia stores
+    │   ├── views/                             # pages
+    │   └── i18n/locales/                      # zh/en/ja/ko/zh-tw
+    └── vite.config.ts                         # dev proxy config
 ```
 
 ---
 
-## 📝 开发规范
+## 常见问题 / Troubleshooting
 
-### 前端开发规范
-1. **组件命名**：使用 PascalCase（如 `ChatItem.vue`）
-2. **文件组织**：按功能模块划分，避免单一文件过大
-3. **类型安全**：所有 API 响应必须定义 TypeScript 接口
-4. **状态管理**：全局状态使用 Pinia，局部状态使用 `ref`/`reactive`
-5. **样式管理**：使用 scoped CSS，避免全局污染
+### 1) 前端请求后端 404 / Frontend gets 404 from backend
 
-### 后端开发规范
-1. **分层原则**：Controller 仅负责参数校验与响应，业务逻辑放 Service
-2. **异常处理**：使用 `@RestControllerAdvice` 统一处理异常
-3. **数据验证**：使用 `@Valid` 注解 + 自定义校验器
-4. **日志规范**：使用 Lombok 的 `@Slf4j`，生产环境关闭 DEBUG
-5. **事务管理**：涉及多表操作必须加 `@Transactional`
+- **原因 / Cause**：开发期必须通过 `/api` 前缀走 Vite proxy；后端没有 `/api` 前缀。  
+  Dev uses `/api` (Vite proxy). Backend routes do not have `/api`.
+- **检查 / Check**：`frontend/vue-ezchat/vite.config.ts` 的 proxy 是否指向 `8080`。
 
----
+### 2) 后端启动失败：占位符未解析 / Backend fails: unresolved placeholders
 
-## 🔧 常见问题
+- **原因 / Cause**：未设置 `DB_*` / `JWT_*` / `OSS_*` 环境变量（本工程不自动加载 `.env`）。  
+  Missing `DB_*` / `JWT_*` / `OSS_*` env vars (no `.env` loader).
+- **Fix**：按“配置环境变量 / Set environment variables”导出环境变量或配置 IDE 运行变量。
 
-### 1. WebSocket 连接失败
-- 检查后端是否启动（端口 8080）
-- 确认 JWT Token 是否有效（F12 查看 Network 面板）
-- 查看浏览器控制台是否有跨域错误
+### 3) WebSocket 断开（4001/4002）/ WebSocket closed with 4001/4002
 
-### 2. 图片上传失败
-- 确认 MinIO 服务是否启动
-- 检查 `application.yml` 中 MinIO 配置是否正确
-- 查看后端日志是否有连接错误
+- **4001**：Token 过期 → 重新登录 / re-login
+- **4002**：认证失败 → 检查 URL 是否为 `/websocket/{token}` / validate token in URL
 
-### 3. 前端无法请求后端 API
-- 检查 `vite.config.ts` 中的 proxy 配置
-- 确认后端 CORS 配置已启用
-- 查看浏览器 Network 面板的请求状态码
+### 4) HTTP 401 / Unauthorized
 
-### 4. IDEA 中代码未更新
-- 执行 `Ctrl+Alt+Y` 同步磁盘文件
-- 清除 IDEA 缓存：`File → Invalidate Caches / Restart`
+- **原因 / Cause**：缺少请求头 `token` 或 token 无效。  
+  Missing/invalid `token` header.
 
----
-
-## 🤝 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建新分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
-
----
-
-## 📄 许可证
-
-本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。
-
----
-
-## 👨‍💻 作者
-
-**oojka**
-- GitHub: [@oojka](https://github.com/oojka)
-- Email: kakoukaire@gmail.com
-
----
-
-## 🙏 致谢
-
-感谢以下开源项目：
-- [Spring Boot](https://spring.io/projects/spring-boot)
-- [Vue.js](https://vuejs.org/)
-- [Element Plus](https://element-plus.org/)
-- [MyBatis](https://mybatis.org/)
-- [Vite](https://vitejs.dev/)
-
----
-
-<div align="center">
-
-**如果觉得项目不错，请给个 ⭐️ Star 支持一下！**
-
-Made with ❤️ by oojka
-
-</div>
 
