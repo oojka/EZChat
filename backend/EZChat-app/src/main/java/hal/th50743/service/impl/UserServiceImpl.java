@@ -8,6 +8,7 @@ import hal.th50743.mapper.UserMapper;
 import hal.th50743.pojo.*;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
+import hal.th50743.utils.UserVOConverter;
 import io.minio.MinioOSSOperator;
 import io.minio.MinioOSSResult;
 import lombok.RequiredArgsConstructor;
@@ -66,14 +67,8 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.FORBIDDEN, "Permission denied: You do not have permission to view this user's profile");
         }
 
-        return new UserVO(
-                user.getUId(),
-                user.getNickname(),
-                new Image(user.getAvatarObject(),
-                        minioOSSOperator.toUrl(user.getAvatarObject()),
-                        minioOSSOperator.toThumbUrl(user.getAvatarObject())),
-                user.getBio()
-        );
+        // 使用转换工具类进行 Entity 到 VO 的转换
+        return UserVOConverter.toUserVO(user, minioOSSOperator);
     }
 
     /**

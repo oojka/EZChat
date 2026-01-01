@@ -30,14 +30,32 @@ public interface UserMapper {
     void addFormalUser(FormalUser formalUser);
 
     /**
-     * 根据用户名和密码查询用户
+     * 根据用户名和密码查询用户（已废弃，建议使用 selectFormalUserByUsername + PasswordUtils）
      *
      * @param username 用户名
      * @param password 密码
      * @return 用户对象
+     * @deprecated 此方法使用明文密码比较，不安全。请使用 selectFormalUserByUsername 和 PasswordUtils.matches
      */
+    @Deprecated
     User selectByUsernameAndPassword(@Param("username") String username,
                                      @Param("password") String password);
+
+    /**
+     * 根据用户名查询正式用户信息（包含密码哈希）
+     *
+     * @param username 用户名
+     * @return 正式用户对象，如果不存在返回 null
+     */
+    FormalUser selectFormalUserByUsername(@Param("username") String username);
+
+    /**
+     * 根据用户名查询用户（包含正式用户信息）
+     *
+     * @param username 用户名
+     * @return 用户对象，如果不存在返回 null
+     */
+    User selectUserByUsername(@Param("username") String username);
 
     /**
      * 根据 UId 查询用户

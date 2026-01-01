@@ -47,6 +47,32 @@
         FROM formal_users f JOIN users u ON f.user_id = u.id
         WHERE f.username = #{username} AND f.password_hash = #{password}
     </select>
+
+    <select id="selectFormalUserByUsername" resultType="hal.th50743.pojo.FormalUser">
+        SELECT user_id as userId,
+               username,
+               password_hash as passwordHash,
+               create_time as createTime,
+               update_time as updateTime,
+               last_login_time as lastLoginTime
+        FROM formal_users
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectUserByUsername" resultType="hal.th50743.pojo.User">
+        SELECT u.id,
+               u.u_id,
+               u.nickname,
+               u.avatar_object,
+               u.bio,
+               u.last_seen_at,
+               u.create_time,
+               u.update_time,
+               f.username
+        FROM formal_users f JOIN users u ON f.user_id = u.id
+        WHERE f.username = #{username}
+    </select>
+
     <select id="selectByUId" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.u_id,

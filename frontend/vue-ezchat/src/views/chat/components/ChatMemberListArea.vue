@@ -61,6 +61,7 @@ watch(chatViewIsLoading, (newVal) => {
 }
 
 .loading-text { font-size: 12px; font-weight: 600; color: var(--text-500); letter-spacing: 0.5px; margin-top: 10px; }
+.loading-content { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .member-list-area { flex: 1; overflow-y: auto; padding: 0; }
 
 .sidebar-header {

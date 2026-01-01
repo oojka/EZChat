@@ -61,8 +61,10 @@ onUnmounted(() => stopResizing())
       <el-container class="chat-main-layout">
         <el-main class="chat-left-panel">
           <div class="message-panel">
-            <ChatSkeleton v-if="chatViewIsLoading" />
-            <MessageArea v-else />
+            <Transition name="chat-fade" mode="in-out">
+              <ChatSkeleton v-if="chatViewIsLoading" />
+              <MessageArea v-else />
+            </Transition>
           </div>
 
           <div class="horizontal-resizer" :class="{ 'is-resizing': isResizing }" @mousedown.prevent="startResizing"></div>
@@ -98,6 +100,8 @@ onUnmounted(() => stopResizing())
 .chat-main-layout { overflow: hidden; height: calc(100% - 60px); }
 .chat-left-panel { padding: 0; display: flex; flex-direction: column; background-color: var(--bg-card); }
 .message-panel { flex: 1; background-color: var(--bg-page); overflow: hidden; position: relative; transition: background-color 0.3s ease; }
+.chat-fade-enter-active, .chat-fade-leave-active { transition: opacity 0.12s ease; }
+.chat-fade-enter-from, .chat-fade-leave-to { opacity: 0; }
 
 .horizontal-resizer { height: 6px; cursor: ns-resize; position: relative; z-index: 50; flex-shrink: 0; display: flex; align-items: center; background-color: transparent; }
 .horizontal-resizer::after { content: ''; width: 100%; height: 1px; background-color: var(--el-border-color-light); transition: all 0.2s ease; }

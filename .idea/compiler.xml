@@ -7,8 +7,6 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="minio-oss-spring-boot-starter" />
-        <module name="minio-oss-spring-boot-autoconfigure" />
       </profile>
       <profile name="Annotation profile for EZChat-parent" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -20,6 +18,10 @@
         <module name="EZChat-app" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="minio-oss-spring-boot-autoconfigure" target="17" />
+      <module name="minio-oss-spring-boot-starter" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

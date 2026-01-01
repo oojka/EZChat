@@ -72,15 +72,19 @@ export function useRegister() {
     if (registerFormRef.value) registerFormRef.value.resetFields()
   }
 
-  const register = async () => {
-    if (!registerFormRef.value) return
+  const register = async (): Promise<boolean> => {
+    if (!registerFormRef.value) return false
     try {
       const valid = await registerFormRef.value.validate()
-      if (valid) return await registerApi(registerForm.value)
+      if (!valid) return false
+      
+      const result = await registerApi(registerForm.value)
+      // 检查返回结果的 status，只有 status === 1 才表示成功
+      return result.status === 1
     } catch (error) {
       console.error('[ERROR] [Register] Validation or API Error:', error)
+      throw error // 重新抛出错误，让调用方处理
     }
-    return false
   }
 
   return {

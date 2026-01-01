@@ -56,9 +56,13 @@ withDefaults(defineProps<Props>(), {
 }
 
 .app-spinner-container.is-absolute {
-  position: absolute;
+  position: relative;
+  inset: auto;
   background: transparent;
   background-image: none;
+  width: auto;
+  height: auto;
+  padding: 0;
 }
 
 html.dark .app-spinner-container {
@@ -94,9 +98,28 @@ html.dark .blob-2 { background: #0a0a0a; opacity: 0.02; }
   50% { transform: scale(1.5); border-radius: 60% 40% 30% / 70% 50% 60% 40%; opacity: 0.7; }
 }
 
-.spinner-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
-.spinner { border: 4px solid var(--el-border-color-light); border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-.spinner-text { font-size: 14px; font-weight: 600; color: var(--text-500); margin-top: 16px; letter-spacing: 1px; text-transform: uppercase; }
+.spinner-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.spinner { 
+  border: 4px solid var(--el-border-color-light); 
+  border-radius: 50%; 
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; 
+  flex-shrink: 0;
+  display: block;
+}
+.spinner-text { 
+  font-size: 14px; 
+  font-weight: 600; 
+  color: var(--text-500); 
+  letter-spacing: 1px; 
+  text-transform: uppercase;
+  margin: 0;
+  text-align: center;
+}
+
+/* 轻量淡入：适用于局部加载 */
+.app-spinner-container { animation: fadeIn 0.25s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

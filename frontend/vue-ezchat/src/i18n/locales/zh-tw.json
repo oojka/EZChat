@@ -145,5 +145,28 @@
     "ws_connecting": "連線中...",
     "ws_closed": "未連線",
     "ws_unknown": "未知"
+  },
+  "create_chat": {
+    "title": "建立新房間",
+    "subtitle": "新社群的開始",
+    "avatar_label": "圖示",
+    "change_avatar": "修改",
+    "avatar_hint": "*建議：500px以上",
+    "guide_title": "房間設定指南",
+    "restriction_title": "加入限制",
+    "restriction_desc": "設定密碼後可被搜尋",
+    "invite_url_title": "邀請連結",
+    "invite_url_desc": "最長30天有效",
+    "capacity_title": "人數限制",
+    "capacity_desc": "最大人數無限制",
+    "room_name": "房間名稱",
+    "room_name_placeholder": "請輸入聊天室名稱",
+    "password_join": "入群驗證",
+    "password_info_title": "加入方式",
+    "password_info_desc": "開啟後，他人可透過 房間ID + 密碼 加入\n關閉後，僅限透過有效邀請連結加入\n創建房間後，您可以隨時在房間設置中更改此項",
+    "submit": "立即建立",
+    "expiry_title": "邀請連結有效期",
+    "custom_date": "指定自訂時間",
+    "day_n": "{n}天"
   }
 }

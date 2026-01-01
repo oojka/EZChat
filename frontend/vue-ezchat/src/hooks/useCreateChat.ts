@@ -5,6 +5,12 @@ import { useI18n } from 'vue-i18n'
 
 export const useCreateChat = () => {
   const { t } = useI18n()
+  const createStep = ref<1 | 2 | 3 | 4>(1)
+  const createResult = ref({ success: false, message: '' })
+  const isCreating = ref(false)
+  const hasPasswordError = ref(false)
+  const passwordErrorMessage = ref('')
+  
   const createChatForm = ref<{
     avatar: Image
     chatName: string
@@ -56,6 +62,21 @@ export const useCreateChat = () => {
     }
   })
 
+  // 逻辑3：监听密码开关变化，关闭时清除错误状态
+  watch(() => createChatForm.value.joinEnable, (newVal) => {
+    if (newVal === 0) {
+      // 关闭密码时，清除错误状态和密码字段
+      hasPasswordError.value = false
+      passwordErrorMessage.value = ''
+      createChatForm.value.password = ''
+      createChatForm.value.passwordConfirm = ''
+      // 清除表单验证错误
+      if (createFormRef.value) {
+        createFormRef.value.clearValidate(['password', 'passwordConfirm'])
+      }
+    }
+  })
+
   const disabledDate = (time: Date) => {
     const now = new Date()
     const startOfToday = new Date(now.setHours(0, 0, 0, 0))
@@ -84,62 +105,192 @@ export const useCreateChat = () => {
   const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
     if (response && response.data) {
       createChatForm.value.avatar = response.data
+      // 触发头像字段验证
+      if (createFormRef.value) {
+        createFormRef.value.validateField('avatar', () => {})
+      }
+    }
+  }
+  
+  // 重置表单
+  const resetCreateForm = () => {
+    createChatForm.value = {
+      avatar: {
+        objectName: '',
+        objectUrl: '',
+        objectThumbUrl: '',
+      },
+      chatName: '',
+      joinEnable: 0,
+      joinLinkExpiryMinutes: 10080,
+      password: '',
+      passwordConfirm: '',
+    }
+    selectedDate.value = null
+    selectedDateRadio.value = 7
+    createStep.value = 1
+    createResult.value = { success: false, message: '' }
+    hasPasswordError.value = false
+    passwordErrorMessage.value = ''
+    if (createFormRef.value) {
+      createFormRef.value.resetFields()
     }
   }
 
   // 2. 自定义密码校验规则
-  const validatePassword = (rule: FormItemRule, value: string, callback: (error?: Error) => void) => {
-    if (createChatForm.value.joinEnable === 1) {
-      if (!value) {
-        callback(new Error(t('validation.password_required')))
-      } else {
-        if (createChatForm.value.passwordConfirm !== '') {
-          createFormRef.value?.validateField('passwordConfirm', () => {})
-        }
-        callback()
-      }
+  const validatePassword = (rule: any, value: string, callback: any) => {
+    // 只在启用密码时进行校验
+    if (createChatForm.value.joinEnable !== 1) {
+      hasPasswordError.value = false
+      passwordErrorMessage.value = ''
+      callback()
+      return
+    }
+    
+    if (!value) {
+      const errorMsg = t('validation.password_required')
+      hasPasswordError.value = true
+      passwordErrorMessage.value = errorMsg
+      callback(new Error(errorMsg))
     } else {
+      // 密码输入后，清除错误状态
+      hasPasswordError.value = false
+      passwordErrorMessage.value = ''
+      // 如果确认密码已输入，重新验证确认密码
+      if (createChatForm.value.passwordConfirm !== '') {
+        createFormRef.value?.validateField('passwordConfirm', () => {})
+      }
       callback()
     }
   }
 
-  const validatePasswordConfirm = (rule: FormItemRule, value: string, callback: (error?: Error) => void) => {
-    if (createChatForm.value.joinEnable === 1) {
-      if (!value) {
-        callback(new Error(t('validation.confirm_password_required')))
-      } else if (value !== createChatForm.value.password) {
-        callback(new Error(t('validation.password_mismatch')))
-      } else {
-        callback()
-      }
+  const validatePasswordConfirm = (rule: any, value: string, callback: any) => {
+    // 只在启用密码时进行校验
+    if (createChatForm.value.joinEnable !== 1) {
+      hasPasswordError.value = false
+      passwordErrorMessage.value = ''
+      callback()
+      return
+    }
+    
+    if (!value) {
+      const errorMsg = t('validation.confirm_password_required')
+      hasPasswordError.value = true
+      passwordErrorMessage.value = errorMsg
+      callback(new Error(errorMsg))
+    } else if (value !== createChatForm.value.password) {
+      const errorMsg = t('validation.password_mismatch')
+      hasPasswordError.value = true
+      passwordErrorMessage.value = errorMsg
+      callback(new Error(errorMsg))
     } else {
+      // 验证通过，清除错误状态
+      hasPasswordError.value = false
+      passwordErrorMessage.value = ''
       callback()
     }
   }
 
   // 3. 校验规则定义
   const createFormRules = reactive<FormRules>({
+    avatar: [
+      {
+        required: true,
+        validator: (rule: any, value: any, callback: any) => {
+          if (!value?.objectUrl) {
+            callback(new Error(t('validation.avatar_required')))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'change',
+      },
+    ],
     chatName: [
       { required: true, message: t('validation.room_name_required'), trigger: 'blur' },
       { min: 1, max: 20, message: t('validation.room_name_length'), trigger: 'blur' },
     ],
-    password: [{ validator: validatePassword, trigger: ['blur', 'change'] }],
-    passwordConfirm: [{ validator: validatePasswordConfirm, trigger: ['blur', 'change'] }],
+    password: [{ validator: validatePassword as any, trigger: ['blur', 'change'] }],
+    passwordConfirm: [{ validator: validatePasswordConfirm as any, trigger: ['blur', 'change'] }],
   })
+  
+  // 步骤验证
+  const validateStep = async (step: number): Promise<boolean> => {
+    if (!createFormRef.value) return false
+    let fieldsToValidate: string[] = []
+    if (step === 1) {
+      // Step 1: 验证头像和房间名称
+      fieldsToValidate = ['avatar', 'chatName']
+    } else if (step === 2) {
+      // Step 2: 如果开启了密码，验证密码字段
+      if (createChatForm.value.joinEnable === 1) {
+        fieldsToValidate = ['password', 'passwordConfirm']
+      } else {
+        // 未开启密码，清除错误状态并直接通过
+        hasPasswordError.value = false
+        passwordErrorMessage.value = ''
+        return true
+      }
+    } else if (step === 3) {
+      // Step 3: 过期时间无需验证
+      return true
+    }
+    try {
+      await createFormRef.value.validateField(fieldsToValidate)
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+  
+  // 步骤导航
+  const nextStep = async () => {
+    if (await validateStep(createStep.value) && createStep.value < 3) {
+      createStep.value++
+    }
+  }
+  
+  const prevStep = () => {
+    if (createStep.value > 1 && createStep.value <= 3) {
+      createStep.value--
+    }
+  }
 
   // 4. 提交包装函数
   const handleCreate = async () => {
-    if (!createFormRef.value) return
+    if (!await validateStep(3)) return
+    isCreating.value = true
     try {
-      await createFormRef.value.validate()
-      console.log('[INFO] [CreateChatHook] Create logic:', createChatForm.value)
-    } catch (error) {
-      console.log('[DEBUG] [CreateChatHook] Validation failed:', error)
+      await createFormRef.value!.validate()
+      // TODO: 调用创建聊天室 API
+      // const result = await createChatApi(createChatForm.value)
+      // if (result.status === 1) {
+      //   createResult.value = { success: true, message: t('create_chat.success_msg') }
+      //   createStep.value = 4
+      // } else {
+      //   createResult.value = { success: false, message: result.message || t('create_chat.fail_msg') }
+      //   ElMessage.error(result.message || t('create_chat.fail_msg'))
+      // }
+      
+      // 临时模拟成功
+      createResult.value = { success: true, message: t('create_chat.success_msg') || '创建成功' }
+      createStep.value = 4
+    } catch (error: any) {
+      const errorMessage = error.message || t('common.error')
+      createResult.value = { success: false, message: errorMessage }
+      ElMessage.error(errorMessage)
+    } finally {
+      isCreating.value = false
     }
   }
 
   return {
     createChatForm,
+    createStep,
+    createResult,
+    isCreating,
+    hasPasswordError,
+    passwordErrorMessage,
     handleCreate,
     createFormRef,
     createFormRules,
@@ -148,5 +299,9 @@ export const useCreateChat = () => {
     selectedDate,
     selectedDateRadio,
     disabledDate,
+    resetCreateForm,
+    validateStep,
+    nextStep,
+    prevStep,
   }
 }

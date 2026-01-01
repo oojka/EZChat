@@ -31,21 +31,21 @@ const selectedDateRadio = computed({
 </script>
 
 <template>
-  <div class="config-card-flat expiry-card">
+  <div class="expiry-config-container">
     <div class="card-title-row">
       <el-icon><Calendar /></el-icon><span>{{ t('create_chat.expiry_title') }}</span>
     </div>
-    <div class="expiry-vertical-layout">
+    <div class="expiry-content">
       <el-radio-group
         v-model="selectedDateRadio"
-        class="modern-radios-compact full-width"
+        class="ez-radio-group-modern"
       >
         <el-radio-button :value="1">{{ t('create_chat.day_n', { n: 1 }) }}</el-radio-button>
         <el-radio-button :value="7">{{ t('create_chat.day_n', { n: 7 }) }}</el-radio-button>
         <el-radio-button :value="30">{{ t('create_chat.day_n', { n: 30 }) }}</el-radio-button>
       </el-radio-group>
 
-      <div class="custom-date-wrapper full-width">
+      <div class="custom-date-picker-area">
         <el-date-picker
           v-model="selectedDate"
           type="datetime"
@@ -53,7 +53,7 @@ const selectedDateRadio = computed({
           format="YYYY/MM/DD HH:mm"
           :disabled-date="props.disabledDate"
           :prefix-icon="EditPen"
-          class="custom-picker-inline"
+          class="ez-date-picker-custom"
           style="width: 100%"
         />
       </div>
@@ -62,74 +62,67 @@ const selectedDateRadio = computed({
 </template>
 
 <style scoped>
-.config-card-flat {
-  border-radius: var(--radius-md);
-  padding: 14px 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--el-border-color-light);
-}
-
-.expiry-card {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
+.expiry-config-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .card-title-row {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--text-700);
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  padding-left: 4px;
 }
 
-.expiry-vertical-layout {
+.expiry-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.custom-date-wrapper {
-  margin-bottom: 12px;
-}
-
-.full-width {
-  width: 100%;
-}
-
-:deep(.modern-radios-compact) {
+.ez-radio-group-modern {
   display: flex;
-}
-
-:deep(.modern-radios-compact .el-radio-button) {
-  flex: 1;
-  margin-right: 8px;
-}
-
-:deep(.modern-radios-compact .el-radio-button:last-child) {
-  margin-right: 0;
-}
-
-:deep(.modern-radios-compact .el-radio-button__inner) {
   width: 100%;
-  height: 36px;
+}
+
+:deep(.ez-radio-group-modern .el-radio-button) {
+  flex: 1;
+}
+
+:deep(.ez-radio-group-modern .el-radio-button__inner) {
+  width: 100%;
+  height: 40px;
   background: var(--bg-page);
-  border: 1px solid var(--el-border-color-light) !important;
-  border-radius: var(--radius-sm) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-base) !important;
   color: var(--text-500);
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
-  font-size: 12px;
+  transition: all 0.3s var(--ease-out-expo);
+  font-size: 13px;
+  margin: 0 4px;
 }
 
-:deep(.modern-radios-compact .el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background-color: var(--primary) !important;
-  border-color: var(--primary) !important;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2) !important;
+:deep(.ez-radio-group-modern .el-radio-button:first-child .el-radio-button__inner) {
+  margin-left: 0;
 }
+
+:deep(.ez-radio-group-modern .el-radio-button:last-child .el-radio-button__inner) {
+  margin-right: 0;
+}
+
+:deep(.ez-radio-group-modern .el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background-color: var(--bg-card) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1) !important;
+}
+
+/* Date picker consistency is handled by parent's deep selector for .el-input__wrapper */
 </style>

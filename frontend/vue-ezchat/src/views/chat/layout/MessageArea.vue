@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {nextTick, ref, watch} from 'vue'
 import {storeToRefs} from 'pinia'
 import {ArrowDown, Loading} from '@element-plus/icons-vue'
 import {useRoomStore} from '@/stores/roomStore.ts'
@@ -7,6 +7,7 @@ import {useMessageStore} from '@/stores/messageStore.ts'
 import {useUserStore} from '@/stores/userStore.ts'
 import MessageItem from '@/views/chat/components/MessageItem.vue'
 import {useI18n} from 'vue-i18n'
+import {useInfiniteScroll} from '@/hooks/useInfiniteScroll.ts'
 
 const { t } = useI18n()
 const messageStore = useMessageStore()
@@ -19,65 +20,48 @@ const { currentRoom, currentRoomCode } = storeToRefs(roomStore)
 const userStore = useUserStore()
 const { loginUserInfo } = storeToRefs(userStore)
 
-const listRef = ref<HTMLElement | null>(null)
-const loadTrigger = ref<HTMLElement | null>(null)
+// 使用无限滚动 Hook
+const {
+  listRef,
+  loadTriggerRef,
+  isAtBottom,
+  scrollToBottom: baseScrollToBottom,
+  resetScrollState,
+} = useInfiniteScroll({
+  loading: loadingMessages,
+  noMore: noMoreMessages,
+  onLoadMore: loadMoreHistory,
+})
 
 const unreadNewMessagesCount = ref(0)
-const isAtBottom = ref(true)
 
+// 扩展 scrollToBottom，增加未读消息计数重置
 const scrollToBottom = async () => {
-  await nextTick()
-  if (listRef.value) {
-    listRef.value.scrollTo({ top: 0, behavior: 'smooth' })
-    unreadNewMessagesCount.value = 0
-  }
+  await baseScrollToBottom()
+  unreadNewMessagesCount.value = 0
 }
 
-const handleScroll = () => {
-  if (!listRef.value) return
-  const scrollPos = Math.abs(listRef.value.scrollTop)
-  isAtBottom.value = scrollPos < 10
-  if (isAtBottom.value) unreadNewMessagesCount.value = 0
-}
-
-const handleLoadHistory = async () => {
-  if (loadingMessages.value || noMoreMessages.value) return
-  await loadMoreHistory()
-}
-
-let observer: IntersectionObserver | null = null
-const setupObserver = () => {
-  if (observer) observer.disconnect()
-  observer = new IntersectionObserver((entries) => {
-    if (entries[0]?.isIntersecting && !loadingMessages.value && !noMoreMessages.value) handleLoadHistory()
-  }, { root: listRef.value, threshold: 0.1 })
-  if (loadTrigger.value) observer.observe(loadTrigger.value)
-}
-
-onMounted(() => {
-  setupObserver()
-  listRef.value?.addEventListener('scroll', handleScroll)
+// 监听滚动位置，重置未读数
+watch(() => isAtBottom.value, (newVal) => {
+  if (newVal) unreadNewMessagesCount.value = 0
 })
 
-onUnmounted(() => {
-  if (observer) observer.disconnect()
-  listRef.value?.removeEventListener('scroll', handleScroll)
-})
-
+// 监听聊天室切换，重置滚动状态
 watch(() => currentRoomCode.value, async (newVal) => {
   if (newVal) {
     await nextTick()
-    if (listRef.value) listRef.value.scrollTop = 0
     unreadNewMessagesCount.value = 0
-    setupObserver()
+    resetScrollState()
   }
 })
 
+// 监听新消息，自动滚动或显示未读数
 watch(() => currentMessageList.value.length, (newLen, oldLen) => {
   if (newLen > oldLen && currentMessageList.value.length > 0) {
     const latestMsg = currentMessageList.value[0]
-    if (latestMsg.sender === loginUserInfo.value?.uid) scrollToBottom()
-    else {
+    if (latestMsg.sender === loginUserInfo.value?.uid) {
+      scrollToBottom()
+    } else {
       if (isAtBottom.value) scrollToBottom()
       else unreadNewMessagesCount.value++
     }
@@ -89,7 +73,7 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
   <div class="message-area">
     <ul class="list" ref="listRef">
       <MessageItem v-for="msg in currentMessageList" :key="msg.tempId || `${msg.sender}_${msg.createTime}`" :msg="msg" :current-chat="currentRoom" />
-      <li class="load-indicator" ref="loadTrigger">
+      <li class="load-indicator" ref="loadTriggerRef">
         <div v-if="loadingMessages" class="loading-wrapper">
           <el-icon class="is-loading" :size="16"><Loading /></el-icon>
           <span>{{ t('common.loading') }}</span>
@@ -116,6 +100,7 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
   box-sizing: border-box;
   position: relative;
   transition: background-color 0.3s ease;
+  animation: fadeIn 0.25s ease;
 }
 
 .list {
@@ -143,4 +128,6 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
 
 .list::-webkit-scrollbar { width: 4px; }
 .list::-webkit-scrollbar-thumb { background: var(--text-400); border-radius: 10px; opacity: 0.2; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 </style>

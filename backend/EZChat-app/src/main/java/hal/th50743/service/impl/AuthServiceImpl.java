@@ -9,6 +9,7 @@ import hal.th50743.service.FormalUserService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.JwtUtils;
 import hal.th50743.utils.LoginVOBuilder;
+import hal.th50743.utils.PasswordUtils;
 import io.minio.MinioOSSOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -101,9 +102,12 @@ public class AuthServiceImpl implements AuthService {
                 log.warn("注册请求参数不完整");
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "Registration info is incomplete");
             }
-            // 校验两次密码是否一致
-            if (!req.getPassword().equals(req.getConfirmPassword())) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "Passwords do not match");
+            // 校验两次密码是否一致（如果 confirmPassword 不为空）
+            // 如果前端未传 confirmPassword，则跳过此校验
+            if (req.getConfirmPassword() != null && !req.getConfirmPassword().trim().isEmpty()) {
+                if (!req.getPassword().equals(req.getConfirmPassword())) {
+                    throw new BusinessException(ErrorCode.BAD_REQUEST, "Passwords do not match");
+                }
             }
 
             // 1. 创建基础 User 信息
@@ -122,11 +126,12 @@ public class AuthServiceImpl implements AuthService {
 
             User userRes = userService.add(userReq);
 
-            // 2. 创建关联的 FormalUser 账号
+            // 2. 创建关联的 FormalUser 账号（使用 BCrypt 加密密码）
+            String passwordHash = PasswordUtils.encode(req.getPassword());
             FormalUser formalUserReq = new FormalUser(
                     userRes.getId(),
                     req.getUsername(),
-                    req.getPassword(), // TODO: 生产环境必须进行 BCrypt 哈希加密
+                    passwordHash,
                     LocalDateTime.now(),
                     LocalDateTime.now(),
                     LocalDateTime.now(),
@@ -140,10 +145,12 @@ public class AuthServiceImpl implements AuthService {
         }
         // 情况 B: 临时用户转为正式用户 (已有临时 UId)
         else {
+            // 使用 BCrypt 加密密码
+            String passwordHash = PasswordUtils.encode(req.getPassword());
             FormalUser formalUserReq = new FormalUser(
                     null,
                     req.getUsername(),
-                    req.getPassword(),
+                    passwordHash,
                     LocalDateTime.now(),
                     LocalDateTime.now(),
                     LocalDateTime.now(),

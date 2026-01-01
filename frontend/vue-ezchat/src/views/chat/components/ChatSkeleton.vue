@@ -11,13 +11,13 @@
         <div class="sk-avatar"></div>
         <div class="sk-content">
           <div class="sk-nickname"></div>
-          <div class="sk-bubble w-40"></div>
+          <div class="sk-bubble" :class="'w-' + ((i % 3) + 1)"></div>
         </div>
       </div>
       <div class="sk-msg-row right">
         <div class="sk-avatar"></div>
         <div class="sk-content">
-          <div class="sk-bubble w-30"></div>
+          <div class="sk-bubble" :class="'w-' + (((i + 1) % 4) + 1)"></div>
         </div>
       </div>
     </div>
@@ -40,6 +40,9 @@
   gap: 18px;
   overflow: hidden;
   transition: background-color 0.4s ease;
+  /* 轻微玻璃化模糊，降低清晰度提升质感 */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .sk-group { display: flex; flex-direction: column; gap: 18px; margin-bottom: 18px; }
@@ -57,13 +60,18 @@
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
   border: 1px solid var(--el-border-color-extra-light);
+  filter: blur(0.4px) saturate(1.05);
 }
 
 .sk-avatar { width: 38px; height: 38px; border-radius: var(--radius-base); flex-shrink: 0; }
 .sk-content { display: flex; flex-direction: column; gap: 4px; max-width: 75%; }
 .sk-msg-row.right .sk-content { align-items: flex-end; }
 .sk-nickname { width: 60px; height: 12px; border-radius: 4px; margin-bottom: 2px; }
-.sk-bubble { height: 40px; border-radius: var(--radius-md); }
-.w-30 { width: 30%; }
-.w-40 { width: 40%; }
+.sk-bubble { height: 40px; border-radius: var(--radius-md); width: fit-content; }
+
+/* 模拟真实消息的不同长度（参考 MessageItem 的实际宽度范围） */
+.w-1 { width: 120px; }
+.w-2 { width: 180px; }
+.w-3 { width: 240px; }
+.w-4 { width: 160px; }
 </style>

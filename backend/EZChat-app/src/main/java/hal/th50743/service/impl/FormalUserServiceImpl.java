@@ -1,10 +1,13 @@
 package hal.th50743.service.impl;
 
+import hal.th50743.exception.BusinessException;
+import hal.th50743.exception.ErrorCode;
 import hal.th50743.mapper.UserMapper;
 import hal.th50743.pojo.FormalUser;
 import hal.th50743.pojo.LoginReq;
 import hal.th50743.pojo.User;
 import hal.th50743.service.FormalUserService;
+import hal.th50743.utils.PasswordUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,12 +51,36 @@ public class FormalUserServiceImpl implements FormalUserService {
 
     /**
      * 用户登录
+     * <p>
+     * 使用 BCrypt 密码哈希验证，确保密码安全性。
      *
      * @param loginReq 登录请求对象
-     * @return User 用户对象
+     * @return User 用户对象，如果用户名或密码错误返回 null
      */
     @Override
     public User login(LoginReq loginReq) {
-        return userMapper.selectByUsernameAndPassword(loginReq.getUsername(), loginReq.getPassword());
+        // 1. 根据用户名查询正式用户信息（包含密码哈希）
+        FormalUser formalUser = userMapper.selectFormalUserByUsername(loginReq.getUsername());
+        if (formalUser == null) {
+            log.warn("登录失败: 用户名不存在 - {}", loginReq.getUsername());
+            return null;
+        }
+
+        // 2. 使用 PasswordUtils 验证密码
+        boolean passwordMatches = PasswordUtils.matches(loginReq.getPassword(), formalUser.getPasswordHash());
+        if (!passwordMatches) {
+            log.warn("登录失败: 密码错误 - {}", loginReq.getUsername());
+            return null;
+        }
+
+        // 3. 密码验证通过，查询并返回用户信息
+        User user = userMapper.selectUserByUsername(loginReq.getUsername());
+        if (user == null) {
+            log.error("登录异常: 用户名存在但用户信息缺失 - {}", loginReq.getUsername());
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "User data inconsistency");
+        }
+
+        log.info("登录成功: username={}, uId={}", loginReq.getUsername(), user.getUId());
+        return user;
     }
 }

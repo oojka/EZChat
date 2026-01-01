@@ -14,6 +14,7 @@ import {useRegister} from '@/hooks/useRegister.ts'
 import {useI18n} from 'vue-i18n'
 import useLogin from '@/hooks/useLogin.ts'
 import PasswordInput from '@/components/PasswordInput.vue'
+import {ElMessage} from 'element-plus'
 
 const { t } = useI18n()
 const props = defineProps<{ active: boolean; flipped: boolean }>()
@@ -27,10 +28,33 @@ const showAvatarError = ref(false)
 const isRegistering = ref(false)
 const registrationResult = ref({ success: false, message: '' })
 
-const progressPercentage = computed(() => (Math.min(registerStep.value, 3) / 3) * 100)
+const progressPercentage = computed(() => {
+  // 只有在步骤4且成功时才显示100%，否则根据当前步骤计算
+  if (registerStep.value === 4 && registrationResult.value.success) {
+    return 100
+  }
+  return (Math.min(registerStep.value, 3) / 3) * 100
+})
 
-const onFlip = () => { resetRegisterForm(); showAvatarError.value = false; emit('flip') }
-const onUnflip = () => { emit('unflip'); setTimeout(() => { registerStep.value = 1; showAvatarError.value = false; resetRegisterForm() }, 800) }
+const onFlip = () => {
+  // 重置注册状态
+  registerStep.value = 1
+  registrationResult.value = { success: false, message: '' }
+  showAvatarError.value = false
+  resetRegisterForm()
+  emit('flip')
+}
+
+const onUnflip = () => {
+  emit('unflip')
+  // 延迟重置，等待翻转动画完成
+  setTimeout(() => {
+    registerStep.value = 1
+    registrationResult.value = { success: false, message: '' }
+    showAvatarError.value = false
+    resetRegisterForm()
+  }, 800)
+}
 const onAvatarSuccess = (response: any) => { handleAvatarSuccess(response); showAvatarError.value = false }
 
 const validateStep = async (step: number) => {
@@ -61,11 +85,22 @@ const handleRegister = async () => {
   isRegistering.value = true
   try {
     const success = await register()
-    registrationResult.value = { success, message: success ? t('auth.register_success_msg') : t('auth.register_fail_msg') }
-    registerStep.value = 4
+    if (success) {
+      // 注册成功：显示成功结果
+      registrationResult.value = { success: true, message: t('auth.register_success_msg') }
+      registerStep.value = 4
+    } else {
+      // 注册失败：保持在步骤3，不跳转到结果页
+      registrationResult.value = { success: false, message: t('auth.register_fail_msg') }
+      // 不设置 registerStep = 4，保持在步骤3
+      ElMessage.error(t('auth.register_fail_msg'))
+    }
   } catch (e: any) {
-    registrationResult.value = { success: false, message: e.message || t('common.error') }
-    registerStep.value = 4
+    // 捕获异常（API 错误或网络错误）：保持在步骤3
+    const errorMessage = e.message || t('common.error')
+    registrationResult.value = { success: false, message: errorMessage }
+    // 不设置 registerStep = 4，保持在步骤3
+    ElMessage.error(errorMessage)
   } finally {
     isRegistering.value = false
   }
@@ -106,7 +141,7 @@ const handleRegister = async () => {
         <el-button v-if="registerStep !== 4" class="close-flip-btn" :icon="Close" circle @click="onUnflip" />
         <div class="register-header">
           <div class="progress-section">
-            <el-progress :percentage="registerStep === 4 ? 100 : progressPercentage" :show-text="false" :stroke-width="4" :status="registerStep === 4 ? (registrationResult.success ? 'success' : 'exception') : ''" class="custom-progress" />
+            <el-progress :percentage="progressPercentage" :show-text="false" :stroke-width="4" :status="registerStep === 4 ? (registrationResult.success ? 'success' : 'exception') : ''" class="custom-progress" />
             <div class="step-label">{{ registerStep === 4 ? 'COMPLETED' : `Step ${registerStep} / 3` }}</div>
           </div>
           <h4>{{ registerStep === 4 ? t('auth.register_result') : t('auth.register') }}</h4>
@@ -176,15 +211,15 @@ const handleRegister = async () => {
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.has-shadow { box-shadow: var(--shadow-glass); }
-html.dark .has-shadow { box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8); }
-
 html.dark .flip-card-front,
 html.dark .flip-card-back {
   background: var(--bg-card);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+.has-shadow { box-shadow: var(--shadow-glass); }
+html.dark .has-shadow { box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8); }
 
 .is-flipped .flip-card-front { visibility: hidden; transition: visibility 0s 0.4s; }
 .flip-card-inner:not(.is-flipped) .flip-card-front { visibility: visible; transition: visibility 0s 0.4s; }

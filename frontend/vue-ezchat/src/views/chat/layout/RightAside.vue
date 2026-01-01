@@ -15,5 +15,8 @@ import ChatMemberListArea from '../components/ChatMemberListArea.vue'
   flex-direction: column;
   background-color: var(--bg-aside); /* 适配暗黑模式 */
   transition: background-color 0.3s ease;
+  animation: fadeIn 0.25s ease;
 }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 </style>
