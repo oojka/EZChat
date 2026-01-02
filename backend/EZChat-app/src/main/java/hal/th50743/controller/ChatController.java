@@ -1,15 +1,13 @@
 package hal.th50743.controller;
 
 import hal.th50743.pojo.ChatReq;
-import hal.th50743.pojo.ChatMemberVO;
+import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.Result;
 import hal.th50743.service.ChatService;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 聊天室控制器
@@ -32,8 +30,9 @@ public class ChatController {
      */
     @PostMapping
     public Result createChat(@RequestBody ChatReq chatReq) {
-
-        return Result.success();
+        Integer userId = CurrentHolder.getCurrentId();
+        CreateChatVO res = chatService.createChat(userId, chatReq);
+        return Result.success(res);
 
     }
 

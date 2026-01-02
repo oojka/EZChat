@@ -91,5 +91,21 @@ public class AuthController {
         return Result.success(res);
     }
 
+    /**
+     * 邀请码免密加入（访客）
+     *
+     * 业务目的：
+     * - 创建短链接的邀请码后，任何人都可通过 inviteCode 免密加入房间（前提：join_enabled=1）
+     * - 成功后返回 JWT token（前端写入 localStorage 后可进入 /chat）
+     *
+     * @param req 邀请加入请求
+     * @return 统一响应结果（LoginVO）
+     */
+    @PostMapping("/invite")
+    public Result inviteGuest(@RequestBody InviteGuestReq req) {
+        LoginVO res = authService.inviteGuest(req);
+        return Result.success(res);
+    }
+
 
 }

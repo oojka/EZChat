@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import {
   ArrowRight,
   Camera,
   CircleCheckFilled,
   CircleCloseFilled,
   Close,
+  DocumentCopy,
   Picture,
 } from '@element-plus/icons-vue'
 import { useCreateChat } from '@/hooks/useCreateChat.ts'
@@ -14,7 +15,6 @@ import { useAppStore } from '@/stores/appStore.ts'
 import PasswordConfig from '@/components/PasswordConfig.vue'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
 
 const appStore = useAppStore()
 const { createRoomVisible } = storeToRefs(appStore)
@@ -26,8 +26,7 @@ const {
   createStep,
   createResult,
   isCreating,
-  hasPasswordError,
-  passwordErrorMessage,
+  showAvatarError,
   handleCreate,
   createFormRef,
   createFormRules,
@@ -36,9 +35,14 @@ const {
   selectedDate,
   selectedDateRadio,
   disabledDate,
-  resetCreateForm,
   nextStep,
   prevStep,
+  // 从组件下沉到 Hook 的逻辑
+  tf,
+  handleClose,
+  roomIdDisplay,
+  copyInviteLink,
+  copyRoomId,
 } = useCreateChat()
 
 // 进度条百分比计算
@@ -49,55 +53,21 @@ const progressPercentage = computed(() => {
   return (Math.min(createStep.value, 3) / 3) * 100
 })
 
-// 监听弹窗关闭，自动重置表单
-watch(createRoomVisible, (newVal) => {
-  if (!newVal) {
-    // 弹窗关闭时重置
-    setTimeout(() => {
-      resetCreateForm()
-    }, 300) // 延迟一点，等关闭动画完成
-  }
-})
-
-const handleClose = () => {
-  createRoomVisible.value = false
-}
-
-const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any) => {
-  handleAvatarSuccess(response, uploadFile, fileList)
-}
 </script>
 
 <template>
-  <el-dialog
-    v-model="createRoomVisible"
-    width="580px"
-    class="ez-modern-dialog create-dialog-step"
-    align-center
-    destroy-on-close
-    :show-close="false"
-    :close-on-click-modal="false"
-  >
-    <div class="create-dialog-container">
-      <!-- 关闭按钮 -->
-      <el-button
-        v-if="createStep !== 4"
-        class="close-btn"
-        :icon="Close"
-        circle
-        @click.stop="handleClose"
-      />
-      
-      <!-- 头部：进度条和标题 -->
+  <el-dialog :model-value="createRoomVisible" @update:model-value="handleClose" width="580px" class="ez-modern-dialog create-dialog-step" align-center
+    destroy-on-close :show-close="false" :close-on-click-modal="false">
+    <template #header>
       <div class="create-header">
-          <div class="progress-section">
-          <el-progress
-            :percentage="progressPercentage"
-            :show-text="false"
-            :stroke-width="4"
-            :status="createStep === 4 ? (createResult.success ? 'success' : 'exception') : ''"
-            class="custom-progress"
-          />
+        <button v-if="createStep !== 4" class="close-btn" type="button" @pointerdown.stop.prevent @click="handleClose">
+          <el-icon>
+            <Close />
+          </el-icon>
+        </button>
+        <div class="progress-section">
+          <el-progress :percentage="progressPercentage" :show-text="false" :stroke-width="4"
+            :status="createStep === 4 ? (createResult.success ? 'success' : 'exception') : ''" class="custom-progress" />
           <div class="step-label">
             {{ createStep === 4 ? 'COMPLETED' : `Step ${createStep} / 3` }}
           </div>
@@ -106,92 +76,114 @@ const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any
           {{ createStep === 4 ? t('create_chat.result') || '完成' : t('create_chat.title') }}
         </h4>
       </div>
+    </template>
+
+    <div class="create-dialog-container">
 
       <!-- 表单内容 -->
-      <el-form
-        ref="createFormRef"
-        :model="createChatForm"
-        :rules="createFormRules"
-        class="create-form-content"
-        label-position="top"
-        hide-required-asterisk
-      >
+      <el-form ref="createFormRef" :model="createChatForm" :rules="createFormRules" class="create-form-content"
+        label-position="top" hide-required-asterisk>
         <transition name="el-fade-in-linear" mode="out-in">
           <!-- Step 1: 头像上传 + 房间名称 -->
           <div v-if="createStep === 1" key="step1" class="step-container">
             <div class="form-vertical-stack">
               <!-- 头像上传 -->
               <div class="avatar-upload-box">
-                <el-upload
-                  class="avatar-uploader-large"
-                  action="/api/auth/register/upload"
-                  :show-file-list="false"
-                  :on-success="handleAvatarUploadSuccess"
-                  :before-upload="beforeAvatarUpload"
-                >
+                <el-upload class="avatar-uploader-large" action="/api/auth/register/upload" :show-file-list="false"
+                  :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload">
                   <div v-if="createChatForm.avatar.objectThumbUrl" class="avatar-preview-lg">
                     <img :src="createChatForm.avatar.objectThumbUrl" class="avatar-img" />
                     <div class="edit-mask-lg">
-                      <el-icon><Camera /></el-icon>
+                      <el-icon>
+                        <Camera />
+                      </el-icon>
                       <span>{{ t('common.change') }}</span>
                     </div>
                   </div>
                   <div v-else class="placeholder-circle-lg">
-                    <el-icon size="40"><Picture /></el-icon>
+                    <el-icon size="40">
+                      <Picture />
+                    </el-icon>
                     <span>{{ t('create_chat.avatar_label') || t('auth.select_image') }}</span>
                   </div>
                 </el-upload>
                 <div class="avatar-info-area">
                   <p class="step-hint">{{ t('create_chat.avatar_hint') || t('auth.avatar_hint') }}</p>
+                  <div class="avatar-error-container">
+                    <span v-show="showAvatarError" class="avatar-error-text">
+                      {{ t('validation.avatar_required') }}
+                    </span>
+                  </div>
                 </div>
                 <el-form-item prop="avatar" class="hidden-item" :show-message="false" />
               </div>
 
               <!-- 房间名称 -->
               <el-form-item :label="t('create_chat.room_name')" prop="chatName" class="spaced-item">
-                <el-input
-                  v-model="createChatForm.chatName"
-                  :placeholder="t('create_chat.room_name_placeholder')"
-                  size="large"
-                  @keydown.enter.prevent="nextStep"
-                />
+                <el-input v-model="createChatForm.chatName" :placeholder="t('create_chat.room_name_placeholder')"
+                  size="large" @keydown.enter.prevent="nextStep" />
               </el-form-item>
             </div>
           </div>
 
           <!-- Step 2: 密码设置 -->
           <div v-else-if="createStep === 2" key="step2" class="step-container step-container-password">
-            <PasswordConfig
-              mode="always-visible"
-              v-model="createChatForm.joinEnable"
-              v-model:password="createChatForm.password"
-              v-model:password-confirm="createChatForm.passwordConfirm"
-              :has-password-error="hasPasswordError"
-              :password-error-message="passwordErrorMessage"
-              @enter="nextStep"
-            />
+            <PasswordConfig mode="always-visible" v-model="createChatForm.joinEnableByPassword"
+              v-model:password="createChatForm.password" v-model:password-confirm="createChatForm.passwordConfirm"
+              @enter="nextStep" />
           </div>
 
           <!-- Step 3: 过期时间设置 -->
           <div v-else-if="createStep === 3" key="step3" class="step-container">
-            <DateTimePicker
-              v-model="selectedDate"
-              v-model:radio-value="selectedDateRadio"
-              :disabled-date="disabledDate"
-            />
+            <DateTimePicker v-model="selectedDate" v-model:radio-value="selectedDateRadio"
+              v-model:oneTimeLink="createChatForm.oneTimeLink" :disabled-date="disabledDate" />
           </div>
 
           <!-- Step 4: 结果反馈 -->
           <div v-else key="step4" class="step-container result-step">
             <div class="result-content">
-              <el-icon :class="['result-icon', createResult.success ? 'success' : 'error']">
-                <CircleCheckFilled v-if="createResult.success" />
-                <CircleCloseFilled v-else />
-              </el-icon>
-              <h3 class="result-title">
-                {{ createResult.success ? (t('create_chat.success') || '创建成功') : (t('create_chat.fail') || '创建失败') }}
-              </h3>
-              <p class="result-message">{{ createResult.message }}</p>
+              <!-- 顶部摘要：icon + 标题 + 消息（紧凑） -->
+              <div class="result-summary">
+                <el-icon :class="['result-icon', createResult.success ? 'success' : 'error']">
+                  <CircleCheckFilled v-if="createResult.success" />
+                  <CircleCloseFilled v-else />
+                </el-icon>
+                <h3 class="result-title">
+                  {{ createResult.success ? (t('create_chat.success') || '创建成功') : (t('create_chat.fail') || '创建失败') }}
+                </h3>
+                <p class="result-message">{{ createResult.message }}</p>
+              </div>
+
+              <!-- 创建成功：展示 chatCode + 邀请链接（可滚动区域） -->
+              <div v-if="createResult.success && createResult.chatCode" class="result-details">
+                <div class="invite-block">
+                  <!-- roomId：主视觉（大号数字） -->
+                  <div class="credential-label">{{ tf('chat.room_id', '房间ID') }}</div>
+                  <div class="credential-roomid-row">
+                    <div class="credential-roomid-value">{{ roomIdDisplay }}</div>
+                    <el-tooltip :content="tf('common.copy', '复制')" placement="top">
+                      <el-button class="copy-icon-btn" :icon="DocumentCopy" @click="copyRoomId" />
+                    </el-tooltip>
+                  </div>
+
+                  <!-- invite link：普通文本（不使用输入框） -->
+                  <div class="credential-label">{{ tf('create_chat.invite_link', '邀请链接') }}</div>
+                  <div class="credential-link-row">
+                    <div v-if="createResult.inviteUrl" class="credential-link-value">
+                      {{ createResult.inviteUrl }}
+                    </div>
+                    <div v-else class="invite-empty">-</div>
+                    <el-tooltip :content="tf('common.copy', '复制')" placement="top">
+                      <el-button class="copy-icon-btn copy-icon-btn--primary" :icon="DocumentCopy"
+                        @click="copyInviteLink" />
+                    </el-tooltip>
+                  </div>
+
+                  <p class="invite-tip">
+                    {{ tf('create_chat.invite_ttl_tip', '默认有效期 7 天；若关闭加入，邀请链接也将失效。') }}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </transition>
@@ -201,7 +193,9 @@ const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any
           <template v-if="createStep === 1">
             <el-button type="primary" @click="nextStep" class="step-btn-full">
               {{ t('common.next') }}
-              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+              <el-icon class="el-icon--right">
+                <ArrowRight />
+              </el-icon>
             </el-button>
           </template>
           <template v-else-if="createStep === 2">
@@ -222,11 +216,8 @@ const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any
             <el-button v-if="!createResult.success" @click="createStep = 1" class="step-btn-half">
               {{ t('common.retry') }}
             </el-button>
-            <el-button
-              type="primary"
-              @click="handleClose"
-              :class="createResult.success ? 'step-btn-full' : 'step-btn-half'"
-            >
+            <el-button type="primary" @click="handleClose"
+              :class="createResult.success ? 'step-btn-full' : 'step-btn-half'">
               {{ t('create_chat.enter_now') || t('common.confirm') }}
             </el-button>
           </template>
@@ -255,22 +246,45 @@ html.dark :deep(.ez-modern-dialog) {
   -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
 }
 
+/* 重置 Element Plus header 默认样式，避免占位/边距影响自定义布局 */
+.create-dialog-step :deep(.el-dialog__header) {
+  /* 本弹窗使用 header slot，但要清零 EP 默认 16px padding（含 bottom） */
+  padding: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+}
+
+.create-dialog-step :deep(.el-dialog__title) {
+  display: none !important;
+}
+
+/* 同时清理 body 默认 padding：避免与 .create-dialog-container 的自定义 padding 叠加 */
+.create-dialog-step :deep(.el-dialog__body) {
+  padding: 0 !important;
+}
+
 .create-dialog-container {
   position: relative;
-  padding: 24px 32px 24px;
+  /* header 与内容区域之间增加间距（padding-top），保持呼吸感 */
+  padding: 10px 32px 16px;
   display: flex;
   flex-direction: column;
-  min-height: 500px;
+  /* 固定高度：再压缩（整体高度更短，但保持"固定不抖动"） */
+  min-height: 420px;
+  overflow: visible;
 }
 
 .close-btn {
   position: absolute;
-  right: 12px;
-  top: 12px;
-  z-index: 50;
+  /* 关闭按钮：位于 header 内部，提供合适的上/右边距（避免负值溢出导致点击/布局不稳定） */
+  right: 16px;
+  /* 让按钮"中心点"对齐进度条线段（header padding-top=20px，stroke=4px，线段中心≈2px） */
+  top: calc(20px + 2px);
+  transform: translateY(-50%);
+  z-index: 999999;
   pointer-events: auto;
   background: var(--bg-page);
-  border: 1px solid var(--el-border-color-light);
+  border: none;
   color: var(--text-500);
   width: 32px;
   height: 32px;
@@ -278,24 +292,28 @@ html.dark :deep(.ez-modern-dialog) {
   align-items: center;
   justify-content: center;
   transition: all 0.3s;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 .close-btn:hover {
   background: var(--el-border-color-light);
   color: var(--text-900);
-  transform: rotate(90deg);
+  transform: translateY(-50%) rotate(90deg);
 }
 
 /* --- Header --- */
 .create-header {
+  position: relative;
   text-align: center;
-  margin-bottom: 12px;
-  padding-top: 4px;
+  margin-bottom: 8px;
+  /* 进度条上方留白：让进度条不贴顶 */
+  padding: 20px 32px 0;
 }
 
 .progress-section {
-  margin-bottom: 10px;
-  padding: 0 24px;
+  margin-bottom: 8px;
+  padding: 0 40px;
 }
 
 :deep(.custom-progress .el-progress-bar__outer) {
@@ -310,7 +328,8 @@ html.dark :deep(.ez-modern-dialog) {
 }
 
 .create-header h4 {
-  margin: 0;
+  /* 进度条与标题间距：层级更清晰 */
+  margin: 12px 0 0;
   font-size: 20px;
   font-weight: 800;
   color: var(--text-900);
@@ -324,7 +343,8 @@ html.dark :deep(.ez-modern-dialog) {
 }
 
 .step-container {
-  height: 400px;
+  /* 压缩 Step 区域高度（整体 dialog 高度也同步缩短） */
+  height: 320px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -341,7 +361,7 @@ html.dark :deep(.ez-modern-dialog) {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .avatar-info-area {
@@ -357,6 +377,22 @@ html.dark :deep(.ez-modern-dialog) {
   font-size: 11px;
   color: var(--text-400);
   margin: 0;
+}
+
+.avatar-error-container {
+  height: 20px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.avatar-error-text {
+  font-size: 11px;
+  color: var(--el-color-danger);
+  font-weight: 600;
+  text-align: center;
 }
 
 .avatar-uploader-large {
@@ -430,10 +466,13 @@ html.dark :deep(.ez-modern-dialog) {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 24px;
+  /* 压缩 Step1 的纵向间距 */
+  gap: 18px;
 }
 
 .spaced-item {
+  /* 需求：ルーム名区域整体下移 10px（仅影响 Step1 的房间名表单项） */
+  margin-top: 10px;
   margin-bottom: 0 !important;
 }
 
@@ -500,20 +539,44 @@ html.dark :deep(.ez-modern-dialog) {
 /* --- Result Step --- */
 .result-step {
   text-align: center;
+  /* Step4 撑满容器高度，让 flex 子项可分配 */
+  justify-content: flex-start;
+  padding-top: 8px;
 }
 
 .result-content {
   display: flex;
   flex-direction: column;
+  /* 使用 stretch 确保子元素宽度不超出父容器 */
+  align-items: stretch;
+  /* 减少间距，让内容更紧凑 */
+  gap: 8px;
+  /* 撑满高度，让 result-details 可分配剩余空间 */
+  height: 100%;
+  min-height: 0;
+}
+
+/* 顶部摘要区：icon + 标题 + 消息（紧凑布局） */
+.result-summary {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .result-icon {
-  font-size: 64px;
+  /* 基础尺寸（失败态） */
+  font-size: 44px;
+  transition: font-size 0.2s ease;
 }
 
 .result-icon.success {
+  /* 成功态放大，作为页面主视觉 */
+  font-size: 64px;
   color: var(--el-color-success);
 }
 
@@ -523,16 +586,228 @@ html.dark :deep(.ez-modern-dialog) {
 
 .result-title {
   margin: 0;
-  font-size: 22px;
+  /* 略微缩小标题字体，让成功图标更突出 */
+  font-size: 16px;
   font-weight: 800;
   color: var(--text-900);
 }
 
 .result-message {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-500);
-  line-height: 1.6;
+  line-height: 1.4;
+  /* 单行省略，减少垂直噪音 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* 详情区：可滚动，撑满剩余高度 */
+.result-details {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 美化滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--el-border-color-light) transparent;
+}
+
+.result-details::-webkit-scrollbar {
+  width: 4px;
+}
+
+.result-details::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.result-details::-webkit-scrollbar-thumb {
+  background: var(--el-border-color-light);
+  border-radius: 2px;
+}
+
+.invite-block {
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+}
+
+/* 成功页字段标题（ルームID / 招待リンク） */
+.credential-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-400);
+  letter-spacing: 0.3px;
+  /* 首个 label 无需额外 margin-top，后续 label 用 :not(:first-child) 控制 */
+  margin-top: 0;
+  text-align: left;
+}
+
+.credential-label:not(:first-child) {
+  margin-top: 8px;
+}
+
+/* roomId：大号数字 + 复制（数字视觉居中，按钮固定右侧） */
+.credential-roomid-row {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 左侧占位：与右侧复制按钮等宽，使数字视觉居中 */
+.credential-roomid-row::before {
+  content: '';
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.credential-roomid-value {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+  /* 降低最大字体，适配紧凑布局 */
+  font-size: clamp(32px, 6vw, 44px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--text-900);
+  line-height: 1;
+  user-select: text;
+}
+
+/* 邀请链接：普通文本展示 + 复制 */
+.credential-link-row {
+  margin-top: 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.credential-link-value {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--bg-page);
+  border: 1px solid var(--el-border-color-light);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-900);
+  line-height: 1.4;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  user-select: text;
+  /* 限制最大高度，超长时滚动 */
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.invite-empty {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--bg-page);
+  border: 1px dashed var(--el-border-color-light);
+  color: var(--text-400);
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+.invite-copy-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.invite-copy-primary {
+  height: 44px;
+  border-radius: 12px;
+  padding: 0 14px;
+}
+
+/* 复制按钮：不使用蓝色 primary，改为 icon-only 的玻璃按钮（更"高级"且不抢主色） */
+.copy-icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  color: var(--text-700);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-glass);
+  transition: transform 0.2s var(--ease-out-expo), background-color 0.2s var(--ease-out-expo);
+}
+
+.copy-icon-btn:hover {
+  transform: translateY(-1px);
+  background: var(--bg-page);
+}
+
+.copy-icon-btn:active {
+  transform: translateY(0);
+}
+
+/* 更强调的复制按钮（邀请链接）：仍然不用蓝色，但通过边框/阴影做“主操作”层级 */
+.copy-icon-btn--primary {
+  border-color: rgba(64, 158, 255, 0.35);
+}
+
+.invite-tip {
+  margin: 8px 0 0;
+  font-size: 10px;
+  color: var(--text-500);
+  line-height: 1.4;
+  text-align: left;
+}
+
+@media (max-width: 520px) {
+  .credential-roomid-value {
+    font-size: clamp(28px, 8vw, 36px);
+  }
+
+  .credential-roomid-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* 移动端隐藏左侧占位元素 */
+  .credential-roomid-row::before {
+    display: none;
+  }
+
+  .credential-link-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .copy-icon-btn {
+    align-self: flex-end;
+  }
 }
 
 /* --- Actions --- */
@@ -540,7 +815,7 @@ html.dark :deep(.ez-modern-dialog) {
   display: flex;
   gap: 12px;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .step-btn-full {
@@ -570,5 +845,4 @@ html.dark :deep(.ez-modern-dialog) {
   background: var(--el-border-color-light);
   color: var(--text-700);
 }
-
 </style>

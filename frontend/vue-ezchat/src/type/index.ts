@@ -9,9 +9,10 @@ export interface Image {
   objectName: string
   objectUrl: string
   objectThumbUrl: string
+  objectId?: number // 对象 ID，用于直接关联 objects 表（可选，向后兼容）
   // 前端持久化字段
-  blobUrl?: string      // 原图 Blob URL
-  blobThumbUrl?: string // 缩略图 Blob URL
+  blobUrl : string    // 原图 Blob URL
+  blobThumbUrl : string // 缩略图 Blob URL
 }
 
 export interface LoginInfo {
@@ -49,17 +50,17 @@ export interface RegisterInfo {
 export interface ChatRoom {
   chatCode : string //
   chatName : string //
-  ownerUid? : string //
-  joinEnabled?: number //
-  lastActiveAt?: string //
-  createTime? : string //
-  updateTime? : string //
-  unreadCount?: number //
-  onLineMemberCount?: number
-  memberCount?: number
-  avatar?: Image //
-  lastMessage?: Message
-  chatMembers?: ChatMember[]
+  ownerUid : string //
+  joinEnabled: number //
+  lastActiveAt: string //
+  createTime : string //
+  updateTime : string //
+  unreadCount : number //
+  onLineMemberCount : number
+  memberCount : number
+  avatar : Image //
+  lastMessage : Message
+  chatMembers : ChatMember[]
 }
 
 export interface ChatMember {
@@ -68,6 +69,14 @@ export interface ChatMember {
   avatar: Image
   online: boolean
   lastSeenAt: string
+}
+
+/**
+ * 创建房间返回（后端 CreateChatVO）
+ */
+export interface CreateChatVO {
+  chatCode: string
+  inviteCode: string
 }
 
 export interface User {
@@ -87,8 +96,8 @@ export interface Message {
   text: string
   images: Image[]
   createTime: string
-  tempId?: string
-  status?: 'sending' | 'sent' | 'error' // 新增状态字段
+  tempId : string | null
+  status : 'sending' | 'sent' | 'error' | null
 }
 
 export interface AppInitInfo {

@@ -90,4 +90,20 @@ public interface UserMapper {
      * @return 用户对象
      */
     User getUserByUid(String uid);
+
+    /**
+     * 根据 UID 查询用户信息（包含头像 object_name）
+     *
+     * @param uid 用户 UID
+     * @return 用户实体（包含 avatarObjectName 临时字段）
+     */
+    User findByUidWithAvatar(String uid);
+
+    /**
+     * 根据 ID 查询用户信息（包含头像 object_name）
+     *
+     * @param id 用户 ID
+     * @return 用户实体（包含 avatarObjectName 临时字段）
+     */
+    User findByIdWithAvatar(Integer id);
 }

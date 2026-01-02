@@ -25,13 +25,60 @@ const isMessagePayload = (data: unknown): data is Message => {
 export function useWebsocket() {
   const socket = ref<WebSocket | null>(null)
   const lockReconnect = ref(false)
-  const status = ref<'CONNECTING' | 'OPEN' | 'CLOSED'>('CLOSED')
+  // rawStatus：真实连接状态（事件驱动）
+  const rawStatus = ref<'CONNECTING' | 'OPEN' | 'CLOSED'>('CLOSED')
+  // status：给 UI 用的“平滑状态”，避免指示灯抖动
+  const status = ref<'CONNECTING' | 'OPEN' | 'CLOSED'>(rawStatus.value)
 
   let currentUrl: string = ''
   let currentOptions: ConnectOptions | null = null
   let heartbeatTimer: number | null = null
   // 新增：标记是否为主动关闭（主动退出时不应重连）
   let isIntentionalClose = false
+  // 状态平滑：CONNECTING（黄灯）出现后，0.5s 内不允许再变化，给用户“正在连接”的稳定感
+  const MIN_CONNECTING_MS = 500
+  let connectingStartAt = 0
+  let statusDelayTimer: number | null = null
+
+  const cleanupStatusDelay = () => {
+    if (statusDelayTimer) {
+      clearTimeout(statusDelayTimer)
+      statusDelayTimer = null
+    }
+  }
+
+  /**
+   * 设置状态：
+   * - rawStatus：实时更新
+   * - status（UI）：CONNECTING 立即更新；从 CONNECTING 切到 OPEN/CLOSED 时最少停留 0.5s
+   */
+  const setStatus = (next: 'CONNECTING' | 'OPEN' | 'CLOSED') => {
+    rawStatus.value = next
+
+    if (next === 'CONNECTING') {
+      cleanupStatusDelay()
+      connectingStartAt = Date.now()
+      status.value = 'CONNECTING'
+      return
+    }
+
+    // 如果当前 UI 正在显示 CONNECTING，则至少展示 MIN_CONNECTING_MS，避免“黄一下就变绿/红”
+    if (status.value === 'CONNECTING') {
+      const elapsed = Date.now() - connectingStartAt
+      const remain = Math.max(0, MIN_CONNECTING_MS - elapsed)
+      if (remain > 0) {
+        cleanupStatusDelay()
+        statusDelayTimer = window.setTimeout(() => {
+          status.value = next
+          statusDelayTimer = null
+        }, remain)
+        return
+      }
+    }
+
+    cleanupStatusDelay()
+    status.value = next
+  }
 
   // --- 核心方法 ---
 
@@ -44,7 +91,7 @@ export function useWebsocket() {
 
     try {
       socket.value = new WebSocket(url)
-      status.value = 'CONNECTING'
+      setStatus('CONNECTING')
     } catch (e) {
       console.error('[ERROR] [WS] WebSocket creation failed', e)
       reconnect()
@@ -54,7 +101,7 @@ export function useWebsocket() {
     // --- 事件监听 ---
 
     socket.value.onopen = () => {
-      status.value = 'OPEN'
+      setStatus('OPEN')
       startHeartbeat()
     }
 
@@ -87,7 +134,7 @@ export function useWebsocket() {
     }
 
     socket.value.onclose = (event) => {
-      status.value = 'CLOSED'
+      setStatus('CLOSED')
       cleanupHeartbeat()
 
       // 1. 优先触发回调，让业务层有机会拦截（例如处理 4001）
@@ -158,12 +205,24 @@ export function useWebsocket() {
   // 新增：暴露关闭方法，供登出使用
   const close = () => {
     isIntentionalClose = true
-    if (socket.value) {
-      socket.value.close()
+    // 关键修复：
+    // - close() 是异步的，如果此时 socket 仍处于 OPEN，下一次 connect() 可能会被“readyState === OPEN”挡住
+    // - 因此这里先清空引用并立即置为 CLOSED，确保后续可以立即重建连接
+    const ws = socket.value
+    socket.value = null
+    setStatus('CLOSED')
+    cleanupHeartbeat()
+    if (ws) {
+      try {
+        ws.close()
+      } catch (e) {
+        console.warn('[WARN] [WS] WebSocket close failed', e)
+      }
     }
   }
 
   return {
+    rawStatus,
     status,
     connect,
     send,

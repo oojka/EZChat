@@ -52,33 +52,34 @@ public final class ImageUtils {
     /**
      * 从存储在数据库中的 JSON 字符串构建 Image 对象列表。
      *
-     * @param objectNamesJson  包含对象名列表的 JSON 字符串
+     * @param imageObjectsJson  包含图片对象名列表的 JSON 字符串
      * @param objectMapper     用于反序列化的 ObjectMapper 实例
      * @param minioOperator    用于生成 URL 的 MinioOSSOperator 实例
      * @return 包含完整 URL 的 Image 对象列表
      */
-    public static List<Image> buildImagesFromJson(String objectNamesJson, ObjectMapper objectMapper, MinioOSSOperator minioOperator) {
-        if (objectNamesJson == null || objectNamesJson.isEmpty()) {
+    public static List<Image> buildImagesFromJson(String imageObjectsJson, ObjectMapper objectMapper, MinioOSSOperator minioOperator) {
+        if (imageObjectsJson == null || imageObjectsJson.isEmpty()) {
             return Collections.emptyList();
         }
 
         try {
-            // 1. 将 JSON 字符串反序列化为对象名列表
-            List<String> objectNames = objectMapper.readValue(objectNamesJson, new TypeReference<List<String>>() {});
+            // 1. 将 JSON 字符串反序列化为图片对象名列表
+            List<String> imageObjects = objectMapper.readValue(imageObjectsJson, new TypeReference<List<String>>() {});
 
             // 2. 使用 getImageUrls() 方法获取图片 URL（自动处理 public/private 分流）
             // 有效期设置为 30 分钟，与之前保持一致
-            return objectNames.stream()
+            return imageObjects.stream()
                     .map(name -> {
                         MinioOSSResult result = minioOperator.getImageUrls(name, 30, TimeUnit.MINUTES);
-                        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl());
+                        // 注意：从 JSON 反序列化时无法获取 objectId，传 null（向后兼容）
+                        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl(), null);
                     })
                     .collect(Collectors.toList());
 
         } catch (JsonProcessingException e) {
-            log.error("反序列化对象名称JSON失败: {}", objectNamesJson, e);
+            log.error("反序列化图片对象名称JSON失败: {}", imageObjectsJson, e);
             // 抛出运行时异常，以便全局异常处理器可以捕获
-            throw new RuntimeException("Failed to deserialize object names JSON: " + e.getMessage());
+            throw new RuntimeException("Failed to deserialize image objects JSON: " + e.getMessage());
         }
     }
 
@@ -95,7 +96,8 @@ public final class ImageUtils {
         }
         // 统一走 getImageUrls：能自动区分 public/private，且在缩略图不存在时会回退到原图，避免前端必 404
         MinioOSSResult result = minioOperator.getImageUrls(objectName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES, TimeUnit.MINUTES);
-        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl());
+        // 注意：buildImage 方法无法获取 objectId，传 null（向后兼容）
+        return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl(), null);
     }
 
     /**
@@ -108,7 +110,8 @@ public final class ImageUtils {
      * - 限制最大边，避免超大图带来的带宽与存储压力
      *
      * 重要说明：
-     * - GIF 动图转 JPEG 会丢失动图，这里保守处理为“原样返回”
+     * - GIF 动图转 JPEG 会丢失动图，这里保守处理为"原样返回"（作为兜底逻辑）
+     * - 注意：GIF 文件应在 Service 层提前检测并跳过此方法，直接使用原始文件
      * - 若解析失败（ImageIO 读不到），也会回退原样返回（不阻断上传）
      *
      * @param file         上传文件
@@ -126,7 +129,7 @@ public final class ImageUtils {
         String lowerContentType = contentType == null ? "" : contentType.toLowerCase();
         boolean isImage = lowerContentType.startsWith("image/");
 
-        // GIF 动图：不做转换，避免丢失动效
+        // GIF 动图：不做转换，避免丢失动效（兜底逻辑，正常情况下 GIF 应在 Service 层提前处理）
         if ("image/gif".equals(lowerContentType)) {
             byte[] bytes = file.getBytes();
             return new NormalizedFile(bytes, guessExtension(file.getOriginalFilename()), contentType);

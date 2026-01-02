@@ -28,6 +28,7 @@ yarn-error.log*
 # === Cursor / tooling ===
 # Keep these committed (project rules):
 .prompt.md
+.cursor_dev_log
 .cursorignore
 .cursorrules
 .cursor/

@@ -3,6 +3,7 @@
     "confirm": "確認",
     "cancel": "キャンセル",
     "loading": "読み込み中...",
+    "initializing": "初期化中...",
     "success": "成功",
     "error": "エラー",
     "warning": "注意",
@@ -16,7 +17,10 @@
     "settings": "設定",
     "language": "言語",
     "on": "ON",
-    "off": "OFF"
+    "off": "OFF",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "copy_failed": "コピーに失敗しました"
   },
   "index": {
     "subtitle": "純粋な会話、軽やかなつながり"
@@ -99,7 +103,7 @@
   },
   "guest": {
     "title": "チャットを開始",
-    "feature_id": "ID / 招待リンクで参加",
+    "feature_id": "ルームID / 招待リンクで参加",
     "feature_no_reg": "アカウント不要（ゲストアクセス）",
     "join_btn": "ルームを探す",
     "join_title": "ルームに参加",
@@ -130,7 +134,7 @@
   "chat": {
     "chat_list": "チャット一覧",
     "members": "メンバー",
-    "room_id": "ID",
+    "room_id": "ルームID",
     "room_info": "ルーム設定",
     "input_placeholder": "メッセージを入力...",
     "send": "送信",
@@ -164,13 +168,15 @@
     "restriction_desc": "公開（ID+パスワード）または非公開",
     "invite_url_title": "招待リンク",
     "invite_url_desc": "有効期限を設定",
+    "invite_link": "招待リンク",
+    "invite_ttl_tip": "既定の有効期限は 7 日です。参加を無効にすると、招待リンクも無効になります。",
     "capacity_title": "容量",
     "capacity_desc": "無制限メンバー",
     "room_name": "ルーム名",
-    "room_name_placeholder": "例：勉強会",
-    "password_join": "アクセス制御",
-    "password_info_title": "参加方法",
-    "password_info_desc": "ON：ルームID + パスワードで参加可能。\nOFF：非公開（有効な招待リンクからのみ参加可能）。\n※作成後もルーム設定で変更できます。",
+    "room_name_placeholder": "ルーム名を入力",
+    "password_join": "パスワードで参加",
+    "password_info_title": "パスワード保護による参加",
+    "password_info_desc": "ON：ルームID + パスワード または 招待リンクで参加可能。\nOFF：招待リンクのみで参加可能（ルームID参加は無効）。\n※この設定はルーム作成後、ルーム設定で管理できます。",
     "submit": "ルームを作成",
     "result": "結果",
     "success": "作成に成功しました",
@@ -178,7 +184,9 @@
     "success_msg": "ルームを作成しました。",
     "fail_msg": "作成に失敗しました。時間をおいて再度お試しください。",
     "enter_now": "今すぐ入室",
-    "expiry_title": "リンク有効期限",
+    "expiry_title": "招待リンク設定",
+    "expiry_info_desc": "招待リンクは発行時に有効期限を設定する必要があります。\n招待リンクは最大5つまで同時に有効です。\n招待リンクはルーム作成後、ルーム設定で再発行および管理できます。\n*ワンタイムリンクを有効にすると、リンクは1回使用後に無効になります。",
+    "one_time_link": "ワンタイムリンク",
     "custom_date": "カスタム日時",
     "day_n": "{n} 日"
   }

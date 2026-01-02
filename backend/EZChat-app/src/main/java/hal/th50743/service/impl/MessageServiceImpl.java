@@ -1,6 +1,7 @@
 package hal.th50743.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
@@ -9,6 +10,7 @@ import hal.th50743.mapper.ChatMemberMapper;
 import hal.th50743.mapper.MessageMapper;
 import hal.th50743.pojo.*;
 import hal.th50743.service.ChatService;
+import hal.th50743.service.FileService;
 import hal.th50743.service.MessageService;
 import hal.th50743.service.OssMediaService;
 import hal.th50743.utils.ImageUtils;
@@ -37,6 +39,7 @@ public class MessageServiceImpl implements MessageService {
     private final MessageMapper messageMapper;
     private final MinioOSSOperator minioOSSOperator;
     private final OssMediaService ossMediaService;
+    private final FileService fileService;
 
     // ObjectMapper是线程安全的，可以作为成员变量
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -82,18 +85,25 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public void saveMessage(Integer userId, Integer chatId, String text, List<Image> images) {
         log.info("save message, userId={}, chatId={}, text={}, images={}", userId, chatId, text, images);
-        String objectNamesJson = null;
-        // 如果有附件URL，则转换为内部存储的对象名
+        String objectIdsJson = null;
+        // 如果有附件，则提取 objectId（直接使用 Image 对象的 objectId 字段）
         if (images != null && !images.isEmpty()) {
-            List<String> objectNames = new ArrayList<>();
+            List<Integer> objectIds = new ArrayList<>();
             for (Image image : images) {
-                objectNames.add(minioOSSOperator.toObjectName(image.getObjectUrl()));
+                if (image.getObjectId() != null) {
+                    objectIds.add(image.getObjectId());
+                } else {
+                    // 新工程中，上传接口必须返回 objectId，如果为 null 则记录错误
+                    log.error("Image objectId is null, skipping image: {}", image.getObjectName());
+                }
             }
-            try {
-                objectNamesJson = objectMapper.writeValueAsString(objectNames);
-            } catch (JsonProcessingException e) {
-                log.error("序列化对象名称列表失败: ", e);
-                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to serialize object names list: " + e.getMessage());
+            if (!objectIds.isEmpty()) {
+                try {
+                    objectIdsJson = objectMapper.writeValueAsString(objectIds);
+                } catch (JsonProcessingException e) {
+                    log.error("序列化图片对象ID列表失败: ", e);
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to serialize image object IDs list: " + e.getMessage());
+                }
             }
         }
         // Message type: 0=text, 1=image, 2=mixed
@@ -108,12 +118,22 @@ public class MessageServiceImpl implements MessageService {
                 chatId,
                 type,
                 text,
-                objectNamesJson, // 存储JSON字符串
+                objectIdsJson, // 存储 objectId 列表的 JSON 字符串
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
-        // 将消息添加到数据库
+        // 将消息添加到数据库（useGeneratedKeys 会自动填充 msg.id）
         messageMapper.addMessage(msg);
+        
+        // 消息保存成功后，批量激活关联的图片文件（status=1, category=MESSAGE_IMG, message_id=msg.id）
+        if (images != null && !images.isEmpty()) {
+            List<String> objectNames = new ArrayList<>();
+            for (Image image : images) {
+                objectNames.add(image.getObjectName());
+            }
+            fileService.activateFilesBatch(objectNames, FileCategory.MESSAGE_IMG, msg.getId());
+            log.debug("Activated {} files for message: messageId={}", objectNames.size(), msg.getId());
+        }
     }
 
     /**
@@ -145,13 +165,36 @@ public class MessageServiceImpl implements MessageService {
         
         // 4. 对每条消息进行后处理，主要是处理附件URL
         for (MessageVO m : messageList) {
-            String objectNamesJson = m.getObjectNames();
-            if (objectNamesJson != null && !objectNamesJson.isEmpty()) {
-                // 使用 ImageUtils 工具类处理图片列表
-                List<Image> images = ImageUtils.buildImagesFromJson(objectNamesJson, objectMapper, minioOSSOperator);
-                m.setImages(images);
+            String objectIdsJson = m.getObjectIds();
+            if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
+                try {
+                    // 1. 反序列化为 objectId 列表
+                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
+                    
+                    // 2. 根据 objectId 列表查询 objects 表，构建 Image 对象列表
+                    List<Image> images = new ArrayList<>();
+                    for (Integer objectId : objectIds) {
+                        FileEntity objectEntity = fileService.findById(objectId);
+                        if (objectEntity != null) {
+                            // 使用 ImageUtils.buildImage() 构建 Image 对象（包含 URL）
+                            Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
+                            // 设置 objectId（buildImage 返回的 Image 可能没有 objectId）
+                            if (image != null) {
+                                image.setObjectId(objectId);
+                                images.add(image);
+                            }
+                        } else {
+                            log.warn("Object not found by id: {}", objectId);
+                        }
+                    }
+                    m.setImages(images);
+                } catch (JsonProcessingException e) {
+                    log.error("反序列化图片对象ID列表失败: {}", objectIdsJson, e);
+                    // 不抛出异常，避免影响整条消息的显示
+                    m.setImages(Collections.emptyList());
+                }
                 // 清理掉原始的JSON字符串，不需要返回给前端
-                m.setObjectNames(null);
+                m.setObjectIds(null);
             }
         }
         

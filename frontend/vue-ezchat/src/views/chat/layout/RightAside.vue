@@ -5,7 +5,8 @@ import { useAppStore } from '@/stores/appStore'
 import { useMessageStore } from '@/stores/messageStore'
 import { useRoomStore } from '@/stores/roomStore'
 import { storeToRefs } from 'pinia'
-import { computed, watch } from 'vue'
+import { computed, watch, ref, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const appStore = useAppStore()
 const messageStore = useMessageStore()
@@ -14,6 +15,10 @@ const { isAppInitializing } = storeToRefs(appStore)
 const { chatViewIsLoading } = storeToRefs(messageStore)
 const { currentRoomCode, isCurrentRoomMembersLoading } = storeToRefs(roomStore)
 const { fetchRoomMembers } = roomStore
+const { t } = useI18n()
+
+// ChatMemberListArea 组件的 ref，用于调用滚动方法
+const memberListAreaRef = ref<InstanceType<typeof ChatMemberListArea> | null>(null)
 
 /**
  * 右侧成员列表的加载策略
@@ -24,6 +29,11 @@ const { fetchRoomMembers } = roomStore
  */
 const showRightSpinner = computed(() =>
   isAppInitializing.value || chatViewIsLoading.value || isCurrentRoomMembersLoading.value
+)
+
+// refresh 初始化阶段：显示“初始化...”；普通加载阶段：显示“加载中...”
+const rightSpinnerText = computed(() =>
+  isAppInitializing.value ? t('common.initializing') : t('common.loading')
 )
 
 // 进入房间后：按需拉取成员列表（右侧栏用 AppSpinner 做局部遮蔽）
@@ -37,19 +47,37 @@ watch(
   },
   { immediate: true },
 )
+
+/**
+ * 处理遮蔽消失后的滚动
+ * 
+ * 业务目的：
+ * - 在 loading 遮蔽（AppSpinner）淡出动画完成后，自动滚动成员列表到顶部
+ * - 确保用户看到列表开头，而不是停留在之前的滚动位置
+ */
+const handleOverlayHidden = async () => {
+  // 等待 DOM 更新完成
+  await nextTick()
+  // 确保成员列表已渲染（检查是否有成员数据）
+  // 使用 useChatMemberList 需要从子组件获取，这里直接调用 scrollToTop
+  // 添加小延迟确保列表项完全渲染（Transition 动画已经完成，这里主要是等待列表渲染）
+  setTimeout(() => {
+    memberListAreaRef.value?.scrollToTop()
+  }, 50)
+}
 </script>
 
 <template>
   <div class="right-aside-wrapper">
     <!-- 成员列表区域始终渲染：这样 loading 遮罩的 backdrop-filter 才有“可模糊的内容”，不会看起来像纯白盖板 -->
-    <ChatMemberListArea />
-    <Transition name="right-aside-fade">
+    <ChatMemberListArea ref="memberListAreaRef" />
+    <Transition name="right-aside-fade" @after-leave="handleOverlayHidden">
       <AppSpinner
         v-if="showRightSpinner"
         :absolute="true"
         :show-blobs="false"
         :show-text="true"
-        text="LOADING..."
+        :text="rightSpinnerText"
       />
     </Transition>
   </div>

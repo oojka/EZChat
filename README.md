@@ -10,9 +10,10 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 
 - **实时消息 / Real-time**：WebSocket 双向通信（消息广播、心跳、ACK）/ WebSocket messaging with heartbeat & ACK
 - **认证 / Auth**：注册登录 + 访客加入（JWT）/ registered login + guest access (JWT)
-- **聊天室 / Rooms**：通过 chatCode 获取房间信息并进入聊天 / join rooms via chatCode
+- **聊天室 / Rooms**：创建房间（可使用密码加入/邀请链接/一次性链接）、通过 chatCode 获取房间信息并进入聊天 / create rooms (join with password/invite links/one-time links), join rooms via chatCode
 - **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
-- **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成）/ uploads with conditional thumbnails
+- **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成），统一大小限制 10MB / uploads with conditional thumbnails, unified 10MB size limit
+- **图片去重 / Image deduplication**：双哈希策略（前端预计算 + 后端规范化哈希）防止重复上传，节省存储空间 / dual-hash strategy (frontend pre-calculation + backend normalized hash) prevents duplicate uploads
 - **图片优化 / Image optimization**：前端预压缩（提升上传体验）+ 后端规范化（兼容/隐私）/ client-side compression + server-side normalization
 - **刷新体验优化 / Refresh UX**：refresh 时优先加载 chatList，成员/消息按需并行加载，减少黑屏与等待 / load chat list first on refresh; members & messages are lazy/parallel to reduce blank screen
 - **国际化 / i18n**：`zh/en/ja/ko/zh-tw` / multi-language UI
@@ -69,8 +70,9 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 - `formal_users`：正式用户账号体系（用户名/密码哈希）/ credentials for formal users
 - `chats`：聊天室（群/单聊统一存储）/ chat rooms
 - `chat_members`：聊天室成员关系 + 最后阅读时间 / membership + last_seen_at
+- `chat_invites`：聊天室邀请码（短链接加入权限，含 TTL / 次数 / 撤销）/ invite codes (short link join permission, TTL/usage/revoke)
 - `messages`：消息主体 / messages
-- `files`：消息附带文件元数据（当前结构预留）/ file metadata (reserved)
+- `objects`：对象存储元数据（图片/文件对象，含去重哈希字段）/ object storage metadata (images/files with deduplication hash fields)
 
 #### 字段要点 / Key fields (summary)
 
@@ -81,7 +83,7 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `id` (PK) | 用户内部ID | internal user id |
 | `uid` (UNIQUE, char(10)) | 用户对外ID（系统统一使用） | public user id (used across system) |
 | `nickname` | 昵称 | nickname |
-| `avatar_object` | MinIO 对象名（object name） | MinIO object name for avatar |
+| `object_id` | 关联 `objects.id`（头像对象，逻辑外键） | references `objects.id` (avatar object, logical FK) |
 | `bio` | 简介 | bio |
 | `last_seen_at` | 最后在线时间 | last seen at |
 | `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
@@ -104,9 +106,9 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `chat_code` (UNIQUE, char(8)) | 聊天室对外ID | public chat code |
 | `chat_name` | 聊天室名称 | chat name |
 | `owner_id` | 群主 `users.id` | owner `users.id` |
-| `chat_password_hash` | 进群密码哈希 | room password hash |
-| `join_enabled` | 是否允许加入 | whether join is enabled |
-| `avatar_name` | 聊天室头像对象名 | chat avatar object name |
+| `chat_password_hash` | 进群密码哈希（NULL=禁用密码加入功能，非NULL=启用密码加入） | room password hash (NULL=password join disabled, non-NULL=password join enabled) |
+| `join_enabled` | 全局加入开关（0=禁止所有方式，1=允许加入） | global join switch (0=all disabled, 1=enabled) |
+| `object_id` | 关联 `objects.id`（头像对象，逻辑外键） | references `objects.id` (avatar object, logical FK) |
 | `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
 
 `chat_members`
@@ -117,6 +119,24 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `user_id` (PK part) | 对应 `users.id` | references `users.id` |
 | `last_seen_at` | 最后阅读该房间时间 | last seen time for this chat |
 
+`chat_invites`
+
+> 说明 / Note  
+> 本工程**不使用物理外键（FK）**；`chat_invites.chat_code` 与 `chats.chat_code` 的关联由 Service 层校验保证。  
+> This project **does not use physical foreign keys**; association is enforced by service-layer checks.
+
+| 字段 | 含义 (中文) | Meaning (EN) |
+|---|---|---|
+| `id` (PK) | 邀请码记录ID | invite record id |
+| `chat_code` (index) | 房间对外ID | public chat code |
+| `code_hash` (UNIQUE) | 邀请短码 SHA-256 Hex（服务端只存哈希） | SHA-256 hex of invite code (server stores hash only) |
+| `expires_at` | 过期时间（TTL） | expiration time (TTL) |
+| `max_uses` | 最大使用次数：0=无限，1=一次性链接（使用一次即失效） | max uses: 0=unlimited, 1=one-time (invalid after first use) |
+| `used_count` | 已使用次数 | used count |
+| `revoked` | 是否撤销：0有效/1撤销 | revoked flag |
+| `created_by` | 创建者 users.id（仅审计，无 FK） | created by users.id (audit only, no FK) |
+| `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
+
 `messages`
 
 | 字段 | 含义 (中文) | Meaning (EN) |
@@ -126,30 +146,34 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `chat_id` | 房间 `chats.id` | chat `chats.id` |
 | `type` (tinyint) | 消息类型：0文本/1图片/2混合 | message type: 0 text / 1 image / 2 mixed |
 | `text` | 文本内容（可空） | text content (nullable) |
-| `object_names` | MinIO 对象名列表（JSON 字符串） | list of MinIO object names (JSON string) |
+| `object_ids` | 图片对象ID列表（JSON数组格式，如 `[1,2,3]`，存储 `objects.id`） | list of image object IDs (JSON array, e.g. `[1,2,3]`, stores `objects.id`) |
 | `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
 
-`files`
+`objects`
 
 | 字段 | 含义 (中文) | Meaning (EN) |
 |---|---|---|
-| `id` (PK) | 文件内部ID | internal file id |
-| `message_id` | 对应 `messages.id` | references `messages.id` |
-| `file_name` | 原始文件名 | original filename |
-| `content_type` | MIME 类型 | MIME type |
-| `file_path` | 存储路径（预留/历史） | storage path (reserved/legacy) |
+| `id` (PK) | 对象内部ID | internal object id |
+| `object_name` (UNIQUE, index) | MinIO 对象名（完整路径） | MinIO object name (full path) |
+| `category` | 对象分类（USER_AVATAR/CHAT_COVER/MESSAGE_IMG/GENERAL） | object category |
+| `status` | 状态（0=PENDING 待激活，1=ACTIVE 已激活） | status (0=PENDING, 1=ACTIVE) |
+| `raw_object_hash` (index) | 原始对象 SHA-256 哈希（前端计算，用于快速去重检查） | raw object SHA-256 hash (frontend-calculated, for quick dedup check) |
+| `normalized_object_hash` (index) | 规范化后对象 SHA-256 哈希（后端计算，用于最终去重） | normalized object SHA-256 hash (backend-calculated, for final dedup) |
+| `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
 
 #### 测试数据生成 / Test data generation
 
-`init.sql` 会创建并执行存储过程 `generate_japanese_test_data()`，默认会：
+`init.sql` 会创建并执行存储过程 `generate_test_data()`，默认会：
 
-`init.sql` creates and calls `generate_japanese_test_data()`, which by default:
+`init.sql` creates and calls `generate_test_data()`, which by default:
 
-- 插入约 **120** 个用户（多语言昵称）/ inserts ~**120** users (multilingual nicknames)
-- 插入约 **120** 个正式用户凭证 / inserts ~**120** formal user credentials
-- 创建约 **25** 个聊天室 / creates ~**25** chats
-- 为每个房间生成 **100+** 条消息 / generates **100+** messages per chat
-- 大量 `chat_members` 关系（含全员入群逻辑）/ many memberships (including full-join logic)
+- 插入 **30 条种子数据**（真实头像，ID 1-30）到 `objects` 表 / inserts **30 seed objects** (real avatars, ID 1-30) into `objects` table
+- 插入 **100** 个用户（每个用户随机选择一个种子头像）/ inserts **100** users (each randomly selects a seed avatar)
+- 插入 **100** 个正式用户凭证 / inserts **100** formal user credentials
+- 创建 **20** 个聊天室（每个聊天室克隆一个种子数据作为封面）/ creates **20** chats (each clones a seed object as cover)
+- 为每个房间生成 **50** 条消息（20% 概率是图片消息，图片从种子数据中随机选择）/ generates **50** messages per chat (20% chance of image messages, images randomly selected from seeds)
+- **所有用户加入所有聊天室**（全员入全群）/ all users join all chats (full membership)
+- 生成 **10 条垃圾数据**（PENDING 状态，48 小时前创建，用于测试 GC）/ generates **10 garbage objects** (PENDING status, created 48h ago, for GC testing)
 
 ### 1) 初始化数据库 / Initialize database
 
@@ -269,17 +293,33 @@ Loading visuals:
 
 ### 上传与图片处理链路 / Upload & image processing pipeline
 
-当前工程采用“双层处理”策略：  
+当前工程采用"双层处理"策略：  
 This project uses a two-stage pipeline:
 
 - **前端预压缩 / Client-side compression**：
   - 依赖：`browser-image-compression`
   - 逻辑：上传前压缩并尽量转为 JPEG；压缩失败会自动回退原图上传
+  - **大小限制**：统一限制为 **10MB**（单张图片），超过限制会提示错误
 - **后端规范化 / Server-side normalization**：
-  - 自动旋转（EXIF Orientation）
-  - 去元数据/EXIF（通过重编码输出 JPEG）
-  - 统一输出 JPEG（质量约 0.85，最大边 2048）
-  - GIF 动图默认原样保留（避免丢失动效）
+  - GIF 文件：**完全跳过规范化处理**，直接上传原始文件（避免丢失动效）
+  - 其他图片：
+    - 自动旋转（EXIF Orientation）
+    - 去元数据/EXIF（通过重编码输出 JPEG）
+    - 统一输出 JPEG（质量约 0.85，最大边 2048）
+
+### 图片去重机制 / Image deduplication mechanism
+
+系统采用**双哈希策略**防止重复上传相同图片：  
+The system uses a **dual-hash strategy** to prevent duplicate uploads:
+
+- **前端预计算 / Frontend pre-calculation**：
+  - 使用 Web Crypto API 计算原始文件的 SHA-256 哈希（`raw_object_hash`）
+  - 上传前调用 `GET /media/check?rawHash=...` 检查是否已存在
+  - 如果已存在，直接复用现有对象（返回 `objectId`），跳过上传
+- **后端规范化哈希 / Backend normalized hash**：
+  - 后端对规范化后的图片（旋转、去 EXIF、压缩后）计算 SHA-256 哈希（`normalized_object_hash`）
+  - 用于最终去重判断：即使原始文件不同，规范化后内容相同也会被识别为重复
+  - 确保存储中不会出现内容相同但格式不同的重复对象
 
 原图加载策略：  
 Original image strategy:
@@ -287,12 +327,22 @@ Original image strategy:
 - **原图 Blob 按需拉取 / On-demand original blob**：仅在打开预览时拉取原图 Blob；若本地 URL 失效，会调用 `GET /media/url?objectName=...` 获取最新 URL 再重试  
   Original blobs are fetched only when opening preview; if cached URL fails, frontend requests a fresh URL and retries.
 
-后端上传/删除统一入口（便于未来扩展“文件功能”）：  
+后端上传/删除统一入口（便于未来扩展"文件功能"）：  
 Unified backend entry for uploads/deletes (ready for future file features):
 
 - `hal.th50743.service.OssMediaService`
 - `hal.th50743.service.impl.OssMediaServiceImpl`
 - 删除对象：`OssMediaService.deleteObject(objectNameOrUrl)`（会联动删除缩略图）
+
+### 对象关联设计 / Object association design
+
+系统统一使用**逻辑外键**关联 `objects` 表，避免通过 `objectName` 查询，提升性能：  
+The system uses **logical foreign keys** to reference `objects` table, avoiding `objectName` lookups for better performance:
+
+- **`users.object_id`**：关联用户头像对象（`objects.id`）
+- **`chats.object_id`**：关联聊天室头像对象（`objects.id`）
+- **`messages.object_ids`**：关联消息图片对象列表（JSON 数组格式，如 `[1,2,3]`，存储 `objects.id` 列表）
+- **上传接口返回 `objectId`**：所有图片上传接口（`POST /auth/register/upload`、`POST /message/upload`、`GET /media/check`）都会返回 `Image` 对象，包含 `objectId` 字段，前端可直接使用，无需后端查表
 
 ### 主要后端路由 / Main backend routes
 
@@ -302,6 +352,7 @@ Unified backend entry for uploads/deletes (ready for future file features):
 - `POST /auth/login`
 - `POST /auth/register`
 - `POST /auth/guest`
+- `POST /auth/invite`（邀请码免密加入，返回 token）
 - `POST /auth/register/upload`
 - `GET  /init`
 - `GET  /init/chat-list`（轻量初始化：chatList + userStatusList）
@@ -310,6 +361,7 @@ Unified backend entry for uploads/deletes (ready for future file features):
 - `GET  /message?chatCode=...&timeStamp=...`
 - `POST /message/upload`
 - `GET  /media/url?objectName=...`（获取最新图片访问 URL）
+- `GET  /media/check?rawHash=...`（检查对象是否已存在，用于前端去重）
 - `GET  /user/{uid}`
 - `POST /user`
 
@@ -395,7 +447,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
   "avatar": {
     "objectName": "public/avatars/20000001.jpg",
     "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000001.jpg",
-    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg"
+    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg",
+    "objectId": 123
   }
 }
 ```
@@ -427,16 +480,22 @@ Unified backend entry for uploads/deletes (ready for future file features):
   "data": {
     "objectName": "public/avatars/20000001.jpg",
     "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000001.jpg",
-    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg"
+    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg",
+    "objectId": 123
   }
 }
 ```
 
 #### `POST /auth/guest`（访客加入房间 / Guest join）
 
-- **业务功能 / Purpose**：用 chatCode + 昵称加入房间，返回访客 token  
-  Join a room as guest and returns token.
+- **业务功能 / Purpose**：用 Room ID (chatCode) + 密码（可选）+ 昵称加入房间，返回访客 token  
+  Join a room as guest via Room ID (chatCode) + password (optional) + nickname, returns token.
 - **Auth**：无需 token / no token
+- **核心规则 / Rules**：
+  - **密码验证**：
+    - 如果房间启用了密码加入功能（`chat_password_hash != NULL`），则必须提供正确的密码
+    - 如果房间未启用密码加入功能（`chat_password_hash = NULL`），则**不能通过此接口加入**（只能通过邀请链接加入）
+  - **强制 join_enabled**：当房间 `join_enabled=0` 时，此接口不可加入（全局禁止加入）
 - **Request (JSON)**（字段来自 `GuestReq`）：
 
 ```json
@@ -451,6 +510,34 @@ Unified backend entry for uploads/deletes (ready for future file features):
   "code": 200,
   "message": "success",
   "data": { "uid": "90000001", "username": "guest", "token": "eyJhbGciOi..." }
+}
+```
+
+#### `POST /auth/invite`（邀请码免密加入 / Invite join as guest）
+
+- **业务功能 / Purpose**：
+  - 使用短邀请码 `inviteCode` 免密加入指定 `chatCode`，并创建临时用户返回 JWT  
+    Join via short invite code (passwordless) and returns JWT for the created guest user.
+- **Auth**：无需 token / no token
+- **核心规则 / Rules**：
+  - **免密 / passwordless**：即使房间启用了密码加入功能（`chat_password_hash != NULL`），也不需要输入密码  
+  - **强制 join_enabled**：当房间 `join_enabled=0` 时，邀请码也不可加入（全局禁止加入）  
+  - **TTL**：默认 7 天（前端默认 `joinLinkExpiryMinutes=10080`，后端兜底同值）
+  - **最多 5 条同时生效**：同一房间最多可以有 5 条有效邀请链接同时存在
+- **Request (JSON)**（字段来自 `InviteGuestReq`）：
+
+```json
+{ "chatCode": "20000022", "inviteCode": "Ab3X9kQpQW1eR2tZ", "nickname": "Guest-Invite" }
+```
+
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": { "uid": "90000002", "username": "Guest-Invite", "token": "eyJhbGciOi..." }
 }
 ```
 
@@ -481,7 +568,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
         "avatar": {
           "objectName": "public/chats/20000022.jpg",
           "objectUrl": "http://localhost:9000/ezchat/public/chats/20000022.jpg",
-          "objectThumbUrl": "http://localhost:9000/ezchat/public/chats/20000022_thumb.jpg"
+          "objectThumbUrl": "http://localhost:9000/ezchat/public/chats/20000022_thumb.jpg",
+          "objectId": 456
         },
         "unreadCount": 3,
         "onLineMemberCount": 5,
@@ -534,7 +622,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
         "avatar": {
           "objectName": "public/avatars/20000003.jpg",
           "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000003.jpg",
-          "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg"
+          "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg",
+          "objectId": 123
         }
       }
     ]
@@ -563,7 +652,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
       "avatar": {
         "objectName": "public/avatars/20000003.jpg",
         "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000003.jpg",
-        "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg"
+        "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg",
+        "objectId": 123
       }
     }
   ]
@@ -572,10 +662,60 @@ Unified backend entry for uploads/deletes (ready for future file features):
 
 #### `POST /chat`（创建房间 / Create room）
 
-- **业务功能 / Purpose**：创建聊天室（当前实现为占位，后续可补齐）  
-  Create chat room (currently stub).
+- **业务功能 / Purpose**：创建聊天室并返回 `chatCode + inviteCode`（短邀请码，用于生成邀请链接）  
+  Create chat room and returns `chatCode + inviteCode` (short code for invite link).
 - **Auth**：需要 `token` / requires `token`
-- **Response**：`Result.success()`（无 data / no data）
+- **核心规则 / Rules**：
+
+  **1. 密码加入功能开关（Join with Password）**  
+  由 `chats.chat_password_hash` 是否为 `NULL` 决定（前端 UI 显示为"可使用密码加入"）：
+  - **开启（`chat_password_hash != NULL`）**：
+    - ✅ 可通过 **Room ID + Password** 加入
+    - ✅ 可通过 **Invite Link** 加入（绕过密码验证）
+  - **关闭（`chat_password_hash = NULL`）**：
+    - ❌ **不能通过 Room ID 加入**（即使没有密码也不行）
+    - ✅ **只能通过 Invite Link 加入**
+  
+  **2. 全局加入开关（Global Join Switch）**  
+  由 `chats.join_enabled` 控制（创建时固定为 `1`，前端 UI 暂不提供控制）：
+  - **`join_enabled = 1`**：允许加入（具体方式由密码加入功能开关决定）
+  - **`join_enabled = 0`**：**禁止所有加入方式**（包括 Room ID + Password 和 Invite Link）
+  
+  **3. 邀请链接设置（Invite Link Settings）**  
+  - **发行时必须设定有效期**：每次发行邀请链接时，必须设置 `expires_at`（由 `joinLinkExpiryMinutes` 控制，前端默认 10080 分钟 = 7 天）
+  - **最多同时生效 5 条**：同一房间最多可以有 5 条有效邀请链接同时存在
+  - **可再次发行和管理**：房间创建后，可在 Room Settings 中再次发行新的邀请链接或管理已有链接（删除使其立即失效）
+  - **一次性链接选项**：创建时可选择生成一次性链接（`maxUses=1`），链接使用一次后即失效；默认生成可重复使用的链接（`maxUses=0`）
+  
+  **4. 一次性链接选项（One-time Link Option）**  
+  - **`maxUses`**（可选，默认 `0`）：
+    - `0`：无限使用（链接可多次使用直到过期）
+    - `1`：一次性链接（使用一次后立即失效，即使未过期也不能再次使用）
+    - 前端 UI 在"邀请链接设置"步骤提供开关控制此选项
+- **Request (JSON)**（字段来自 `ChatReq`）：
+
+```json
+{
+  "chatName": "Study Group",
+  "avatar": { "objectName": "public/ezchat/xxx/avatar.jpg", "objectUrl": "", "objectThumbUrl": "", "objectId": 456 },
+  "joinEnable": 1,
+  "joinLinkExpiryMinutes": 10080,
+  "maxUses": 0,
+  "password": "",
+  "passwordConfirm": ""
+}
+```
+
+- **Response (mock)**（`CreateChatVO`）：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": { "chatCode": "12345678", "inviteCode": "Ab3X9kQpQW1eR2tZ" }
+}
+```
 
 ---
 
@@ -610,7 +750,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
           {
             "objectName": "private/messages/20000022/abc.jpg",
             "objectUrl": "https://minio.example.com/presigned/original...",
-            "objectThumbUrl": "https://minio.example.com/presigned/thumb..."
+            "objectThumbUrl": "https://minio.example.com/presigned/thumb...",
+            "objectId": 789
           }
         ],
         "createTime": "2026-01-02T10:20:30"
@@ -637,7 +778,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
   "data": {
     "objectName": "private/messages/20000022/abc.jpg",
     "objectUrl": "https://minio.example.com/presigned/original...",
-    "objectThumbUrl": "https://minio.example.com/presigned/thumb..."
+    "objectThumbUrl": "https://minio.example.com/presigned/thumb...",
+    "objectId": 789
   }
 }
 ```
@@ -661,6 +803,41 @@ Unified backend entry for uploads/deletes (ready for future file features):
   "code": 200,
   "message": "success",
   "data": "https://minio.example.com/presigned/original?X-Amz-Algorithm=..."
+}
+```
+
+#### `GET /media/check?rawHash=...`（检查对象是否存在 / Check object existence）
+
+- **业务功能 / Purpose**：前端上传前检查对象是否已存在（基于原始文件哈希），用于去重优化  
+  Check if object already exists (based on raw file hash) before upload for deduplication.
+- **Auth**：需要 `token` / requires `token`
+- **Query**：
+  - `rawHash`：必填，原始文件的 SHA-256 哈希值（十六进制字符串）
+- **Response (mock)**：`data` 为对象信息（如果存在）或 `null`（如果不存在）
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "objectName": "public/avatars/20000001.jpg",
+    "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000001.jpg",
+    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg",
+    "objectId": 123
+  }
+}
+```
+
+如果对象不存在，`data` 为 `null`：
+If object does not exist, `data` is `null`:
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": null
 }
 ```
 
@@ -760,7 +937,8 @@ Unified backend entry for uploads/deletes (ready for future file features):
       {
         "objectName": "private/messages/20000022/abc.jpg",
         "objectUrl": "https://minio.example.com/presigned/original...",
-        "objectThumbUrl": "https://minio.example.com/presigned/thumb..."
+        "objectThumbUrl": "https://minio.example.com/presigned/thumb...",
+        "objectId": 789
       }
     ],
     "createTime": "2026-01-02T10:20:30"
@@ -866,4 +1044,199 @@ EZChat/
 - **原因 / Cause**：缺少请求头 `token` 或 token 无效。  
   Missing/invalid `token` header.
 
+---
 
+## 业务逻辑说明 / Business Logic
+
+### 认证与用户管理 / Authentication & User Management
+
+#### 用户类型 / User Types
+
+系统支持两种用户类型：
+
+1. **正式用户 / Formal Users**：
+   - 拥有 `username` 和 `password_hash`（存储在 `formal_users` 表）
+   - 可通过 `POST /auth/login` 登录
+   - 可通过 `POST /auth/register` 注册（支持头像上传）
+   - 所有用户共享 `users` 表（统一使用 `uid` 作为对外标识）
+
+2. **访客用户 / Guest Users**：
+   - 无 `username`，仅记录 `nickname`
+   - 通过 `POST /auth/guest`（Room ID + 密码）或 `POST /auth/invite`（邀请码）创建
+   - 可后续通过 `POST /auth/register` 转正（提供 `userUid` 参数）
+
+#### 注册流程 / Registration Flow
+
+- **新用户注册**：创建 `User` + `FormalUser`，生成新的 `uid`
+- **临时用户转正**：已有临时 `uid` 的用户，提供 `userUid` 参数，系统创建对应的 `FormalUser` 记录
+- **头像处理**：注册时上传的头像会先写入 `objects` 表（status=0, PENDING），注册成功后激活（status=1, ACTIVE）
+
+### 聊天室创建与加入规则 / Chat Room Creation & Join Rules
+
+#### 创建房间 / Create Room
+
+**核心流程**：
+1. 生成 8 位数字 `chatCode`（冲突重试最多 5 次）
+2. 创建者自动加入房间（写入 `chat_members` 表）
+3. 自动生成邀请码（18 位随机字符串，SHA-256 哈希存储）
+4. 邀请码默认有效期 7 天（`joinLinkExpiryMinutes=10080`）
+
+**密码加入功能开关（Join with Password）**：
+- **开启**（`chat_password_hash != NULL`）：
+  - ✅ 可通过 **Room ID + Password** 加入（`POST /auth/guest`）
+  - ✅ 可通过 **Invite Link** 加入（绕过密码验证）
+- **关闭**（`chat_password_hash = NULL`）：
+  - ❌ **不能通过 Room ID 加入**（即使没有密码也不行）
+  - ✅ **只能通过 Invite Link 加入**
+
+**全局加入开关（Global Join Switch）**：
+- **`join_enabled = 1`**：允许加入（具体方式由密码加入功能开关决定）
+- **`join_enabled = 0`**：**禁止所有加入方式**（包括 Room ID + Password 和 Invite Link）
+
+#### 邀请码规则 / Invite Code Rules
+
+**有效期与使用次数**：
+- **TTL**：每次发行时必须设定有效期（前端默认 7 天，后端兜底同值）
+- **最多 5 条同时生效**：同一房间最多可以有 5 条有效邀请链接同时存在（创建新链接时会检查）
+- **一次性链接**：`maxUses=1` 时，链接使用一次后立即失效；`maxUses=0` 时无限使用（直到过期）
+
+**邀请码消费逻辑**：
+- 服务端只存储 `code_hash`（SHA-256 哈希），不存储明文
+- 消费时原子递增 `used_count`，检查过期/撤销/次数用尽
+- 一次性链接（`maxUses=1`）使用后立即失效
+
+**撤销与管理**：
+- 可通过设置 `revoked=1` 使邀请码立即失效
+- 房间创建后可在 Room Settings 中再次发行新的邀请链接或管理已有链接
+
+#### 加入房间验证流程 / Join Room Validation Flow
+
+**`POST /auth/guest`（Room ID + Password）**：
+1. 检查 `join_enabled`：如果为 0，直接拒绝
+2. 检查 `chat_password_hash`：
+   - 如果 `!= NULL`：必须提供正确密码
+   - 如果 `= NULL`：**不能通过此接口加入**（只能通过邀请链接）
+3. 创建临时用户并自动加入房间
+
+**`POST /auth/invite`（邀请码免密加入）**：
+1. 检查 `join_enabled`：如果为 0，直接拒绝（即使有邀请码也不行）
+2. 校验邀请码：检查过期/撤销/次数用尽
+3. 消费邀请码：原子递增 `used_count`
+4. 创建临时用户并自动加入房间（**免密，即使房间启用了密码加入功能**）
+
+### 图片上传与去重机制 / Image Upload & Deduplication
+
+#### 上传流程 / Upload Flow
+
+**前端预处理**：
+1. 使用 Web Crypto API 计算原始文件的 SHA-256 哈希（`raw_object_hash`）
+2. 调用 `GET /media/check?rawHash=...` 检查是否已存在
+3. 如果已存在，直接复用现有对象（返回 `objectId`），跳过上传
+4. 如果不存在，进行前端预压缩（`browser-image-compression`），然后上传
+
+**后端处理**：
+1. 接收上传文件，进行规范化处理：
+   - **GIF 文件**：完全跳过规范化处理，直接使用原始文件上传（避免丢失动效）
+   - **其他图片**：
+     - 自动旋转（EXIF Orientation）
+     - 去元数据/EXIF（通过重编码输出 JPEG）
+     - 统一输出 JPEG（质量约 0.85，最大边 2048）
+2. 计算哈希（用于去重比对）：
+   - **GIF 文件**：使用原始文件内容的 SHA-256 哈希
+   - **其他图片**：使用规范化后内容的 SHA-256 哈希（`normalized_object_hash`）
+3. 查询是否存在相同哈希的对象（status=1）
+4. 如果存在，复用现有对象（不重复上传到 MinIO）
+5. 如果不存在，上传到 MinIO 并写入 `objects` 表（status=0, PENDING）
+
+#### 去重策略 / Deduplication Strategy
+
+**双哈希策略**：
+- **`raw_object_hash`**：前端计算的原始文件哈希，用于快速去重检查（`GET /media/check`）
+- **`normalized_object_hash`**：后端计算的规范化后哈希，用于最终去重判断
+
+**去重检查顺序**：
+1. 前端上传前：先查 `raw_object_hash`（轻量级比对）
+2. 后端上传时：先查 `raw_object_hash`，如果不存在再查 `normalized_object_hash`（兼容性）
+3. 最终去重：使用 `normalized_object_hash` 确保内容相同但格式不同的文件被识别为重复
+
+#### 对象生命周期管理 / Object Lifecycle Management
+
+**状态流转**：
+- **PENDING（status=0）**：上传后初始状态，等待激活
+- **ACTIVE（status=1）**：已激活，关联到用户/聊天室/消息
+
+**激活时机**：
+- **用户头像**：注册/更新用户信息时激活
+- **聊天室封面**：创建聊天室时激活
+- **消息图片**：消息保存成功后批量激活（`fileService.activateFilesBatch()`）
+
+**垃圾回收（GC）**：
+- **定时任务**：每天凌晨 2 点执行（`@Scheduled(cron = "0 0 2 * * ?")`）
+- **清理条件**：`status=0 AND create_time < NOW - 24h`（24 小时前的 PENDING 文件）
+- **处理策略**：
+  - 分页查询（每批 100 条），防止 OOM
+  - 每批处理后休眠 100ms，释放数据库连接
+  - 异常隔离：单个文件删除失败不影响其他文件
+  - 先删除 MinIO 对象（自动删除缩略图），再删除数据库记录
+
+### 消息处理逻辑 / Message Processing Logic
+
+#### 消息类型计算 / Message Type Calculation
+
+后端自动计算消息类型（并在 DB 中持久化）：
+- **`type=0`**：仅文本（`text != null && !text.isBlank()` 且 `images == null || images.isEmpty()`）
+- **`type=1`**：仅图片（`images != null && !images.isEmpty()` 且 `text == null || text.isBlank()`）
+- **`type=2`**：混合（文本 + 图片都存在）
+
+#### 消息图片存储 / Message Image Storage
+
+**存储格式**：
+- `messages.object_ids` 字段存储 JSON 数组格式（如 `[1,2,3]`），存储 `objects.id` 列表
+- 序列化：`List<Integer>` → JSON 字符串（使用 `ObjectMapper.writeValueAsString()`）
+- 反序列化：JSON 字符串 → `List<Integer>` → 查询 `objects` 表构建 `Image` 对象列表
+
+**图片关联流程**：
+1. 前端上传图片，获得 `Image` 对象（包含 `objectId`）
+2. 发送消息时，传递 `Image` 对象列表（包含 `objectId`）
+3. 后端序列化 `objectId` 列表为 JSON 字符串，存储到 `messages.object_ids`
+4. 查询消息时，反序列化 `object_ids`，根据 `objectId` 查询 `objects` 表构建 `Image` 对象列表
+
+#### 已读游标更新 / Read Cursor Update
+
+- 查询消息列表时（`GET /message?chatCode=...&timeStamp=...`），服务端会同步更新当前用户在该房间的 `last_seen_at`
+- 用于计算未读消息数（`messages.create_time > chat_members.last_seen_at`）
+
+### 对象关联设计 / Object Association Design
+
+系统统一使用**逻辑外键**关联 `objects` 表，避免通过 `objectName` 查询，提升性能：
+
+**关联字段**：
+- **`users.object_id`**：关联用户头像对象（`objects.id`）
+- **`chats.object_id`**：关联聊天室头像对象（`objects.id`）
+- **`messages.object_ids`**：关联消息图片对象列表（JSON 数组格式，如 `[1,2,3]`，存储 `objects.id` 列表）
+
+**性能优化**：
+- **上传接口返回 `objectId`**：所有图片上传接口（`POST /auth/register/upload`、`POST /message/upload`、`GET /media/check`）都会返回 `Image` 对象，包含 `objectId` 字段
+- **前端直接传递 `objectId`**：创建聊天室/发送消息时，前端直接传递 `objectId`，后端无需查表
+- **查询时使用 JOIN**：查询聊天室列表/详情时，使用 `LEFT JOIN objects` 获取 `object_name`，然后构建 `Image` 对象
+
+**数据一致性**：
+- 不使用物理外键约束，数据一致性由应用层保证
+- 创建聊天室/发送消息时，如果 `objectId` 为 `null`，会记录错误日志（新工程中上传接口必须返回 `objectId`）
+
+### 测试数据生成 / Test Data Generation
+
+**种子数据**：
+- `init.sql` 包含 30 条真实头像数据（ID 1-30），存储在 `objects` 表
+- 所有用户头像、聊天室封面、消息图片都从这 30 条数据中随机选择
+
+**生成规则**：
+- **用户**：100 个用户，每个用户随机选择一个种子头像
+- **聊天室**：20 个聊天室，每个聊天室克隆一个种子数据作为封面（category=CHAT_COVER）
+- **消息**：每个聊天室 50 条消息，20% 概率是图片消息，图片从种子数据中随机选择并克隆（category=MESSAGE_IMG）
+- **成员关系**：所有 100 个用户加入所有 20 个聊天室（全员入全群）
+
+**垃圾数据**：
+- 生成 10 条 PENDING 状态的垃圾对象（48 小时前创建），用于测试 GC 功能
+
+---

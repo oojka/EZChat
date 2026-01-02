@@ -8,8 +8,8 @@
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
-        INSERT INTO users (uid, nickname, avatar_object, bio, last_seen_at, create_time, update_time)
-        VALUES (#{uid}, #{nickname}, #{avatarObject}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
+        INSERT INTO users (uid, nickname, object_id, bio, last_seen_at, create_time, update_time)
+        VALUES (#{uid}, #{nickname}, #{objectId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
     </insert>
 
     <insert id="addFormalUser">
@@ -21,7 +21,7 @@
         UPDATE users
         <set>
             <if test="nickname != null and nickname != ''">nickname = #{nickname},</if>
-            <if test="avatarObject != null and avatarObject != ''">avatar_object = #{avatarObject},</if>
+            <if test="objectId != null">object_id = #{objectId},</if>
             <if test="bio != null and bio != ''">bio = #{bio},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
@@ -48,7 +48,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.avatar_object,
+               u.object_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -62,7 +62,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.avatar_object,
+               u.object_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -80,7 +80,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.avatar_object,
+               u.object_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -95,7 +95,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.avatar_object,
+               u.object_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -104,6 +104,28 @@
         FROM users u
                  LEFT JOIN formal_users f ON u.id = f.user_id
         WHERE u.uid = #{uid}
+    </select>
+
+    <!-- 根据 UID 查询用户信息（JOIN objects 表获取头像 object_name） -->
+    <select id="findByUidWithAvatar" resultType="hal.th50743.pojo.User">
+        SELECT 
+            u.id, u.uid, u.nickname, u.object_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
+            o.object_name as avatarObjectName
+        FROM users u
+        LEFT JOIN objects o ON u.object_id = o.id
+        WHERE u.uid = #{uid}
+        LIMIT 1
+    </select>
+
+    <!-- 根据 ID 查询用户信息（JOIN objects 表） -->
+    <select id="findByIdWithAvatar" resultType="hal.th50743.pojo.User">
+        SELECT 
+            u.id, u.uid, u.nickname, u.object_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
+            o.object_name as avatarObjectName
+        FROM users u
+        LEFT JOIN objects o ON u.object_id = o.id
+        WHERE u.id = #{id}
+        LIMIT 1
     </select>
 
 </mapper>

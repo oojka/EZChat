@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Result {
+public class Result<I> {
 
     private Integer status; // 1 为成功，0 为失败
     private Integer code;   // 具体的业务错误码

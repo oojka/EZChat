@@ -3,6 +3,7 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "loading": "Loading...",
+    "initializing": "Initializing...",
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
@@ -16,7 +17,10 @@
     "settings": "Settings",
     "language": "Language",
     "on": "ON",
-    "off": "OFF"
+    "off": "OFF",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copy_failed": "Copy failed"
   },
   "index": {
     "subtitle": "Pure talk, instant connection."
@@ -99,7 +103,7 @@
   },
   "guest": {
     "title": "Start Chatting",
-    "feature_id": "Join via ID / Invite Link",
+    "feature_id": "Join via Room ID / Invite Link",
     "feature_no_reg": "No Account Required (Guest Access)",
     "join_btn": "Find a Room",
     "join_title": "Join Room",
@@ -130,7 +134,7 @@
   "chat": {
     "chat_list": "Chats",
     "members": "Members",
-    "room_id": "ID",
+    "room_id": "Room ID",
     "room_info": "Room Settings",
     "input_placeholder": "Type a message...",
     "send": "Send",
@@ -164,13 +168,15 @@
     "restriction_desc": "Public (ID+PW) vs Private",
     "invite_url_title": "Invite Link",
     "invite_url_desc": "Set expiration limit",
+    "invite_link": "Invite link",
+    "invite_ttl_tip": "Default validity is 7 days. If joining is disabled, the invite link will also become invalid.",
     "capacity_title": "Capacity",
     "capacity_desc": "Unlimited members",
     "room_name": "Room Name",
-    "room_name_placeholder": "e.g. Study Group",
-    "password_join": "Access Control",
-    "password_info_title": "Joining Method",
-    "password_info_desc": "ON: Allow joining via Room ID + Password.\nOFF: Private (Joining restricted to valid Invite Links only).\n*You can adjust this later in Room Settings.",
+    "room_name_placeholder": "Enter room name",
+    "password_join": "Join with Password",
+    "password_info_title": "Password-Protected Join",
+    "password_info_desc": "ON: Join via Room ID + Password or Invite Link.\nOFF: Join via Invite Link only (Room ID join disabled).\n*This setting can be managed in Room Settings after room creation.",
     "submit": "Create Room",
     "result": "Result",
     "success": "Created successfully",
@@ -178,7 +184,9 @@
     "success_msg": "Room created successfully.",
     "fail_msg": "Failed to create room. Please try again.",
     "enter_now": "Enter now",
-    "expiry_title": "Link Expiry",
+    "expiry_title": "Invite Link Settings",
+    "expiry_info_desc": "You must set an expiry date when issuing an invite link.\nUp to 5 active invite links at a time.\nInvite links can be re-issued and managed in Room Settings after room creation.\n*When one-time link is enabled, the link becomes invalid after first use.",
+    "one_time_link": "One-time Link",
     "custom_date": "Custom Date",
     "day_n": "{n} Days"
   }

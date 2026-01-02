@@ -31,7 +31,7 @@ public class MessageController {
      */
     @GetMapping
     public Result getMessagesByChatCode(@RequestParam String chatCode,
-                                        @RequestParam(required = false) String timeStamp){
+                                           @RequestParam(required = false) String timeStamp){
         // 从线程上下文中获取当前登录用户的ID
         Integer userID = CurrentHolder.getCurrentId();
         // 调用服务层获取消息，并返回成功响应

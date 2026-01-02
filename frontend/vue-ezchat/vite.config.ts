@@ -20,7 +20,7 @@ export default defineConfig({
     port: 5173,
     // 允许你的外部域名访问
     allowedHosts: [
-      'ez-chat.vornet.i234.me'
+      'ez-chat.oojka.com'
     ],
     // 关键：告诉 Vite 浏览器是通过 HTTPS (WSS) 连过来的
     // 解决 "vite外面套了一个https" 导致的热更新失败问题

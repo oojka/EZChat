@@ -2,7 +2,10 @@ package hal.th50743.service;
 
 import hal.th50743.pojo.AppInitVO;
 import hal.th50743.pojo.Chat;
+import hal.th50743.pojo.ChatJoinInfo;
 import hal.th50743.pojo.ChatMemberVO;
+import hal.th50743.pojo.ChatReq;
+import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.JoinChatReq;
 
@@ -80,5 +83,30 @@ public interface ChatService {
      * @return ChatId
      */
     Integer getChatId(Integer userId, String chatCode);
+
+    /**
+     * 获取聊天室“加入校验”所需的最小信息（不做成员权限校验）
+     *
+     * 业务目的：
+     * - 访客加入/邀请码加入需要先校验 join_enabled / chat_password_hash
+     * - 该方法不要求请求方已经是成员（否则无法加入）
+     *
+     * @param chatCode 聊天室对外 ID
+     * @return ChatJoinInfo（不存在则返回 null）
+     */
+    ChatJoinInfo getJoinInfo(String chatCode);
+
+    /**
+     * 创建聊天室
+     *
+     * 业务目的：
+     * - 创建 chats 记录并让创建者自动入群
+     * - 生成短邀请码（用于 7 天有效期的邀请链接，免密加入）
+     *
+     * @param userId 当前用户内部 ID（创建者）
+     * @param chatReq 创建请求参数
+     * @return 创建结果（chatCode + inviteCode）
+     */
+    CreateChatVO createChat(Integer userId, ChatReq chatReq);
 
 }

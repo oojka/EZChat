@@ -3,6 +3,7 @@
     "confirm": "確認",
     "cancel": "取消",
     "loading": "載入中...",
+    "initializing": "初始化...",
     "success": "成功",
     "error": "錯誤",
     "warning": "注意",
@@ -16,7 +17,10 @@
     "settings": "設定",
     "language": "語言",
     "on": "開啟",
-    "off": "關閉"
+    "off": "關閉",
+    "copy": "複製",
+    "copied": "已複製",
+    "copy_failed": "複製失敗"
   },
   "index": {
     "subtitle": "純粹溝通，即刻連接"
@@ -99,11 +103,11 @@
   },
   "guest": {
     "title": "開始聊天",
-    "feature_id": "透過 ID / 邀請連結加入",
+    "feature_id": "透過 房間ID / 邀請連結加入",
     "feature_no_reg": "無需帳號（訪客訪問）",
     "join_btn": "查找房間",
     "join_title": "加入房間",
-    "input_id": "房間 ID",
+    "input_id": "房間ID",
     "input_pw": "密碼（如需要）",
     "input_url": "貼上邀請連結",
     "join_submit": "加入"
@@ -130,7 +134,7 @@
   "chat": {
     "chat_list": "聊天列表",
     "members": "成員",
-    "room_id": "ID",
+    "room_id": "房間ID",
     "room_info": "房間設定",
     "input_placeholder": "輸入訊息...",
     "send": "發送",
@@ -164,13 +168,15 @@
     "restriction_desc": "公開（ID+密碼）或私密",
     "invite_url_title": "邀請連結",
     "invite_url_desc": "設定過期時間",
+    "invite_link": "邀請連結",
+    "invite_ttl_tip": "預設有效期 7 天；若關閉加入，邀請連結也將失效。",
     "capacity_title": "容量",
     "capacity_desc": "無限制成員",
     "room_name": "房間名稱",
-    "room_name_placeholder": "例如：學習小組",
-    "password_join": "訪問控制",
-    "password_info_title": "加入方式",
-    "password_info_desc": "開啟：允許透過 房間ID + 密碼 加入。\n關閉：私密（僅限透過有效邀請連結加入）。\n*建立後可在房間設定中隨時修改。",
+    "room_name_placeholder": "請輸入房間名稱",
+    "password_join": "可使用密碼加入",
+    "password_info_title": "密碼保護加入",
+    "password_info_desc": "開啟：可透過 房間ID + 密碼 或 邀請連結 加入。\n關閉：只能透過邀請連結加入（房間ID加入已停用）。\n*該設定可在房間建立後在房間設定中管理。",
     "submit": "建立房間",
     "result": "結果",
     "success": "建立成功",
@@ -178,7 +184,9 @@
     "success_msg": "房間建立成功",
     "fail_msg": "建立失敗，請稍後重試",
     "enter_now": "立即進入",
-    "expiry_title": "連結有效期",
+    "expiry_title": "邀請連結設定",
+    "expiry_info_desc": "邀請連結在發行時需要設定有效期。\n邀請連結最多同時生效 5 條。\n邀請連結可在建立房間後在房間設定中再次發行和管理。\n*開啟一次性連結後，連結使用一次即失效。",
+    "one_time_link": "一次性連結",
     "custom_date": "自訂日期",
     "day_n": "{n} 天"
   }

@@ -3,7 +3,7 @@ import {computed, ref, watchEffect} from 'vue'
 import {Loading, Picture as IconPicture, WarningFilled} from '@element-plus/icons-vue'
 import { ElImageViewer } from 'element-plus'
 import SmartAvatar from '@/components/SmartAvatar.vue'
-import type {ChatRoom, Message} from '@/type'
+import type {ChatRoom, Message, Image} from '@/type'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useImageStore} from '@/stores/imageStore'
 import {storeToRefs} from 'pinia'
@@ -34,6 +34,14 @@ const avatarUrl = computed(() =>
   || senderInfo.value?.avatar?.objectUrl
   || ''
 )
+
+// 预取发送者头像 blob URL（避免重新加载）
+watchEffect(() => {
+  const avatar = senderInfo.value?.avatar
+  if (avatar) {
+    imageStore.ensureThumbBlobUrl(avatar).then(() => {})
+  }
+})
 
 // 严格的 Emoji 正则表达式：只匹配真正的 Emoji，排除 CJK 字符、假名和标点符号
 // 匹配范围：
@@ -73,6 +81,126 @@ const openViewer = async (idx: number) => {
     .filter(Boolean) as string[]
   viewerVisible.value = true
 }
+
+// =========================
+// 图片加载降级策略（5 阶段，复用 imageStore 逻辑）
+// =========================
+
+// 失败占位符：使用 SVG data URI（破损图片图标）
+const FAILED_IMAGE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y1ZjVmNSIvPjxwYXRoIGQ9Ik0yMCAyMGg2MHY2MEgyMHoiIGZpbGw9IiNjY2MiLz48cGF0aCBkPSJNMjAgMjBsMjAgMjAgMjAtMjB6IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik02MCAyMGwtMjAgMjAtMjAtMjB6IiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPjwvc3ZnPg=='
+
+// 每个图片的当前 URL 状态（key: 图片在数组中的索引）
+const imageUrlMap = ref<Map<number, string>>(new Map())
+
+// 每个图片的降级阶段（防止重复尝试）
+// Stage 1: blobThumbUrl
+// Stage 2: blobUrl（复用 imageStore.ensureOriginalBlobUrl）
+// Stage 3: 刷新后缓存新的 blobThumbUrl（复用 imageStore.ensureThumbBlobUrl）
+// Stage 4: 刷新后缓存新的 blobUrl（复用 imageStore.ensureOriginalBlobUrl）
+// Stage 5: 显示失败占位符
+const imageFallbackStage = ref<Map<number, number>>(new Map())
+
+// 正在处理的图片索引（防止并发重复处理）
+const processingImages = ref<Set<number>>(new Set())
+
+// 初始化图片 URL（优先 blobThumbUrl）
+watchEffect(() => {
+  const images = props.msg.images || []
+  images.forEach((img, idx) => {
+    if (!imageUrlMap.value.has(idx)) {
+      // Stage 1: 最优先显示 blobThumbUrl
+      const initialUrl = img.blobThumbUrl || img.blobUrl || img.objectThumbUrl || img.objectUrl || ''
+      if (initialUrl) {
+        imageUrlMap.value.set(idx, initialUrl)
+        imageFallbackStage.value.set(idx, img.blobThumbUrl ? 1 : 2)
+      } else {
+        imageUrlMap.value.set(idx, FAILED_IMAGE_PLACEHOLDER)
+        imageFallbackStage.value.set(idx, 5)
+      }
+    }
+  })
+})
+
+/**
+ * 获取图片当前 URL
+ */
+const getImageUrl = (img: Image, idx: number): string => {
+  return imageUrlMap.value.get(idx) || FAILED_IMAGE_PLACEHOLDER
+}
+
+/**
+ * 图片加载错误处理（5 阶段降级策略，复用 imageStore 逻辑）
+ * 
+ * 降级顺序：
+ * 1. blobThumbUrl（最优先）
+ * 2. blobUrl（复用 imageStore.ensureOriginalBlobUrl，内部处理所有降级）
+ * 3. 刷新后缓存新的 blobThumbUrl（复用 imageStore.ensureThumbBlobUrl，内部处理 API 刷新）
+ * 4. 刷新后缓存新的 blobUrl（复用 imageStore.ensureOriginalBlobUrl）
+ * 5. 显示失败占位符
+ */
+const handleImageError = async (img: Image, idx: number) => {
+  // 防止并发重复处理
+  if (processingImages.value.has(idx)) return
+  processingImages.value.add(idx)
+
+  try {
+    const currentStage = imageFallbackStage.value.get(idx) || 1
+
+    // Stage 1 → Stage 2: blobThumbUrl 失败，尝试 blobUrl（复用 imageStore 逻辑）
+    if (currentStage === 1) {
+      // 复用 imageStore.ensureOriginalBlobUrl，它会处理所有降级逻辑
+      const blobUrl = await imageStore.ensureOriginalBlobUrl(img)
+      if (blobUrl) {
+        imageUrlMap.value.set(idx, blobUrl)
+        imageFallbackStage.value.set(idx, 2)
+        return
+      }
+      
+      // 进入 Stage 3
+      imageFallbackStage.value.set(idx, 3)
+    }
+
+    // Stage 2 → Stage 3: blobUrl 失败，刷新并缓存新的 blobThumbUrl（复用 imageStore 逻辑）
+    if (currentStage === 2 || imageFallbackStage.value.get(idx) === 3) {
+      if (img.objectName) {
+        // 复用 imageStore.ensureThumbBlobUrl，它会自动调用 API 刷新并缓存
+        const newBlobThumb = await imageStore.ensureThumbBlobUrl(img)
+        if (newBlobThumb) {
+          imageUrlMap.value.set(idx, newBlobThumb)
+          imageFallbackStage.value.set(idx, 3)
+          return
+        }
+      }
+      
+      // 进入 Stage 4
+      imageFallbackStage.value.set(idx, 4)
+    }
+
+    // Stage 3 → Stage 4: 刷新 thumb 失败，尝试缓存新的 blobUrl（复用 imageStore 逻辑）
+    if (currentStage === 3 || imageFallbackStage.value.get(idx) === 4) {
+      if (img.objectName) {
+        // 复用 imageStore.ensureOriginalBlobUrl，它会使用已刷新的 objectUrl
+        const newBlobUrl = await imageStore.ensureOriginalBlobUrl(img)
+        if (newBlobUrl) {
+          imageUrlMap.value.set(idx, newBlobUrl)
+          imageFallbackStage.value.set(idx, 4)
+          return
+        }
+      }
+      
+      // 进入 Stage 5
+      imageFallbackStage.value.set(idx, 5)
+    }
+
+    // Stage 4 → Stage 5: 所有尝试都失败，显示失败占位符
+    if (currentStage === 4 || currentStage === 5 || imageFallbackStage.value.get(idx) === 5 || !img.objectName) {
+      imageUrlMap.value.set(idx, FAILED_IMAGE_PLACEHOLDER)
+      imageFallbackStage.value.set(idx, 5)
+    }
+  } finally {
+    processingImages.value.delete(idx)
+  }
+}
 </script>
 
 <template>
@@ -110,15 +238,21 @@ const openViewer = async (idx: number) => {
           >
             <el-image
               v-for="(img, idx) in msg.images"
-              :key="idx"
-              :src="img.blobThumbUrl || img.blobUrl || img.objectThumbUrl"
+              :key="`${idx}-${imageUrlMap.get(idx) || ''}`"
+              :src="getImageUrl(img, idx)"
               class="img-item"
               fit="contain"
               loading="lazy"
               @click="openViewer(idx)"
+              @error="handleImageError(img, idx)"
             >
               <template #placeholder><div class="img-placeholder"><el-icon class="is-loading"><Loading /></el-icon></div></template>
-              <template #error><div class="img-error"><el-icon><IconPicture /></el-icon></div></template>
+              <template #error>
+                <div class="img-error">
+                  <img v-if="getImageUrl(img, idx) === FAILED_IMAGE_PLACEHOLDER" :src="FAILED_IMAGE_PLACEHOLDER" alt="Failed to load" />
+                  <el-icon v-else><IconPicture /></el-icon>
+                </div>
+              </template>
             </el-image>
           </div>
         </div>

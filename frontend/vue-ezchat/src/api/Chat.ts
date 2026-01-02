@@ -1,5 +1,5 @@
 import request from '../utils/request'
-import type {ChatMember, ChatRoom, Result} from '@/type'
+import type {ChatMember, ChatRoom, CreateChatVO, Image, Result} from '@/type'
 
 
 /**
@@ -19,3 +19,20 @@ export const getChatRoomApi = (chatCode: string): Promise<Result<ChatRoom>> =>
  */
 export const getChatMembersApi = (chatCode: string): Promise<Result<ChatMember[]>> =>
   request.get(`/chat/${chatCode}/members`)
+
+/**
+ * 创建聊天室
+ *
+ * - 后端接口：POST `/chat`
+ * - 业务目的：创建房间并返回 chatCode + inviteCode（短链接邀请码）
+ */
+export const createChatApi = (payload: {
+  chatName: string
+  avatar: Image
+  joinEnable: 0 | 1
+  joinLinkExpiryMinutes: number | null
+  maxUses?: number
+  password?: string
+  passwordConfirm?: string
+}): Promise<Result<CreateChatVO>> =>
+  request.post('/chat', payload)

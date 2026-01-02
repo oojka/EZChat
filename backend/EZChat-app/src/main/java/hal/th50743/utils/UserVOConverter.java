@@ -45,11 +45,22 @@ public final class UserVOConverter {
 
         // 构建头像对象（如果存在）
         Image avatar = null;
-        if (user.getAvatarObject() != null) {
+        // 优先使用 avatarObjectName（来自 JOIN 查询）
+        String avatarObjectName = user.getAvatarObjectName();
+        if (avatarObjectName == null && user.getObjectId() != null) {
+            // 如果没有 JOIN 查询结果，需要查询 objects 表
+            // 这种情况应该避免，建议在 Service 层统一使用 JOIN 查询
+            log.warn("User objectId exists but avatarObjectName is null, objectId={}", user.getObjectId());
+        }
+        
+        if (avatarObjectName != null) {
+            // 注意：UserVOConverter 无法获取 objectId，传 null（向后兼容）
+            // 如果后续需要 objectId，建议在 Service 层通过 JOIN 查询获取
             avatar = new Image(
-                    user.getAvatarObject(),
-                    minioOSSOperator.toUrl(user.getAvatarObject()),
-                    minioOSSOperator.toThumbUrl(user.getAvatarObject())
+                    avatarObjectName,
+                    minioOSSOperator.toUrl(avatarObjectName),
+                    minioOSSOperator.toThumbUrl(avatarObjectName),
+                    user.getObjectId() // 使用 user.getObjectId()（如果可用）
             );
         }
 

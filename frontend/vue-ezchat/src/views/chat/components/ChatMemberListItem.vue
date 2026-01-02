@@ -12,7 +12,7 @@ const { wsDisplayState } = storeToRefs(websocketStore)
 </script>
 
 <template>
-  <div class="member-item" :class="{ 'is-me': isMe, 'is-offline': !member.online }">
+  <div class="member-item" :class="{ 'is-me': isMe, 'is-offline': !member.online && !isMe }">
     <div class="avatar-wrapper">
       <el-badge is-dot :offset="[-2, 34]" :type="isMe ? wsDisplayState.type : (member.online ? 'success' : 'info')" class="status-dot">
         <SmartAvatar
@@ -50,6 +50,16 @@ const { wsDisplayState } = storeToRefs(websocketStore)
 
 .is-me { background-color: var(--primary-light); border-left-color: var(--primary); }
 .is-offline { opacity: 0.5; }
+
+/* 当前用户头像永远保持明亮（即使意外应用了 is-offline 类） */
+.is-me.is-offline,
+.is-me .member-avatar {
+  opacity: 1 !important;
+  filter: none !important;
+}
+.is-me.is-offline .nickname {
+  color: var(--text-900) !important;
+}
 
 .avatar-wrapper { margin-right: 14px; position: relative; }
 .member-avatar { background-color: var(--bg-page); border: 2px solid var(--bg-card); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }

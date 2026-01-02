@@ -5,6 +5,8 @@ import ChatView from '@/views/chat/index.vue'
 import WelcomeView from '@/views/welcome/index.vue'
 import ErrorView from '@/views/error/index.vue'
 import {useAppStore} from '@/stores/appStore'
+import {useWebsocketStore} from '@/stores/websocketStore'
+import i18n from '@/i18n'
 
 /**
  * 路由配置
@@ -67,6 +69,14 @@ const router = createRouter({
  */
 router.beforeEach((to, from, next) => {
   const appStore = useAppStore()
+  const websocketStore = useWebsocketStore()
+
+  // 业务规则：离开 /chat 体系（去到首页/错误页等）时，自动断开 WebSocket
+  // 目的：避免用户不在聊天页时仍保持 WS 长连接占用资源，也防止后台重连带来额外流量。
+  const isLeavingChat = from.path.startsWith('/chat') && !to.path.startsWith('/chat')
+  if (isLeavingChat) {
+    websocketStore.resetState()
+  }
 
   // 逻辑优化：
   // 判断是否在 /chat 体系内部切换（包括欢迎页和具体房间）
@@ -76,7 +86,12 @@ router.beforeEach((to, from, next) => {
   // 只有在非 /chat 内部切换，且路径确实发生变化时，才显示全局 Loading
   if (to.path !== from.path && !isChatSwitch) {
     appStore.isAppLoading = true
-    appStore.loadingText = 'Loading...'
+    // 进入聊天体系（登录后跳转 / 刷新回到 /chat）：使用“初始化...”提示
+    // 其他普通路由切换：使用“加载中...”提示
+    const isEnterChat = to.path.startsWith('/chat') && !from.path.startsWith('/chat')
+    appStore.loadingText = isEnterChat
+      ? (i18n.global.t('common.initializing') as unknown as string)
+      : (i18n.global.t('common.loading') as unknown as string)
   }
   next()
 })

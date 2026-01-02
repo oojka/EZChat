@@ -21,9 +21,17 @@ public class ChatMember {
     private String chatCode;
     private Integer userId;
     private String nickname;
-    private String avatarObject;
+    /**
+     * 关联 objects 表的 id（逻辑外键）
+     */
+    private Integer objectId;
     private LocalDateTime lastSeenAt;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /**
+     * 临时字段：头像对象名（来自 JOIN 查询，不持久化）
+     */
+    private transient String avatarObjectName;
 
 }

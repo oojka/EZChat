@@ -3,6 +3,7 @@
     "confirm": "확인",
     "cancel": "취소",
     "loading": "로딩 중...",
+    "initializing": "초기화 중...",
     "success": "성공",
     "error": "오류",
     "warning": "주의",
@@ -16,7 +17,10 @@
     "settings": "설정",
     "language": "언어",
     "on": "ON",
-    "off": "OFF"
+    "off": "OFF",
+    "copy": "복사",
+    "copied": "복사됨",
+    "copy_failed": "복사 실패"
   },
   "index": {
     "subtitle": "순수한 대화, 가벼운 연결"
@@ -99,11 +103,11 @@
   },
   "guest": {
     "title": "채팅 시작",
-    "feature_id": "ID / 초대 링크로 참여",
+    "feature_id": "룸ID / 초대 링크로 참여",
     "feature_no_reg": "계정 불필요 (게스트 액세스)",
     "join_btn": "룸 찾기",
     "join_title": "룸 참여",
-    "input_id": "룸 ID",
+    "input_id": "룸ID",
     "input_pw": "비밀번호 (필요한 경우)",
     "input_url": "초대 URL 붙여넣기",
     "join_submit": "참여"
@@ -130,7 +134,7 @@
   "chat": {
     "chat_list": "채팅 목록",
     "members": "멤버",
-    "room_id": "ID",
+    "room_id": "룸ID",
     "room_info": "룸 설정",
     "input_placeholder": "메시지를 입력하세요...",
     "send": "전송",
@@ -164,13 +168,15 @@
     "restriction_desc": "공개 (ID+비밀번호) 또는 비공개",
     "invite_url_title": "초대 링크",
     "invite_url_desc": "만료 시간 설정",
+    "invite_link": "초대 링크",
+    "invite_ttl_tip": "기본 유효기간은 7일입니다. 참여를 비활성화하면 초대 링크도 무효가 됩니다.",
     "capacity_title": "용량",
     "capacity_desc": "제한 없는 멤버",
     "room_name": "룸 이름",
-    "room_name_placeholder": "예: 스터디 그룹",
-    "password_join": "액세스 제어",
-    "password_info_title": "참여 방법",
-    "password_info_desc": "ON: 룸 ID + 비밀번호로 참여 가능.\nOFF: 비공개 (유효한 초대 링크로만 참여 가능).\n*생성 후에도 룸 설정에서 변경할 수 있습니다.",
+    "room_name_placeholder": "룸 이름을 입력하세요",
+    "password_join": "비밀번호로 참여",
+    "password_info_title": "비밀번호 보호 참여",
+    "password_info_desc": "ON: 룸 ID + 비밀번호 또는 초대 링크로 참여 가능.\nOFF: 초대 링크로만 참여 가능 (룸 ID 참여 비활성화).\n*이 설정은 룸 생성 후 룸 설정에서 관리할 수 있습니다.",
     "submit": "룸 만들기",
     "result": "결과",
     "success": "생성 성공",
@@ -178,7 +184,9 @@
     "success_msg": "룸이 성공적으로 생성되었습니다.",
     "fail_msg": "생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
     "enter_now": "바로 입장",
-    "expiry_title": "링크 만료",
+    "expiry_title": "초대 링크 설정",
+    "expiry_info_desc": "초대 링크는 발행 시 유효 기간을 설정해야 합니다.\n초대 링크는 최대 5개까지 동시에 유효합니다.\n초대 링크는 룸 생성 후 룸 설정에서 다시 발행하고 관리할 수 있습니다.\n*일회성 링크를 활성화하면 링크는 첫 사용 후 무효화됩니다.",
+    "one_time_link": "일회성 링크",
     "custom_date": "사용자 지정 날짜",
     "day_n": "{n}일"
   }

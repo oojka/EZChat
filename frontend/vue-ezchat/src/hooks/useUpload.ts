@@ -2,6 +2,7 @@ import {ref} from 'vue'
 import {ElMessage, type UploadRequestOptions} from 'element-plus'
 import axios from 'axios'
 import {useUserStore} from '@/stores/userStore'
+import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 
 // 定义上传结果接口
 interface UploadResult {
@@ -21,13 +22,13 @@ export function useUpload(uploadApiUrl: string) {
 
     // 1. 校验文件类型和大小
     const isImage = file.type.startsWith('image/')
-    const isLt10M = file.size / 1024 / 1024 < 10
+    const isLtMaxSize = file.size / 1024 / 1024 < MAX_IMAGE_SIZE_MB
 
     if (!isImage) {
       ElMessage.error('画像ファイルのみアップロード可能です')
       return
     }
-    if (!isLt10M) {
+    if (!isLtMaxSize) {
       ElMessage.error('画像サイズは10MB以下にしてください')
       return
     }

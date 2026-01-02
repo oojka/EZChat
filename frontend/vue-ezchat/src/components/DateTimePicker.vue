@@ -6,12 +6,14 @@ import { useI18n } from 'vue-i18n'
 interface Props {
   modelValue?: Date | null
   radioValue?: number | null
+  oneTimeLink?: boolean
   disabledDate?: (time: Date) => boolean
 }
 
 interface Emits {
   (e: 'update:modelValue', value: Date | null): void
   (e: 'update:radioValue', value: number | null): void
+  (e: 'update:oneTimeLink', value: boolean): void
 }
 
 const props = defineProps<Props>()
@@ -39,6 +41,31 @@ const selectedDateRadio = computed({
           <span>{{ t('create_chat.expiry_title') }}</span>
         </div>
       </div>
+
+      <!-- 功能说明提示（始终可见，支持语言切换淡入淡出） -->
+      <Transition name="el-fade-in-linear" mode="out-in">
+        <p :key="t('create_chat.expiry_info_desc')" class="expiry-hint">
+          {{ t('create_chat.expiry_info_desc') }}
+        </p>
+      </Transition>
+
+      <!-- 分割线：与 PasswordConfig.vue 同款风格 -->
+      <div class="expiry-divider" aria-hidden="true" />
+
+      <!-- 一次性链接开关 -->
+      <div class="one-time-switch-area">
+        <span class="switch-label">{{ t('create_chat.one_time_link') }}</span>
+        <el-switch
+          :model-value="props.oneTimeLink ?? false"
+          @update:model-value="$emit('update:oneTimeLink', $event)"
+          :active-value="true"
+          :inactive-value="false"
+          :active-text="t('common.on')"
+          :inactive-text="t('common.off')"
+          inline-prompt
+        />
+      </div>
+
       <div class="expiry-content">
         <el-radio-group
           v-model="selectedDateRadio"
@@ -98,7 +125,35 @@ const selectedDateRadio = computed({
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.expiry-hint {
+  margin-top: 12px;
+  margin-bottom: 0;
+  font-size: 11px;
+  color: var(--text-500);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.expiry-divider {
+  margin-top: 16px;
+  border-top: 1px solid var(--el-border-color-extra-light);
+}
+
+.one-time-switch-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
   margin-bottom: 16px;
+}
+
+.switch-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-500);
+  letter-spacing: 0.2px;
 }
 
 .title-with-icon {
@@ -115,6 +170,8 @@ const selectedDateRadio = computed({
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin-top: 0;
+  padding-top: 16px;
   padding-bottom: 8px;
 }
 

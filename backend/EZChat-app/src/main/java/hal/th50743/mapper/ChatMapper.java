@@ -1,5 +1,7 @@
 package hal.th50743.mapper;
 
+import hal.th50743.pojo.ChatCreate;
+import hal.th50743.pojo.ChatJoinInfo;
 import hal.th50743.pojo.ChatVO;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -45,4 +47,22 @@ public interface ChatMapper {
      * @return 聊天室视图对象
      */
     ChatVO getChatVOByChatId(Integer chatId);
+
+    /**
+     * 获取“加入校验”所需的最小信息
+     *
+     * @param chatCode 聊天室对外 ID
+     * @return ChatJoinInfo（包含 joinEnabled / chatPasswordHash / chatId）
+     */
+    ChatJoinInfo getJoinInfoByChatCode(String chatCode);
+
+    /**
+     * 新增聊天室
+     *
+     * 注意：本工程不使用物理外键，owner_id 关联关系由业务逻辑保证。
+     *
+     * @param chat 创建聊天室写入对象
+     * @return 影响行数
+     */
+    int insertChat(ChatCreate chat);
 }

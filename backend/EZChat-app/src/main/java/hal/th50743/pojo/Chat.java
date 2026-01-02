@@ -15,7 +15,13 @@ public class Chat {
     private String chatCode;
     private String chatName;
     private Integer ownerId;
-    private String avatarName;
+    private Integer objectId;
+    /**
+     * 临时字段，用于 JOIN 查询获取 object_name
+     * <p>
+     * 业务说明：通过 LEFT JOIN objects 表获取头像对象名，用于构建 Image 对象
+     */
+    private transient String avatarObjectName;
     private Integer joinEnabled;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

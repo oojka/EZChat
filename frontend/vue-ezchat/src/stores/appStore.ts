@@ -32,7 +32,8 @@ export const useAppStore = defineStore('app', () => {
   // 全局 Loading 状态：用于控制页面骨架/遮罩
   const isAppLoading = ref(false)
   const showLoadingSpinner = ref(true)
-  const loadingText = ref('初期化...')
+  // 注意：默认值会在 initLanguage() 后再用 i18n 文案覆盖，避免多语言下出现“写死某一语言”的问题
+  const loadingText = ref('Initializing...')
   // App 初始化中的保护标记：用于避免路由守卫过早关闭 Loading
   const isAppInitializing = ref(false)
   // refresh 全屏 Loading 的“最短展示时长”（毫秒）：用于缓解骨架屏切换的突兀感
@@ -105,6 +106,8 @@ export const useAppStore = defineStore('app', () => {
   }
 
   initLanguage()
+  // 初始化语言后，补齐 Loading 文案（与当前 locale 对齐）
+  loadingText.value = i18n.global.t('common.initializing') as unknown as string
 
   /**
    * 切换主题（暗黑/明亮）
@@ -170,8 +173,12 @@ export const useAppStore = defineStore('app', () => {
     const websocketStore = useWebsocketStore()
     const messageStore = useMessageStore()
     const refreshLoadingStartAt = type === 'refresh' ? Date.now() : 0
+    let finalTokenForWs: string | undefined
 
     try {
+      // 登录 / refresh：全屏遮蔽应显示“初始化...”而不是 “Loading...”
+      loadingText.value = i18n.global.t('common.initializing') as unknown as string
+
       // refresh：尽早标记“初始化中”，避免 messageStore/router 等并发逻辑提前触发拉取
       if (type === 'refresh') {
         isAppInitializing.value = true
@@ -188,6 +195,7 @@ export const useAppStore = defineStore('app', () => {
       // 用户详情/房间列表等慢请求放到后台，避免黑屏转圈时间被拉长
       const hasToken = token || userStore.restoreLoginUserFromStorage()
       const finalToken = token || userStore.loginUser.token
+      finalTokenForWs = finalToken
 
       if (!finalToken) {
         // 未登录：强制回到首页
@@ -195,13 +203,18 @@ export const useAppStore = defineStore('app', () => {
         return
       }
 
-      // 2) 启动 WS（不等待握手完成）
-      if (websocketStore.status !== 'OPEN') websocketStore.initWS(finalToken)
-
-      // 3) refresh 优先加载 chatList：先把 AsideList 的 roomList 拉齐，再撤掉全屏遮蔽
+      // 2) refresh 优先加载 chatList：先把 AsideList 的 roomList 拉齐，再撤掉全屏遮蔽
       // 用户详情不影响 chatList，可后台加载
       userStore.fetchLoginUserInfo().then(() => {})
       await roomStore.initRoomList()
+
+      // 3) WS 连接时机：等待初始化关键链路完成再连接（避免初始化阶段 WS 事件造成数据/状态抖动）
+      // - login：roomList 加载完成后即可连接
+      // - refresh：在 finally 里“撤掉遮蔽并解除初始化标记”后再连接
+      if (type === 'login') {
+        // 关键修复保留：不要依赖 status 判断（close 是异步的，可能导致“误判为 OPEN 而跳过重连”）
+        websocketStore.initWS(finalToken)
+      }
 
     } catch (error) {
       console.error('[ERROR] [AppStore] Initialization failed:', error)
@@ -215,6 +228,10 @@ export const useAppStore = defineStore('app', () => {
           isAppLoading.value = false
           // 2) 遮蔽撤掉后再解除“初始化中”，允许 chatView/消息开始加载
           isAppInitializing.value = false
+          // 3) 初始化完成后再连接 WS（不等待握手完成）
+          if (finalTokenForWs) {
+            websocketStore.initWS(finalTokenForWs)
+          }
         }, remain)
       }
     }

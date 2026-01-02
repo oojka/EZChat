@@ -1,21 +1,28 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Lock } from '@element-plus/icons-vue'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { useI18n } from 'vue-i18n'
 
+/**
+ * PasswordConfig - 密码保护配置组件（UI-only，可复用）
+ *
+ * 职责：
+ * - 渲染密码保护开关（switch）
+ * - 渲染密码输入框（支持 expand / always-visible 两种模式）
+ * - 不维护校验状态：依赖外层 el-form rules 作为唯一校验来源
+ *
+ * modelValue 语义：密码保护开关（joinEnableByPassword）
+ * - 1: 启用密码保护
+ * - 0: 禁用密码保护
+ */
 interface Props {
-  modelValue: number // joinEnable: 0 | 1
+  modelValue: number // joinEnableByPassword: 0 | 1
   password: string
   passwordConfirm: string
-  hasPasswordError?: boolean
-  passwordErrorMessage?: string
-  mode?: 'expand' | 'always-visible' // expand: 点击开关展开/收起输入框; always-visible: 默认展开，开关控制输入框是否可输入
+  mode?: 'expand' | 'always-visible' // expand: 开关控制展开/收起; always-visible: 开关控制是否可输入
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  hasPasswordError: false,
-  passwordErrorMessage: '',
   mode: 'expand',
 })
 
@@ -28,7 +35,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const joinEnable = computed({
+const joinEnableByPassword = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 })
@@ -52,12 +59,10 @@ const handleEnter = () => {
   <div class="password-form-center">
     <div class="config-glass-card">
       <div class="config-header">
-        <div class="title-with-icon">
-          <el-icon><Lock /></el-icon>
-          <span>{{ t('create_chat.password_join') }}</span>
-        </div>
+        <!-- 弱化标题：只保留开关，标题改为轻提示 -->
+        <span class="header-label">{{ t('create_chat.password_join') }}</span>
         <el-switch
-          v-model="joinEnable"
+          v-model="joinEnableByPassword"
           :active-value="1"
           :inactive-value="0"
           :active-text="t('common.on')"
@@ -76,16 +81,17 @@ const handleEnter = () => {
       <!-- 密码输入框 -->
       <!-- expand 模式：展开时显示 -->
       <Transition v-if="mode === 'expand'" name="password-input-expand">
-        <div v-if="joinEnable === 1" class="password-setup-area">
+        <div v-if="joinEnableByPassword === 1" class="password-setup-area">
           <div class="password-inputs-grid">
-            <el-form-item :label="t('auth.password')" prop="password" :show-message="false">
+            <!-- 使用 el-form-item 原生错误展示 -->
+            <el-form-item prop="password" class="no-label-item show-error-inline">
               <PasswordInput
                 v-model="passwordValue"
                 :placeholder="t('auth.password')"
                 @enter="handleEnter"
               />
             </el-form-item>
-            <el-form-item :label="t('auth.confirm_password')" prop="passwordConfirm" :show-message="false">
+            <el-form-item prop="passwordConfirm" class="no-label-item show-error-inline">
               <PasswordInput
                 v-model="passwordConfirmValue"
                 :placeholder="t('auth.confirm_password_placeholder')"
@@ -93,44 +99,29 @@ const handleEnter = () => {
               />
             </el-form-item>
           </div>
-          <!-- 固定高度的错误提示容器 -->
-          <div class="password-error-container">
-            <Transition name="el-fade-in-linear">
-              <span v-show="hasPasswordError" class="password-error-text">
-                {{ passwordErrorMessage }}
-              </span>
-            </Transition>
-          </div>
         </div>
       </Transition>
       
       <!-- always-visible 模式：始终显示，开关控制是否可输入 -->
       <div v-else class="password-setup-area">
         <div class="password-inputs-grid">
-          <el-form-item :label="t('auth.password')" prop="password" :show-message="false">
+          <!-- 使用 el-form-item 原生错误展示 -->
+          <el-form-item prop="password" class="no-label-item show-error-inline">
             <PasswordInput
               v-model="passwordValue"
               :placeholder="t('auth.password')"
-              :disabled="joinEnable === 0"
+              :disabled="joinEnableByPassword === 0"
               @enter="handleEnter"
             />
           </el-form-item>
-          <el-form-item :label="t('auth.confirm_password')" prop="passwordConfirm" :show-message="false">
+          <el-form-item prop="passwordConfirm" class="no-label-item show-error-inline">
             <PasswordInput
               v-model="passwordConfirmValue"
               :placeholder="t('auth.confirm_password_placeholder')"
-              :disabled="joinEnable === 0"
+              :disabled="joinEnableByPassword === 0"
               @enter="handleEnter"
             />
           </el-form-item>
-        </div>
-        <!-- 固定高度的错误提示容器 -->
-        <div class="password-error-container">
-          <Transition name="el-fade-in-linear">
-            <span v-show="hasPasswordError" class="password-error-text">
-              {{ passwordErrorMessage }}
-            </span>
-          </Transition>
         </div>
       </div>
     </div>
@@ -171,14 +162,12 @@ const handleEnter = () => {
   align-items: center;
 }
 
-.title-with-icon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-700);
-  padding-left: 4px;
+/* 弱化标题：轻提示风格，替代原 icon + 粗体标题 */
+.header-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-500);
+  letter-spacing: 0.2px;
 }
 
 .password-hint {
@@ -204,26 +193,25 @@ const handleEnter = () => {
   margin-bottom: 0;
 }
 
-.password-error-container {
-  height: 20px;
-  margin-top: 8px;
-  margin-bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-}
-
-.password-error-text {
+/* 让 el-form-item 显示校验错误信息 */
+.show-error-inline :deep(.el-form-item__error) {
   font-size: 11px;
-  color: var(--el-color-danger);
   font-weight: 600;
-  line-height: 1.2;
+  padding-top: 4px;
 }
 
-/* Password input wrapper - 高度设置（背景色样式已移至 PasswordInput.vue） */
+/* Password input wrapper - 对齐登录页风格 */
 .password-form-center :deep(.password-input-wrapper .el-input__wrapper) {
   height: 48px !important;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--el-border-color-light) inset;
+  background-color: var(--bg-page);
+  padding: 6px 16px;
+  transition: all 0.3s;
+}
+
+.password-form-center :deep(.password-input-wrapper .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) inset !important;
 }
 
 :deep(.el-form-item) {
@@ -246,6 +234,11 @@ const handleEnter = () => {
   color: var(--text-700);
   padding-bottom: 4px !important;
   line-height: 1 !important;
+}
+
+/* 去除 label：对齐登录页风格，用 placeholder 替代 */
+.no-label-item :deep(.el-form-item__label) {
+  display: none !important;
 }
 
 /* --- Password Animation Transitions --- */

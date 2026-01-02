@@ -1,21 +1,33 @@
 package hal.th50743.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
 import hal.th50743.mapper.ChatMapper;
 import hal.th50743.mapper.ChatMemberMapper;
+import hal.th50743.mapper.ChatInviteMapper;
 import hal.th50743.mapper.MessageMapper;
 import hal.th50743.pojo.*;
+import hal.th50743.pojo.FileEntity;
 import hal.th50743.service.ChatService;
+import hal.th50743.service.FileService;
+import hal.th50743.service.UserService;
 import hal.th50743.utils.ImageUtils;
+import hal.th50743.utils.InviteCodeUtils;
+import hal.th50743.utils.PasswordUtils;
+import hal.th50743.utils.UidGenerator;
 import hal.th50743.ws.WebSocketServer;
 import io.minio.MinioOSSOperator;
 import jakarta.websocket.Session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,8 +44,11 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatMapper chatMapper;
     private final ChatMemberMapper chatMemberMapper;
+    private final ChatInviteMapper chatInviteMapper;
     private final MessageMapper messageMapper;
     private final MinioOSSOperator minioOSSOperator;
+    private final UserService userService;
+    private final FileService fileService;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -58,15 +73,36 @@ public class ChatServiceImpl implements ChatService {
                                 Integer unreadCount,
                                 List<ChatMember> members) {
         // A. 头像处理
-        if (c.getAvatarName() != null) {
-            c.setAvatar(ImageUtils.buildImage(c.getAvatarName(), minioOSSOperator));
-            c.setAvatarName(null);
+        if (c.getAvatarObjectName() != null) {
+            c.setAvatar(ImageUtils.buildImage(c.getAvatarObjectName(), minioOSSOperator));
+            c.setAvatarObjectName(null);
         }
 
         // B. 最后消息处理
         if (lastMsg != null) {
-            lastMsg.setImages(ImageUtils.buildImagesFromJson(lastMsg.getObjectNames(), objectMapper, minioOSSOperator));
-            lastMsg.setObjectNames(null);
+            // 根据 objectIds 构建 Image 对象列表
+            String objectIdsJson = lastMsg.getObjectIds();
+            if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
+                try {
+                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
+                    List<Image> images = new ArrayList<>();
+                    for (Integer objectId : objectIds) {
+                        FileEntity objectEntity = fileService.findById(objectId);
+                        if (objectEntity != null) {
+                            Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
+                            if (image != null) {
+                                image.setObjectId(objectId);
+                                images.add(image);
+                            }
+                        }
+                    }
+                    lastMsg.setImages(images);
+                } catch (JsonProcessingException e) {
+                    log.error("反序列化最后消息的图片对象ID列表失败: {}", objectIdsJson, e);
+                    lastMsg.setImages(Collections.emptyList());
+                }
+            }
+            lastMsg.setObjectIds(null);
             c.setLastMessage(lastMsg);
             c.setLastActiveAt(lastMsg.getCreateTime());
         } else {
@@ -91,8 +127,8 @@ public class ChatServiceImpl implements ChatService {
                 vo.setOnline(isOnline);
                 vo.setLastSeenAt(m.getLastSeenAt());
                 
-                if (m.getAvatarObject() != null) {
-                    vo.setAvatar(ImageUtils.buildImage(m.getAvatarObject(), minioOSSOperator));
+                if (m.getAvatarObjectName() != null) {
+                    vo.setAvatar(ImageUtils.buildImage(m.getAvatarObjectName(), minioOSSOperator));
                 }
                 
                 memberVOList.add(vo);
@@ -120,8 +156,8 @@ public class ChatServiceImpl implements ChatService {
             vo.setNickname(m.getNickname());
             vo.setOnline(isOnline);
             vo.setLastSeenAt(m.getLastSeenAt());
-            if (m.getAvatarObject() != null) {
-                vo.setAvatar(ImageUtils.buildImage(m.getAvatarObject(), minioOSSOperator));
+            if (m.getAvatarObjectName() != null) {
+                vo.setAvatar(ImageUtils.buildImage(m.getAvatarObjectName(), minioOSSOperator));
             }
             memberVOList.add(vo);
         }
@@ -228,16 +264,37 @@ public class ChatServiceImpl implements ChatService {
 
         for (ChatVO c : chatVOList) {
             // 头像处理
-            if (c.getAvatarName() != null) {
-                c.setAvatar(ImageUtils.buildImage(c.getAvatarName(), minioOSSOperator));
-                c.setAvatarName(null);
+            if (c.getAvatarObjectName() != null) {
+                c.setAvatar(ImageUtils.buildImage(c.getAvatarObjectName(), minioOSSOperator));
+                c.setAvatarObjectName(null);
             }
 
             // 最后消息处理
             MessageVO lastMsg = lastMessageMap.get(c.getChatCode());
             if (lastMsg != null) {
-                lastMsg.setImages(ImageUtils.buildImagesFromJson(lastMsg.getObjectNames(), objectMapper, minioOSSOperator));
-                lastMsg.setObjectNames(null);
+                // 根据 objectIds 构建 Image 对象列表
+                String objectIdsJson = lastMsg.getObjectIds();
+                if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
+                    try {
+                        List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
+                        List<Image> images = new ArrayList<>();
+                        for (Integer objectId : objectIds) {
+                            FileEntity objectEntity = fileService.findById(objectId);
+                            if (objectEntity != null) {
+                                Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
+                                if (image != null) {
+                                    image.setObjectId(objectId);
+                                    images.add(image);
+                                }
+                            }
+                        }
+                        lastMsg.setImages(images);
+                    } catch (JsonProcessingException e) {
+                        log.error("反序列化最后消息的图片对象ID列表失败: {}", objectIdsJson, e);
+                        lastMsg.setImages(Collections.emptyList());
+                    }
+                }
+                lastMsg.setObjectIds(null);
                 c.setLastMessage(lastMsg);
                 c.setLastActiveAt(lastMsg.getCreateTime());
             } else {
@@ -328,6 +385,17 @@ public class ChatServiceImpl implements ChatService {
         return chatId;
     }
 
+    /**
+     * 获取聊天室加入校验信息（不做成员权限校验）
+     *
+     * @param chatCode 聊天室对外 ID
+     * @return ChatJoinInfo
+     */
+    @Override
+    public ChatJoinInfo getJoinInfo(String chatCode) {
+        return chatMapper.getJoinInfoByChatCode(chatCode);
+    }
+
     // ============================================================
     // 4. 其他逻辑
     // ============================================================
@@ -351,7 +419,157 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public Chat join(JoinChatReq joinChatReq) {
-        // TODO: 实现用户加入聊天室的业务逻辑
-        return null;
+        // 业务校验：chatCode 必填
+        if (joinChatReq == null || joinChatReq.getChatCode() == null || joinChatReq.getChatCode().isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "chatCode is required");
+        }
+        if (joinChatReq.getUid() == null || joinChatReq.getUid().isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "uid is required");
+        }
+
+        ChatJoinInfo info = chatMapper.getJoinInfoByChatCode(joinChatReq.getChatCode());
+        if (info == null || info.getChatId() == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
+        }
+
+        // 业务规则：join_enabled=0 时，密码/邀请都不可加入（统一拒绝）
+        if (info.getJoinEnabled() != null && info.getJoinEnabled() == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat");
+        }
+
+        // 业务规则：chat_password_hash != null 则必须校验密码；为 null 则免密加入
+        if (info.getChatPasswordHash() != null && !info.getChatPasswordHash().isBlank()) {
+            if (joinChatReq.getPassword() == null || joinChatReq.getPassword().isBlank()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Password is required");
+            }
+            if (!PasswordUtils.matches(joinChatReq.getPassword(), info.getChatPasswordHash())) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Incorrect password");
+            }
+        }
+
+        Integer userId = userService.getIdByUid(joinChatReq.getUid());
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        chatMemberMapper.insertIgnore(info.getChatId(), userId, now);
+
+        // 返回最小 Chat 对象用于上层逻辑（当前工程对 join 返回不做强依赖）
+        // 注意：Lombok @AllArgsConstructor 不包含 transient 字段，所以构造函数参数不包含 avatarObjectName
+        // 参数顺序：id, chatCode, chatName, ownerId, objectId, joinEnabled, createTime, updateTime
+        Chat chat = new Chat();
+        chat.setId(info.getChatId());
+        chat.setChatCode(info.getChatCode());
+        chat.setJoinEnabled(info.getJoinEnabled());
+        chat.setCreateTime(now);
+        chat.setUpdateTime(now);
+        return chat;
+    }
+
+    /**
+     * 创建聊天室
+     *
+     * @param userId 当前用户内部 ID
+     * @param chatReq 创建参数
+     * @return CreateChatVO（chatCode + inviteCode）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public CreateChatVO createChat(Integer userId, ChatReq chatReq) {
+        if (userId == null) throw new BusinessException(ErrorCode.UNAUTHORIZED, "User is required");
+        if (chatReq == null) throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
+        if (chatReq.getChatName() == null || chatReq.getChatName().isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "chatName is required");
+        }
+
+        // 1) joinEnabled：默认允许加入（1）
+        int joinEnabled = chatReq.getJoinEnable() == null ? 1 : chatReq.getJoinEnable();
+
+        // 2) 密码：可选。若提供则写入 BCrypt hash；不提供则 NULL（表示免密）
+        String passwordHash = null;
+        String password = chatReq.getPassword();
+        String confirm = chatReq.getPasswordConfirm();
+        if (password != null && !password.isBlank()) {
+            if (!password.equals(confirm)) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Password confirm mismatch");
+            }
+            passwordHash = PasswordUtils.encode(password);
+        }
+
+        // 3) 头像对象 ID：优先使用前端传来的 objectId（性能优化，无需查表）
+        Integer objectId = null;
+        if (chatReq.getAvatar() != null) {
+            // 优先使用 objectId（如果前端已提供）
+            if (chatReq.getAvatar().getObjectId() != null) {
+                objectId = chatReq.getAvatar().getObjectId();
+            } else if (chatReq.getAvatar().getObjectName() != null) {
+                // 降级方案：如果前端未提供 objectId，根据 objectName 查询（向后兼容）
+                FileEntity existingObject = fileService.findByObjectName(chatReq.getAvatar().getObjectName());
+                if (existingObject != null) {
+                    objectId = existingObject.getId();
+                } else {
+                    log.warn("Chat avatar object not found in objects table: {}", chatReq.getAvatar().getObjectName());
+                }
+            }
+        }
+
+        // 4) chatCode：8 位数字，冲突重试（复用 UID 生成思路）
+        String chatCode = null;
+        ChatCreate chatCreate = new ChatCreate();
+        chatCreate.setChatName(chatReq.getChatName());
+        chatCreate.setOwnerId(userId);
+        chatCreate.setJoinEnabled(joinEnabled);
+        chatCreate.setChatPasswordHash(passwordHash);
+        chatCreate.setObjectId(objectId);
+
+        for (int i = 1; i <= 5; i++) {
+            chatCode = UidGenerator.generateUid(8);
+            chatCreate.setChatCode(chatCode);
+            try {
+                chatMapper.insertChat(chatCreate);
+                break;
+            } catch (DuplicateKeyException e) {
+                if (i == 5) throw new BusinessException(ErrorCode.DATABASE_ERROR, "Failed to generate unique chatCode");
+            }
+        }
+
+        Integer chatId = chatCreate.getId();
+        if (chatId == null) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Create chat failed (no chatId)");
+        }
+
+        // 5) 创建者自动入群
+        LocalDateTime now = LocalDateTime.now();
+        chatMemberMapper.insertIgnore(chatId, userId, now);
+
+        // 6) 生成短邀请码（默认 7 天 TTL）：入库保存 hash，返回明文给前端展示
+        int expiryMinutes = chatReq.getJoinLinkExpiryMinutes() == null ? 10080 : chatReq.getJoinLinkExpiryMinutes();
+        LocalDateTime expiresAt = now.plusMinutes(Math.max(1, expiryMinutes));
+
+        // 读取 maxUses：默认为 0（无限使用）
+        int maxUses = chatReq.getMaxUses() == null ? 0 : chatReq.getMaxUses();
+        // 业务校验：目前只支持 0（无限）或 1（一次性）
+        if (maxUses != 0 && maxUses != 1) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "maxUses must be 0 or 1");
+        }
+
+        String inviteCode = InviteCodeUtils.generateInviteCode(18);
+        String codeHash = InviteCodeUtils.sha256Hex(inviteCode);
+        ChatInvite invite = new ChatInvite(
+                null,
+                chatCode,
+                codeHash,
+                expiresAt,
+                maxUses,
+                0,
+                0,
+                userId,
+                null,
+                null
+        );
+        chatInviteMapper.insert(invite);
+
+        return new CreateChatVO(chatCode, inviteCode);
     }
 }

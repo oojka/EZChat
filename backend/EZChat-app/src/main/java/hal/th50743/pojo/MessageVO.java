@@ -19,7 +19,7 @@ public class MessageVO {
      */
     private Integer type;
     private String text;
-    private String objectNames;
+    private String objectIds; // 临时字段，用于数据转换
     private List<Image> images;
     private LocalDateTime createTime;
 

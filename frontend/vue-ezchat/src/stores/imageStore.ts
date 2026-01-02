@@ -151,12 +151,28 @@ export const useImageStore = defineStore('image', () => {
   }
 
   /**
+   * 图像数组去重：基于 objectName/objectId/objectUrl 去除重复项
+   * 
+   * @param images 图像数组（可能包含 undefined）
+   * @returns 去重后的图像数组
+   */
+  const deduplicateImages = (images: Array<Image | undefined>): Image[] => {
+    return Array.from(
+      new Map(
+        images
+          .filter(Boolean)
+          .map((img) => [img.objectName || img.objectId || img.objectUrl, img])
+      ).values()
+    ) as Image[]
+  }
+
+  /**
    * 批量预取缩略图 blob（用于头像/列表）
+   * 内部自动去重，避免重复预取相同的图像
    */
   const prefetchThumbs = (images: Array<Image | undefined>, limit = 6) => {
-    const tasks = images
-      .filter(Boolean)
-      .map((img) => () => ensureThumbBlobUrl(img as Image))
+    const uniqueImages = deduplicateImages(images)
+    const tasks = uniqueImages.map((img) => () => ensureThumbBlobUrl(img))
     runWithConcurrency(tasks, limit).then(() => {})
   }
 
@@ -167,8 +183,8 @@ export const useImageStore = defineStore('image', () => {
     if (!img) return
     if (img.blobUrl) URL.revokeObjectURL(img.blobUrl)
     if (img.blobThumbUrl) URL.revokeObjectURL(img.blobThumbUrl)
-    img.blobUrl = undefined
-    img.blobThumbUrl = undefined
+    img.blobUrl = ''
+    img.blobThumbUrl = ''
   }
 
   /**

@@ -128,9 +128,10 @@ export const useRoomStore = defineStore('room', () => {
 
       // 2) 列表头像缩略图：在 Store 更新后异步预取 blob（不阻塞主流程）
       const rooms = _roomList.value || []
-      const newAvatars = rooms.map(r => r.avatar).filter(Boolean) as any
-      imageStore.revokeUnusedBlobs(prevAvatars as any, newAvatars as any)
-      imageStore.prefetchThumbs(newAvatars, 6)
+      const allAvatars = rooms.map(r => r.avatar).filter(Boolean) as any
+      // prefetchThumbs 内部已自动去重，无需手动去重
+      imageStore.revokeUnusedBlobs(prevAvatars as any, allAvatars as any)
+      imageStore.prefetchThumbs(allAvatars, 6)
     } catch (e) {
       console.error('[ERROR] [RoomStore] Init API Error:', e)
     } finally {
@@ -167,6 +168,7 @@ export const useRoomStore = defineStore('room', () => {
     // 房间信息更新后：按需预取房间头像与成员头像缩略图（避免刷新/切换时头像加载慢）
     if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => {})
     const members = newRoomInfo.chatMembers || []
+    // prefetchThumbs 内部已自动去重，无需手动去重
     imageStore.prefetchThumbs(members.map(m => m.avatar), 6)
   }
 
@@ -196,6 +198,7 @@ export const useRoomStore = defineStore('room', () => {
       target.onLineMemberCount = members.filter(m => m.online).length
 
       // 成员头像缩略图预取：异步触发，不阻塞 UI
+      // prefetchThumbs 内部已自动去重，无需手动去重
       const imageStore = useImageStore()
       imageStore.prefetchThumbs(members.map(m => m.avatar).filter(Boolean) as any, 6)
     } catch (e) {

@@ -27,27 +27,16 @@ type OutgoingMessage = {
 }
 
 export const useWebsocketStore = defineStore('websocket', () => {
+  // status 已在 useWebsocket 内做“CONNECTING 最短展示 0.5s”的平滑处理
   const { status, connect, send, close } = useWebsocket()
   const isInitialized = ref(false)
   const { t } = i18n.global
-
-  // --- 状态平滑切换逻辑 ---
-  const delayedStatus = ref(status.value)
-  let statusTimer: ReturnType<typeof setTimeout> | null = null
-
-  watch(status, (newStatus) => {
-    // 业务目的：避免 WS 状态快速抖动导致 UI 提示闪烁
-    if (statusTimer) clearTimeout(statusTimer)
-    statusTimer = setTimeout(() => {
-      delayedStatus.value = newStatus
-    }, 500)
-  })
 
   /**
    * 给 UI 展示用的连接状态（含颜色/徽标类型）
    */
   const wsDisplayState = computed(() => {
-    switch (delayedStatus.value) {
+    switch (status.value) {
       case 'OPEN':
         return { text: t('chat.ws_connected'), color: '#67C23A', class: 'status-online', type: 'success' }
       case 'CONNECTING':
@@ -136,14 +125,9 @@ export const useWebsocketStore = defineStore('websocket', () => {
    * - 不应重置 wsDisplayState 等纯 UI 展示状态（由 status 的 watch 自然驱动）
    */
   const resetState = () => {
-    // 1) 清理延迟状态计时器
-    if (statusTimer) {
-      clearTimeout(statusTimer)
-      statusTimer = null
-    }
-    // 2) 主动关闭底层连接（useWebsocket 会标记为主动关闭，不触发重连）
+    // 主动关闭底层连接（useWebsocket 会标记为主动关闭，不触发重连）
     close()
-    // 3) 重置初始化标记
+    // 重置初始化标记
     isInitialized.value = false
   }
 

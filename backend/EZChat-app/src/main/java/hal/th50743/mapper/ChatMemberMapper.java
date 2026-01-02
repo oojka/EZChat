@@ -3,6 +3,7 @@ package hal.th50743.mapper;
 import hal.th50743.pojo.ChatMember;
 import hal.th50743.pojo.ChatMemberLite;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -77,4 +78,18 @@ public interface ChatMemberMapper {
      * @param now    当前时间
      */
     void updateLastSeenAt(Integer userId, Integer chatId, LocalDateTime now);
+
+    /**
+     * 新增聊天室成员关系（若已存在则忽略）
+     *
+     * 业务目的：
+     * - join / guest join / invite join 都需要写 chat_members
+     * - 避免重复加入导致主键冲突
+     *
+     * @param chatId 聊天室内部 ID
+     * @param userId 用户内部 ID
+     * @param now    当前时间（用于 last_seen_at/create_time/update_time）
+     * @return 影响行数（插入成功=1；已存在=0）
+     */
+    int insertIgnore(@Param("chatId") Integer chatId, @Param("userId") Integer userId, @Param("now") LocalDateTime now);
 }

@@ -57,7 +57,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 
 <template>
-  <div class="chat-item" :class="{ 'is-active': isActive }">
+  <div class="chat-item" :class="{ 'is-active': isActive }" :data-chat-code="chat.chatCode">
     <div class="avatar-wrapper">
       <SmartAvatar
         class="avatar"

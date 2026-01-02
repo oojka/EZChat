@@ -1,10 +1,14 @@
 /*
  Navicat MySQL Data Transfer
+ Source Schema         : ezchat
  Target Server Type    : MySQL
  Target Server Version : 80000
  File Encoding         : 65001
 
- 说明：已将 users 表字段统一修改为 uid (原 u_id)，以匹配后端 Mapper XML 中的定义。
+ 说明：
+ 1. 核心资产表 `objects` 仅包含 30 条真实 MinIO 种子数据。
+ 2. 用户头像、群封面、消息图片 **全部复用** 这 30 条数据的 ID (Ref Only)。
+ 3. 只有 Step 7 会生成少量 status=0 的垃圾数据用于测试 GC。
 */
 
 SET NAMES utf8mb4;
@@ -14,497 +18,329 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. 建表语句 (DDL)
 -- =============================================
 
-DROP TABLE IF EXISTS `chat_members`;
-create table chat_members
-(
-    chat_id      int unsigned                       not null comment '聊天内部ID，对应chats.id',
-    user_id      int unsigned                       not null comment '成员用户内部ID，对应users.id',
-    last_seen_at datetime                           not null comment '最后一次看该chat时间',
-    create_time  datetime default CURRENT_TIMESTAMP not null comment '记录创建时间（建议按UTC存储）',
-    update_time  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '记录最后修改时间（建议按UTC存储）',
-    primary key (chat_id, user_id)
-)
-    comment '聊天成员表：记录每个聊天中的成员' charset = utf8mb4;
+-- 1.1 对象资产表 (核心)
+DROP TABLE IF EXISTS `objects`;
+CREATE TABLE `objects` (
+                           `id`                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                           `object_name`            VARCHAR(255) NOT NULL COMMENT 'MinIO Object Key',
+                           `original_name`          VARCHAR(255) NOT NULL COMMENT '原始文件名',
+                           `content_type`           VARCHAR(100) DEFAULT NULL,
+                           `file_size`              BIGINT UNSIGNED DEFAULT 0,
+                           `category`               VARCHAR(32) NOT NULL DEFAULT 'GENERAL' COMMENT '主要用途标记',
+                           `message_id`             INT UNSIGNED DEFAULT NULL COMMENT '关联消息ID (复用模式下此字段可能为空)',
+                           `status`                 TINYINT DEFAULT 0 COMMENT '0=PENDING (待清理), 1=ACTIVE (有效)',
+                           `raw_object_hash`        CHAR(64) NULL COMMENT '原始文件Hash (SHA-256)',
+                           `normalized_object_hash` CHAR(64) NULL COMMENT '规范化Hash (后端计算)',
+                           `create_time`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                           `update_time`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-DROP TABLE IF EXISTS `chats`;
-create table chats
-(
-    id                 int unsigned auto_increment comment '自增主键，聊天内部ID（chat_pk）'
-        primary key,
-    chat_code          char(8)                               not null comment '聊天对外ID（chatId），8位字符串',
-    chat_name          varchar(20) default 'New Chat'        not null comment '聊天名称 / 群名称，可由成员修改，默认"New Chat"',
-    owner_id           int unsigned                          null comment '群主用户内部ID，对应users.id，通常为第一次创建该聊天的用户',
-    chat_password_hash varchar(255)                          null comment '聊天密码的哈希值',
-    join_enabled       tinyint     default 1                 not null comment '是否允许通过群ID+密码加入：1=允许，0=禁止',
-    create_time        datetime    default CURRENT_TIMESTAMP not null comment '聊天创建时间（建议按UTC存储）',
-    update_time        datetime    default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '聊天信息最后修改时间（建议按UTC存储）',
-    avatar_name        varchar(255)                          null,
-    constraint chat_code
-        unique (chat_code)
-)
-    comment '聊天表：统一存储单聊和群聊的基本信息' charset = utf8mb4;
+                           INDEX `idx_object_name` (`object_name`),
+                           INDEX `idx_gc_cleanup` (`status`, `create_time`),
+                           INDEX `idx_message_id` (`message_id`),
+                           INDEX `idx_normalized_hash` (`normalized_object_hash`)
+) COMMENT='对象资产表' CHARSET=utf8mb4;
 
+-- (删除冗余表)
 DROP TABLE IF EXISTS `files`;
-create table files
-(
-    id           int unsigned auto_increment comment '文件ID，自增主键'
-        primary key,
-    message_id   int unsigned                       not null comment '所属消息ID，对应messages.id',
-    file_name    varchar(255)                       not null comment '原始文件名（用户看到的文件名）',
-    content_type varchar(100)                       null comment '文件MIME类型，例如image/png、application/pdf等',
-    file_path    varchar(255)                       not null comment '文件在服务器上的物理存储路径或相对路径',
-    create_time  datetime default CURRENT_TIMESTAMP not null comment '文件上传时间（建议按UTC存储）',
-    update_time  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '文件记录最后修改时间（建议按UTC存储）'
-)
-    comment '文件表：存储消息附带的图片/文件的元数据与存储路径' charset = utf8mb4;
+
+-- 1.2 用户表 (关联 object_id)
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users` (
+                         `id`           INT UNSIGNED AUTO_INCREMENT COMMENT '用户内部ID' PRIMARY KEY,
+                         `uid`          CHAR(10) NOT NULL COMMENT '对外ID',
+                         `nickname`     VARCHAR(20) NOT NULL,
+                         `object_id`    INT UNSIGNED NULL COMMENT '头像ID (关联 objects.id)',
+                         `bio`          VARCHAR(255) NULL,
+                         `last_seen_at` DATETIME NOT NULL,
+                         `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                         `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+                         CONSTRAINT `uq_uid` UNIQUE (`uid`)
+) COMMENT='用户基础信息表' CHARSET=utf8mb4;
+
+-- 1.3 聊天室表 (关联 object_id)
+DROP TABLE IF EXISTS `chats`;
+CREATE TABLE `chats` (
+                         `id`                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                         `chat_code`          CHAR(8) NOT NULL COMMENT '对外ID',
+                         `chat_name`          VARCHAR(20) DEFAULT 'New Chat' NOT NULL,
+                         `owner_id`           INT UNSIGNED NULL COMMENT '群主ID',
+                         `chat_password_hash` VARCHAR(255) NULL,
+                         `join_enabled`       TINYINT DEFAULT 1 NOT NULL,
+                         `object_id`          INT UNSIGNED NULL COMMENT '群封面ID (关联 objects.id)',
+                         `create_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                         `update_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+                         CONSTRAINT `uq_chat_code` UNIQUE (`chat_code`)
+) COMMENT='聊天室/群组表' CHARSET=utf8mb4;
+
+-- 1.4 消息表 (使用 object_ids)
+DROP TABLE IF EXISTS `messages`;
+CREATE TABLE `messages` (
+                            `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                            `chat_id`     INT UNSIGNED NOT NULL,
+                            `sender_id`   INT UNSIGNED NOT NULL,
+                            `type`        TINYINT DEFAULT 0 NOT NULL COMMENT '0:Text, 1:Img, 2:Mixed',
+                            `text`        LONGTEXT NULL,
+                            `object_ids`  VARCHAR(4096) NULL COMMENT '图片ID列表 JSON数组 [1, 2]',
+                            `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                            `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+                            INDEX `idx_chat_timeline` (`chat_id`, `create_time`)
+) COMMENT='消息表' CHARSET=utf8mb4;
+
+-- 1.5 其他辅助表
+DROP TABLE IF EXISTS `chat_members`;
+CREATE TABLE `chat_members` (
+                                `chat_id`      INT UNSIGNED NOT NULL,
+                                `user_id`      INT UNSIGNED NOT NULL,
+                                `last_seen_at` DATETIME NOT NULL,
+                                `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+                                PRIMARY KEY (`chat_id`, `user_id`),
+                                INDEX `idx_user_chats` (`user_id`)
+) COMMENT='群成员关联表' CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `chat_invites`;
+CREATE TABLE `chat_invites` (
+                                `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                `chat_code`   CHAR(8) NOT NULL,
+                                `code_hash`   CHAR(64) NOT NULL,
+                                `expires_at`  DATETIME NOT NULL,
+                                `max_uses`    INT UNSIGNED DEFAULT 0 NOT NULL,
+                                `used_count`  INT UNSIGNED DEFAULT 0 NOT NULL,
+                                `revoked`     TINYINT DEFAULT 0 NOT NULL,
+                                `created_by`  INT UNSIGNED NULL,
+                                `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+                                CONSTRAINT `uq_invite_code` UNIQUE (`code_hash`),
+                                INDEX `idx_chat_code` (`chat_code`),
+                                INDEX `idx_expire` (`expires_at`)
+) COMMENT='邀请码/短链接表' CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS `formal_users`;
-create table formal_users
-(
-    user_id         int unsigned                       not null comment '用户内部ID，对应users.id，同时作为本表主键'
-        primary key,
-    username        varchar(50)                        not null comment '登录用户名，唯一',
-    password_hash   varchar(255)                       not null comment '登录密码的哈希值（例如BCrypt）',
-    token           varchar(255)                       null comment '长期 Token（可选，用于长期登录/Remember Me）',
-    create_time     datetime default CURRENT_TIMESTAMP not null comment '成为正式用户的时间（建议按UTC存储）',
-    update_time     datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '记录最后修改时间（建议按UTC存储）',
-    last_login_time datetime default CURRENT_TIMESTAMP not null,
-    constraint username
-        unique (username)
-)
-    comment '正式用户表：只存有账号体系的用户信息（登录名与密码哈希）' charset = utf8mb4;
-
-DROP TABLE IF EXISTS `messages`;
-create table messages
-(
-    id           int unsigned auto_increment comment '自增主键，消息内部ID'
-        primary key,
-    sender_id    int unsigned                       not null comment '发送方用户内部ID，对应users.id',
-    chat_id      int unsigned                       not null comment '所属聊天内部ID，对应chats.id',
-    type         tinyint                            not null default 0 comment '0: Text, 1: Image, 2: Mixed',
-    text         longtext                           null comment '消息内容（明文）；文本消息为文本内容，文件消息可存文件说明或预览文本',
-    create_time  datetime default CURRENT_TIMESTAMP not null comment '消息创建（发送）时间（建议按UTC存储）',
-    update_time  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '消息记录最后修改时间（建议按UTC存储）',
-    object_names varchar(4096)                      null
-)
-    comment '消息表：存储各聊天中的聊天消息' charset = utf8mb4;
-
-DROP TABLE IF EXISTS `users`;
-create table users
-(
-    id            int unsigned auto_increment comment '自增主键，用户内部ID'
-        primary key,
-    uid           char(10)                           not null comment '用户对外ID，纯数字固定10位，唯一身份标识',
-    nickname      varchar(20)                        not null comment '用户昵称，建议不超过20个字符',
-    avatar_object varchar(255)                       null comment '头像图片的object name',
-    bio           varchar(255)                       null comment '个人简介 / 个性签名',
-    last_seen_at  datetime                           not null comment '最后在线时间，用于判断离线清理',
-    create_time   datetime default CURRENT_TIMESTAMP not null comment '记录创建时间（建议按UTC存储）',
-    update_time   datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '记录最后修改时间（建议按UTC存储）',
-    constraint user_id
-        unique (uid)
-)
-    comment '用户表：包含所有用户（临时用户和正式用户）的基础信息' charset = utf8mb4;
+CREATE TABLE `formal_users` (
+                                `user_id`         INT UNSIGNED NOT NULL PRIMARY KEY,
+                                `username`        VARCHAR(50) NOT NULL,
+                                `password_hash`   VARCHAR(255) NOT NULL,
+                                `token`           VARCHAR(255) NULL,
+                                `last_login_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                `create_time`     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                `update_time`     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+                                CONSTRAINT `uq_username` UNIQUE (`username`)
+) COMMENT='正式用户认证表' CHARSET=utf8mb4;
 
 -- =============================================
--- 2. 存储过程：生成多语言混合测试数据
+-- 2. 存储过程：生成全链路测试数据 (纯引用模式)
 -- =============================================
 
-DROP PROCEDURE IF EXISTS generate_japanese_test_data;
+DROP PROCEDURE IF EXISTS generate_test_data;
 
 DELIMITER $$
 
-CREATE PROCEDURE generate_japanese_test_data()
+CREATE PROCEDURE generate_test_data()
 BEGIN
+    -- 循环控制变量
     DECLARE i INT DEFAULT 1;
     DECLARE j INT DEFAULT 1;
-    DECLARE msg_count INT DEFAULT 0;
+
+    -- 临时数据变量
     DECLARE rand_user_id INT;
-    DECLARE rand_chat_id INT;
-    DECLARE msg_type INT; -- 0=text, 1=image
-    DECLARE avatar_idx INT;
-    DECLARE image_idx INT;
+    DECLARE msg_type INT;
     DECLARE chat_owner INT;
 
-    -- 密码哈希值
-    DECLARE password_hash VARCHAR(255) DEFAULT '$2a$10$//Cuez3MneKPnLPQICdrMuUJ3lZ8KQxFr.p.zOhNnkfG9IJAiYEr.';
+    -- 游标与引用ID变量
+    DECLARE v_seed_id INT;
 
-    -- List A: Public Avatars
-    DECLARE avatar_1 VARCHAR(255) DEFAULT 'public/ezchat/423c3d9a-6dfe-41b5-8778-841d424e7609/unnamed.jpg';
-    DECLARE avatar_2 VARCHAR(255) DEFAULT 'public/ezchat/d7badc14-0968-43c9-ab06-1c255101e5f3/DE294B50DF84BFCA1F72E10FC8601576.png';
-    DECLARE avatar_3 VARCHAR(255) DEFAULT 'public/ezchat/3151ed41-9f67-4e17-9db0-a0cb21cb5fe8/{6574DC50-2835-8ECB-A21A-669949DD7611}.jpg';
-    DECLARE avatar_4 VARCHAR(255) DEFAULT 'public/ezchat/de91f422-f4e5-4997-be63-1d4eff2bf8e1/0ADAFC829F328DF2E7F93648486BBB6E.jpg';
-    DECLARE avatar_5 VARCHAR(255) DEFAULT 'public/ezchat/addfa91a-4e38-477f-a7f1-0d9a158cb5b7/makabaka.jpg';
-    DECLARE avatar_6 VARCHAR(255) DEFAULT 'public/ezchat/f01c8e35-10c3-4b5d-adcd-3b05723f01d4/d183ad39-0303-4ad7-bcf6-200a0ab2b057.png';
-    DECLARE avatar_7 VARCHAR(255) DEFAULT 'public/ezchat/cb389c26-f1e7-4bd7-bfc1-40434fd12607/QQ20250917-142543.png';
-    DECLARE avatar_8 VARCHAR(255) DEFAULT 'public/ezchat/c709e063-1ca1-4424-afbf-cb0f6b73a27c/80acbfed-ad9f-4327-8adc-66fff69dbe4f_e7fe6489-1e91-46ba-94b2-40136d6f8de9.png';
-    DECLARE avatar_9 VARCHAR(255) DEFAULT 'public/ezchat/0ca84aad-5506-4058-9836-fb5fa64d66a9/51F-jNF1frL._AC_UF894_1000_QL80.jpg';
-    DECLARE avatar_10 VARCHAR(255) DEFAULT 'public/ezchat/8743e13e-7305-474e-b494-6c9ecb74fad8/file.jpg';
-    DECLARE avatar_11 VARCHAR(255) DEFAULT 'public/ezchat/addfa91a-4e38-477f-a7f1-0d9a158cb5b7/makabaka.jpg';
-    DECLARE avatar_12 VARCHAR(255) DEFAULT 'public/ezchat/490f1491-17ee-45c3-88fe-7ce7cef7806e/USA.jpg';
-    DECLARE avatar_13 VARCHAR(255) DEFAULT 'public/ezchat/9ccf18bb-a3be-4f9e-9421-0162b512daa6/gandam.jpg';
-    DECLARE avatar_14 VARCHAR(255) DEFAULT 'public/ezchat/1d098f35-4e1f-4116-8b6e-342dd921148c/0207phn003.jpg';
-    DECLARE avatar_15 VARCHAR(255) DEFAULT 'public/ezchat/1d098f35-4e1f-4116-8b6e-342dd921148c/0207phn003.jpg';
-    DECLARE avatar_16 VARCHAR(255) DEFAULT 'public/ezchat/1d098f35-4e1f-4116-8b6e-342dd921148c/0207phn003.jpg';
-    DECLARE avatar_17 VARCHAR(255) DEFAULT 'public/ezchat/61d1bf35-2d8b-48f9-926b-a64fbf7cef73/Chouju_sumo2.jpg';
-    DECLARE avatar_18 VARCHAR(255) DEFAULT 'public/ezchat/5c567263-c29f-412d-9513-31f852fb1a8c/360_F_460031310_ObbCLA1tKrqjsHa7je6G6BSa7iAYBANP.jpg';
-    DECLARE avatar_19 VARCHAR(255) DEFAULT 'public/ezchat/1d82344e-6d8f-46ad-945f-fa7dccc30949/73024655.jpg';
-    DECLARE avatar_20 VARCHAR(255) DEFAULT 'public/ezchat/8f575445-952c-4e37-81fe-82acd96feea5/wenquan.jpg';
+    -- 常量
+    DECLARE password_hash VARCHAR(255) DEFAULT '$2a$10$nIU8n7a0EgE37XlUM3zJJusqHg1VR9R9NJixvi35ILQmpq8yTPRn2';
 
-
-    -- List B: Message Images (14个)
-    DECLARE img_1 VARCHAR(255) DEFAULT 'private/ezchat/69445c53-57c8-4ea4-9949-3c31aecbec64/android-chrome-512x512.png';
-    DECLARE img_2 VARCHAR(255) DEFAULT 'public/ezchat/bbf13e53-ba8c-45c8-8ea9-8fc8e963a00c/03.jpg';
-    DECLARE img_3 VARCHAR(255) DEFAULT 'private/ezchat/12b1b563-453b-47a9-ba1e-adedaad97bc9/0207phn003.jpg';
-    DECLARE img_4 VARCHAR(255) DEFAULT 'private/ezchat/1c61dfec-27e1-481b-8393-4b1c0ec20120/1.jpg';
-    DECLARE img_5 VARCHAR(255) DEFAULT 'private/ezchat/256d293d-ffbc-4342-b48a-51b5a9590740/0207phn003.jpg';
-    DECLARE img_6 VARCHAR(255) DEFAULT 'private/ezchat/36ebf97c-ebe9-465d-a458-365d11a839df/unnamed.jpg';
-    DECLARE img_7 VARCHAR(255) DEFAULT 'private/ezchat/52b93fa5-e6d8-4edd-8fcc-78d9b5f3c60e/1.jpg';
-    DECLARE img_8 VARCHAR(255) DEFAULT 'private/ezchat/27022f6a-b28c-4068-b643-3bbbafbe2266/DE294B50DF84BFCA1F72E10FC8601576.jpg';
-    DECLARE img_9 VARCHAR(255) DEFAULT 'private/ezchat/54bef7cc-b3ea-457b-8c92-82f0a9047ba5/unnamed.jpg';
-    DECLARE img_10 VARCHAR(255) DEFAULT 'private/ezchat/58deebf7-bdcc-4086-9895-68fa25f3cf3d/1.jpg';
-    DECLARE img_11 VARCHAR(255) DEFAULT 'private/ezchat/60da2c4e-65f6-403c-8558-571350e5a76a/unnamed.jpg';
-    DECLARE img_12 VARCHAR(255) DEFAULT 'private/ezchat/6668942e-8189-4076-988c-1e05a4a10dce/1.jpg';
-    DECLARE img_13 VARCHAR(255) DEFAULT 'private/ezchat/8c456600-1d47-4557-8c17-321ee28ccddd/oUnANr7qQCxE1AF9mAMIPRCAAuALg6fCakWDEf_tplv-dy-aweme-images_q75.jpg';
-
-    -- 性能优化设置
+    -- 性能优化
     SET FOREIGN_KEY_CHECKS = 0;
     SET UNIQUE_CHECKS = 0;
     SET AUTOCOMMIT = 0;
 
-    -- 清空旧数据
-    TRUNCATE TABLE files;
+    -- 清空所有表
+    TRUNCATE TABLE chat_invites;
     TRUNCATE TABLE messages;
     TRUNCATE TABLE chat_members;
     TRUNCATE TABLE chats;
     TRUNCATE TABLE formal_users;
     TRUNCATE TABLE users;
+    TRUNCATE TABLE objects;
 
     -- =============================================
-    -- 1. 生成 120 个用户 (多语言混合)
+    -- Step 1: 插入 30 条真实种子数据 (Seed Data, ID 1-30)
+    -- =============================================
+    INSERT INTO objects (id, object_name, original_name, content_type, file_size, category, message_id, status, raw_object_hash, normalized_object_hash, create_time, update_time) VALUES
+                                                                                                                                                                                       (1, 'public/ezchat/04ae5084-c177-4523-a371-5387072b6cac/DE294B50DF84BFCA1F72E10FC8601576.jpg', 'DE294B50DF84BFCA1F72E10FC8601576.png', 'image/jpeg', 108566, 'USER_AVATAR', NULL, 1, NULL, 'ac605ab93e3954c1d08ad8babe5e7e3384a36707ef4cb17a830be43fb7662a2f', '2026-01-03 05:02:22', '2026-01-03 05:11:24'),
+                                                                                                                                                                                       (2, 'public/ezchat/c92dc483-668c-42c7-9d0d-177248fde52e/0207phn003.jpg', '0207phn003.jpg', 'image/jpeg', 388771, 'USER_AVATAR', NULL, 1, NULL, '97564c6f301658b99d9c1e1d1694827890b13a66a777d2947a114df04ca53297', '2026-01-03 05:17:30', '2026-01-03 05:18:32'),
+                                                                                                                                                                                       (3, 'public/ezchat/0016f8da-a289-4372-9288-fc50d9c375c5/4EF0713EDC3376AFBAB1451C62DE2D10.gif', '4EF0713EDC3376AFBAB1451C62DE2D10.gif', 'image/gif', 3193461, 'USER_AVATAR', NULL, 1, NULL, '266a6b09eb9533ce4136eb14fa3fa8ef63510d088be13e895d06f907bb72c72d', '2026-01-03 05:17:39', '2026-01-03 05:18:32'),
+                                                                                                                                                                                       (4, 'public/ezchat/31afaabd-d188-44ec-a97e-869e26264127/oUnANr7qQCxE1AF9mAMIPRCAAuALg6fCakWDEf_tplv-dy-aweme-images_q75.webp', 'oUnANr7qQCxE1AF9mAMIPRCAAuALg6fCakWDEf~tplv-dy-aweme-images_q75.webp', 'image/webp', 450924, 'USER_AVATAR', NULL, 1, NULL, '01964171e8e582a809828d022c24512845359b26b55aaa34222efc245315a0ef', '2026-01-03 05:17:47', '2026-01-03 05:18:32'),
+                                                                                                                                                                                       (5, 'public/ezchat/05f9bf23-1e9b-4455-94de-df04c6f55fb6/8A8B2353D2DC9AE9EBBCC5BCDA5C15A7.jpg', '8A8B2353D2DC9AE9EBBCC5BCDA5C15A7.jpg', 'image/jpeg', 38662, 'USER_AVATAR', NULL, 1, NULL, '1d89ea073e578f993248c748f6e406ed9235001d1fa7143bf017be13f05af3eb', '2026-01-03 05:20:04', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (6, 'public/ezchat/9e1422e7-8571-4540-97fa-c84d4cf0a475/691BA1F6-D199-F1DB-A105-887EE491A664.jpg', '{691BA1F6-D199-F1DB-A105-887EE491A664}.jpg', 'image/jpeg', 4110, 'USER_AVATAR', NULL, 1, NULL, 'd9b97c5e674bd3d1ea37905411273c49bc226a5654d65d90947412c8eac38c6d', '2026-01-03 05:20:14', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (7, 'public/ezchat/d5d2ef65-7713-49db-b371-645f4089c60c/4101005F-91DE-85D6-04E1-09E90592920A.jpg', '{4101005F-91DE-85D6-04E1-09E90592920A}.png', 'image/jpeg', 125277, 'USER_AVATAR', NULL, 1, NULL, 'cbfbf0f84f97b62c3229cae4d1a3d02bced81b4e4b554dc8793ef13fb5629483', '2026-01-03 05:20:19', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (8, 'public/ezchat/66e0a9a6-f9ec-46a6-ae30-ae8ad657fbf0/ED5E592B-29FD-84F8-3549-B6CFA2D04BAF.gif', '{ED5E592B-29FD-84F8-3549-B6CFA2D04BAF}.gif', 'image/gif', 935958, 'USER_AVATAR', NULL, 1, NULL, 'ec7422530ee87bc970424d0cbdce2671b6dba7929ec0efb98d0dbef5f4e5da2e', '2026-01-03 05:20:27', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (9, 'public/ezchat/62c883d4-b98b-46ba-9576-6b90a01c5990/39FB24749BCF42FFD81DAE3DCD36E8D9.jpg', '39FB24749BCF42FFD81DAE3DCD36E8D9.jpg', 'image/jpeg', 132717, 'USER_AVATAR', NULL, 1, NULL, '1d116f6682dd7ed4eade73279b2b87478c5b5b7fffc75f14e3d3786614eef2b6', '2026-01-03 05:20:33', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (10, 'public/ezchat/cf0c3a60-cfdb-49a5-907a-d3f08a480fa5/250FF6A3CBAECA868DAE99F2AC57AEF8.jpg', '250FF6A3CBAECA868DAE99F2AC57AEF8.png', 'image/jpeg', 664978, 'USER_AVATAR', NULL, 1, NULL, 'a01f3f8f6e31fe9a46e6a923d953e491775589e8a531ddc5e5f45a732ce0321b', '2026-01-03 05:20:40', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (11, 'public/ezchat/c2f4fd6f-b81d-43cb-9bdf-b0918835f801/771B709538E230DC45F108A41F4D6D06.jpg', '771B709538E230DC45F108A41F4D6D06.png', 'image/jpeg', 472438, 'USER_AVATAR', NULL, 1, NULL, 'c8ebd89232b4b23064be9130f359096e42fd195b7f2edb0ec21c36a36c5085fb', '2026-01-03 05:20:44', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (12, 'public/ezchat/b1cc1dcb-9da6-4b5e-b540-c63372833974/74718916A14E6B135BE660BA12379FDC.gif', '74718916A14E6B135BE660BA12379FDC.gif', 'image/gif', 702122, 'USER_AVATAR', NULL, 1, NULL, 'fe7f54f0affd48a64ea9778a3c4e70702e9253deadee45e7829e800450cd8732', '2026-01-03 05:20:50', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (13, 'public/ezchat/7d3a8cf8-4987-4e40-a0fe-b79e34ae671a/99036205D18CA5A7A27C8CB93A4F6C52.jpg', '99036205D18CA5A7A27C8CB93A4F6C52.jpg', 'image/jpeg', 114329, 'USER_AVATAR', NULL, 1, NULL, '8c189da536636e2be133193945d6db221278a48ede1be82ebb205b28e226e706', '2026-01-03 05:20:53', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (14, 'public/ezchat/4fda9920-72ed-4917-b21e-fb406b4421e3/79BC2C0B-CC9E-4CE7-684A-5078820C7B7E.jpg', '(79BC2C0B-CC9E-4CE7-684A-5078820C7B7E).jpg', 'image/jpeg', 8256, 'USER_AVATAR', NULL, 1, NULL, 'd571df60ef15ed3410722ce77146b1dac29c35346c165be50abdd83587b36c09', '2026-01-03 05:21:00', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (15, 'public/ezchat/854da858-2f73-4b22-93e3-7eb29675bfe0/01.jpg', '01.jpg', 'image/jpeg', 86762, 'USER_AVATAR', NULL, 1, NULL, '3051d6a778155615bd8cf9d2e4ccf9c3f69763b6d692ef05b1f476e8e660bd79', '2026-01-03 05:21:08', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (16, 'public/ezchat/90b1b805-264c-4359-83ab-101c47c53268/1.jpg', '1.jpg', 'image/jpeg', 8256, 'USER_AVATAR', NULL, 1, NULL, 'd571df60ef15ed3410722ce77146b1dac29c35346c165be50abdd83587b36c09', '2026-01-03 05:21:09', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (17, 'public/ezchat/b722073b-1c85-42d8-8a40-238fcc466d0c/02.jpg', '02.jpg', 'image/jpeg', 9371, 'USER_AVATAR', NULL, 1, NULL, '750decb5b3ab4e9a2c92600c1f4182c9279d81124968ed92f87b319b3ed7636f', '2026-01-03 05:21:11', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (18, 'public/ezchat/ee9233e6-a9ff-46a3-8f43-c6749f87e332/03.jpg', '03.jpg', 'image/jpeg', 25441, 'USER_AVATAR', NULL, 1, NULL, '4b3806f9bb827c417a45c70cfdd26f2ef97f3dde5c7ebfb35026fddc9bd6e8cc', '2026-01-03 05:21:14', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (19, 'public/ezchat/1276f52f-4d14-4a25-adb4-8e40e2f1beca/51F-jNF1frL._AC_UF894_1000_QL80.jpg', '51F-jNF1frL._AC_UF894,1000_QL80_.jpg', 'image/jpeg', 94504, 'USER_AVATAR', NULL, 1, NULL, '8349a2f66d1dfb1a260b92c798613c17821a03edcea03737d78a80d8df76e835', '2026-01-03 05:21:16', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (20, 'public/ezchat/10ad33f6-fb08-445e-a736-ac5e51fc5e22/80acbfed-ad9f-4327-8adc-66fff69dbe4f_e7fe6489-1e91-46ba-94b2-40136d6f8de9.jpg', '80acbfed-ad9f-4327-8adc-66fff69dbe4f_e7fe6489-1e91-46ba-94b2-40136d6f8de9.png', 'image/jpeg', 25920, 'USER_AVATAR', NULL, 1, NULL, '43418fe254b798b1e2bdf116cbb4315b0b58db3df4a8f65f794838d544a26504', '2026-01-03 05:21:18', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (21, 'public/ezchat/38221715-12d3-4c39-994f-949d393a8dd7/360_F_460031310_ObbCLA1tKrqjsHa7je6G6BSa7iAYBANP.jpg', '360_F_460031310_ObbCLA1tKrqjsHa7je6G6BSa7iAYBANP.jpg', 'image/jpeg', 14916, 'USER_AVATAR', NULL, 1, NULL, '92a327463665b9effea5604ce0661e59c60828ce8ba9bff3863a80f2a45552b3', '2026-01-03 05:21:20', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (22, 'public/ezchat/d285ad3a-a943-4601-9751-c9b5a5fd5b24/73024655.jpg', '73024655.jpg', 'image/jpeg', 49467, 'USER_AVATAR', NULL, 1, NULL, '5bf84c4343f29be83d213261ff481818cdfd42fcd7a9e09f349ffaf862f9ebbb', '2026-01-03 05:21:26', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (23, 'public/ezchat/062be252-4ae6-4c96-807b-f7790a3b3a58/Chouju_sumo2.jpg', 'Chouju_sumo2.jpg', 'image/jpeg', 62076, 'USER_AVATAR', NULL, 1, NULL, '264de28dc90e3c861abf4f704100538a77c8cbcec85a1aa942331fa5eee594eb', '2026-01-03 05:21:34', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (24, 'public/ezchat/8e1b67a9-618e-4de7-9c77-c3b765551f8d/73024655.jpg', '73024655.jpg', 'image/jpeg', 49467, 'USER_AVATAR', NULL, 1, NULL, '5bf84c4343f29be83d213261ff481818cdfd42fcd7a9e09f349ffaf862f9ebbb', '2026-01-03 05:21:38', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (25, 'public/ezchat/9e2941ef-ca4e-4d19-bad7-561e20f6e945/makabaka.jpg', 'makabaka.jpg', 'image/jpeg', 15815, 'USER_AVATAR', NULL, 1, NULL, '7779347e483b8ad91c8031b24cf8089c0cc228910e07e9685e3eb6415f65dcba', '2026-01-03 05:21:41', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (26, 'public/ezchat/200fd3c1-4115-4d8b-8229-c2853b775d60/gandam.jpg', 'gandam.jpg', 'image/jpeg', 12217, 'USER_AVATAR', NULL, 1, NULL, '4d75616ccb60c99ec55b4a97f683f4559142dbea87c081950b348ea3d159e81f', '2026-01-03 05:21:45', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (27, 'public/ezchat/504f8019-ccb0-4c48-929a-d91450d2e7c2/Chouju_sumo2.jpg', 'Chouju_sumo2.jpg', 'image/jpeg', 62076, 'USER_AVATAR', NULL, 1, NULL, '264de28dc90e3c861abf4f704100538a77c8cbcec85a1aa942331fa5eee594eb', '2026-01-03 05:21:49', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (28, 'public/ezchat/4c98a5c3-75a8-4ce8-9052-e7fd41994780/USA.jpg', 'USA.jpg', 'image/jpeg', 22122, 'USER_AVATAR', NULL, 1, NULL, '5a4760be93cab324b1e3a0fc7c11332e232feb271a396a9619a6c785e8e45fb0', '2026-01-03 05:21:54', '2026-01-03 05:22:56'),
+                                                                                                                                                                                       (29, 'public/ezchat/fab1bac7-e3db-455e-b728-49fa02d424a3/wenquan.jpg', 'wenquan.jpg', 'image/jpeg', 17393, 'USER_AVATAR', NULL, 1, NULL, '31a75818ce870793512952af285f6ec4621dd79e716e9178dc613b96d37c819e', '2026-01-03 05:21:58', '2026-01-03 05:23:11'),
+                                                                                                                                                                                       (30, 'public/ezchat/42d37661-3ece-4457-965d-cebfa35c6f24/file.jpg', '下载.jpg', 'image/jpeg', 14025, 'USER_AVATAR', NULL, 1, NULL, '64f524010b21448ee45c9aad0431cd1611d3fbf38db7a1bfe0126ca420845682', '2026-01-03 05:22:04', '2026-01-03 05:23:11');
+
+    COMMIT;
+
+    -- =============================================
+    -- Step 2: 生成用户 (关联随机种子头像)
     -- =============================================
     SET i = 1;
-    WHILE i <= 120 DO
-            SET avatar_idx = ((i - 1) % 20) + 1;
+    WHILE i <= 100 DO
+            -- 随机选取一个种子对象 (ID 1-30)
+            SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-            -- 修复：这里使用 uid 字段名
-            INSERT INTO users (id, uid, nickname, avatar_object, bio, last_seen_at, create_time)
+            INSERT INTO users (id, uid, nickname, object_id, bio, last_seen_at, create_time)
             VALUES (
                        i,
                        CONCAT('1000', LPAD(i, 6, '0')),
-                       CASE
-                           -- 日语
-                           WHEN i <= 30 THEN
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('田中 ', i)
-                                   WHEN 1 THEN CONCAT('佐藤 ', i)
-                                   WHEN 2 THEN CONCAT('鈴木 ', i)
-                                   WHEN 3 THEN CONCAT('高橋 ', i)
-                                   ELSE CONCAT('伊藤 ', i)
-                                   END
-                           -- 英语
-                           WHEN i <= 60 THEN
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('Alex ', i)
-                                   WHEN 1 THEN CONCAT('Sarah ', i)
-                                   WHEN 2 THEN CONCAT('John ', i)
-                                   WHEN 3 THEN CONCAT('Emma ', i)
-                                   ELSE CONCAT('Mike ', i)
-                                   END
-                           -- 中文
-                           WHEN i <= 90 THEN
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('李明 ', i)
-                                   WHEN 1 THEN CONCAT('王伟 ', i)
-                                   WHEN 2 THEN CONCAT('张伟 ', i)
-                                   WHEN 3 THEN CONCAT('刘洋 ', i)
-                                   ELSE CONCAT('陈静 ', i)
-                                   END
-                           -- 韩语
-                           ELSE
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('김철수 ', i)
-                                   WHEN 1 THEN CONCAT('이영희 ', i)
-                                   WHEN 2 THEN CONCAT('박지민 ', i)
-                                   WHEN 3 THEN CONCAT('최민호 ', i)
-                                   ELSE CONCAT('정수빈 ', i)
-                                   END
-                           END,
-                       CASE avatar_idx
-                           WHEN 1 THEN avatar_1
-                           WHEN 2 THEN avatar_2
-                           WHEN 3 THEN avatar_3
-                           WHEN 4 THEN avatar_4
-                           WHEN 5 THEN avatar_5
-                           WHEN 6 THEN avatar_6
-                           WHEN 7 THEN avatar_7
-                           WHEN 8 THEN avatar_8
-                           WHEN 9 THEN avatar_9
-                           WHEN 10 THEN avatar_10
-                           WHEN 11 THEN avatar_11
-                           WHEN 12 THEN avatar_12
-                           WHEN 13 THEN avatar_13
-                           WHEN 14 THEN avatar_14
-                           WHEN 15 THEN avatar_15
-                           WHEN 16 THEN avatar_16
-                           WHEN 17 THEN avatar_17
-                           WHEN 18 THEN avatar_18
-                           WHEN 19 THEN avatar_19
-                           ELSE avatar_20
-                           END,
-                       CASE
-                           WHEN i <= 30 THEN CONCAT('よろしくお願いします。JP', i)
-                           WHEN i <= 60 THEN CONCAT('Nice to meet you. EN', i)
-                           WHEN i <= 90 THEN CONCAT('请多关照。CN', i)
-                           ELSE CONCAT('반갑습니다. KR', i)
-                           END,
+                       CONCAT('User_', LPAD(i, 3, '0')),
+                       v_seed_id,
+                       'Hello World!',
                        DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE),
                        DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
                    );
-
             SET i = i + 1;
         END WHILE;
     COMMIT;
 
     -- =============================================
-    -- 2. 生成 120 个正式用户
+    -- Step 3: 生成正式用户
     -- =============================================
     SET i = 1;
-    WHILE i <= 120 DO
-            INSERT INTO formal_users (user_id, username, password_hash, create_time, last_login_time)
-            VALUES (
-                       i,
-                       CASE
-                           WHEN i <= 30 THEN
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('tanaka', i)
-                                   WHEN 1 THEN CONCAT('sato', i)
-                                   WHEN 2 THEN CONCAT('suzuki', i)
-                                   WHEN 3 THEN CONCAT('takahashi', i)
-                                   ELSE CONCAT('ito', i)
-                                   END
-                           WHEN i <= 60 THEN
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('alex', i)
-                                   WHEN 1 THEN CONCAT('sarah', i)
-                                   WHEN 2 THEN CONCAT('john', i)
-                                   WHEN 3 THEN CONCAT('emma', i)
-                                   ELSE CONCAT('mike', i)
-                                   END
-                           WHEN i <= 90 THEN
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('liming', i)
-                                   WHEN 1 THEN CONCAT('wangwei', i)
-                                   WHEN 2 THEN CONCAT('zhangwei', i)
-                                   WHEN 3 THEN CONCAT('liuyang', i)
-                                   ELSE CONCAT('chenjing', i)
-                                   END
-                           ELSE
-                               CASE (i % 5)
-                                   WHEN 0 THEN CONCAT('kim', i)
-                                   WHEN 1 THEN CONCAT('lee', i)
-                                   WHEN 2 THEN CONCAT('park', i)
-                                   WHEN 3 THEN CONCAT('choi', i)
-                                   ELSE CONCAT('jung', i)
-                                   END
-                           END,
-                       password_hash,
-                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY),
-                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE)
-                   );
-
+    WHILE i <= 100 DO
+            INSERT INTO formal_users (user_id, username, password_hash)
+            VALUES (i, CONCAT('test', LPAD(i, 3, '0')), password_hash);
             SET i = i + 1;
         END WHILE;
     COMMIT;
 
     -- =============================================
-    -- 3. 生成 25 个聊天室
+    -- Step 4: 生成聊天室 (直接引用种子ID，不克隆)
     -- =============================================
     SET i = 1;
-    WHILE i <= 25 DO
-            SET avatar_idx = ((i - 1) % 4) + 1;
-            SET chat_owner = FLOOR(1 + RAND() * 120);
+    WHILE i <= 20 DO
+            SET chat_owner = FLOOR(1 + RAND() * 100);
 
-            INSERT INTO chats (id, chat_code, chat_name, owner_id, chat_password_hash, join_enabled, avatar_name, create_time)
+            -- 随机选取一个种子对象 (ID 1-30) 作为群封面
+            SET v_seed_id = FLOOR(1 + RAND() * 30);
+
+            INSERT INTO chats (id, chat_code, chat_name, owner_id, join_enabled, object_id, create_time)
             VALUES (
                        i,
                        CAST(20000000 + i AS CHAR),
-                       CASE
-                           WHEN i = 1 THEN 'Global Lounge'
-                           WHEN i = 2 THEN '雜談 / Chat'
-                           WHEN i = 3 THEN 'プロジェクトA'
-                           WHEN i = 4 THEN 'Project B'
-                           WHEN i = 5 THEN 'Lunch Group'
-                           WHEN i = 6 THEN 'Game / ゲーム'
-                           WHEN i = 7 THEN 'Study Group'
-                           WHEN i = 8 THEN 'Tech Talk'
-                           WHEN i = 9 THEN 'Design Team'
-                           WHEN i = 10 THEN 'Marketing'
-                           WHEN i = 11 THEN 'Sales'
-                           WHEN i = 12 THEN 'Dev Team'
-                           WHEN i = 13 THEN 'QA Team'
-                           WHEN i = 14 THEN 'HR'
-                           WHEN i = 15 THEN 'General Affairs'
-                           WHEN i = 16 THEN 'Meeting'
-                           WHEN i = 17 THEN 'Managers'
-                           WHEN i = 18 THEN 'Newcomers'
-                           WHEN i = 19 THEN 'Events'
-                           WHEN i = 20 THEN 'Books'
-                           WHEN i = 21 THEN 'Travel'
-                           WHEN i = 22 THEN 'Football'
-                           WHEN i = 23 THEN 'Music'
-                           WHEN i = 24 THEN 'Cooking'
-                           ELSE 'Others'
-                           END,
+                       CONCAT('Group ', i),
                        chat_owner,
-                       CASE WHEN i > 15 THEN password_hash ELSE NULL END,
                        1,
-                       CASE avatar_idx
-                           WHEN 1 THEN avatar_1
-                           WHEN 2 THEN avatar_2
-                           WHEN 3 THEN avatar_3
-                           ELSE avatar_4
-                           END,
+                       v_seed_id, -- 直接引用，不新增 object
                        DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
                    );
-
             SET i = i + 1;
         END WHILE;
     COMMIT;
 
     -- =============================================
-    -- 4. 生成聊天成员关系
+    -- Step 5: 生成成员 (全员入全群)
     -- =============================================
+    INSERT INTO chat_members (chat_id, user_id, last_seen_at)
+    SELECT id, owner_id, NOW() FROM chats;
 
-    -- 4.1 核心：每个房间的群主自动加入
-    INSERT INTO chat_members (chat_id, user_id, last_seen_at, create_time)
-    SELECT id, owner_id, NOW(), create_time FROM chats;
-
-    -- 4.2 补充：添加一些具有随机时间的成员记录
     SET i = 1;
-    WHILE i <= 25 DO
+    WHILE i <= 20 DO
             SET j = 1;
-            WHILE j <= FLOOR(5 + RAND() * 6) DO
-                    SET rand_user_id = FLOOR(1 + RAND() * 120);
-                    INSERT IGNORE INTO chat_members (chat_id, user_id, last_seen_at, create_time)
-                    VALUES (
-                               i,
-                               rand_user_id,
-                               DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE),
-                               DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
-                           );
+            WHILE j <= 100 DO
+                    INSERT IGNORE INTO chat_members (chat_id, user_id, last_seen_at)
+                    VALUES (i, j, NOW());
                     SET j = j + 1;
                 END WHILE;
             SET i = i + 1;
         END WHILE;
-
-    -- 4.3 强制全员入群
-    INSERT INTO chat_members (chat_id, user_id, create_time, update_time, last_seen_at)
-    SELECT c.id, u.id,
-           DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY), -- create_time
-           DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY), -- update_time
-           DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE) -- last_seen_at
-    FROM chats c
-             CROSS JOIN users u
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM chat_members cm
-        WHERE cm.chat_id = c.id AND cm.user_id = u.id
-    );
-
     COMMIT;
 
     -- =============================================
-    -- 5. 为每个房间生成 100+ 条消息
+    -- Step 6: 生成消息 (Text + Image 引用)
     -- =============================================
     SET i = 1;
-    WHILE i <= 25 DO
-            SET msg_count = 0;
+    WHILE i <= 20 DO
             SET j = 1;
+            WHILE j <= 50 DO
+                    SELECT user_id INTO rand_user_id FROM chat_members WHERE chat_id = i ORDER BY RAND() LIMIT 1;
 
-            WHILE j <= FLOOR(100 + RAND() * 21) DO
-                    SELECT user_id INTO rand_user_id
-                    FROM chat_members
-                    WHERE chat_id = i
-                    ORDER BY RAND()
-                    LIMIT 1;
+                    -- 20% 概率发送图片
+                    SET msg_type = CASE WHEN RAND() < 0.2 THEN 1 ELSE 0 END;
 
-                    SET msg_type = CASE WHEN RAND() < 0.7 THEN 0 ELSE 1 END;
-                    SET image_idx = FLOOR(1 + RAND() * 13);
+                    IF msg_type = 0 THEN
+                        INSERT INTO messages (sender_id, chat_id, type, text, create_time)
+                        VALUES (rand_user_id, i, 0, 'Hello, this is a test message.', DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1000) MINUTE));
+                    ELSE
+                        -- 随机选取一个种子对象 (ID 1-30) 作为消息图片
+                        SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-                    INSERT INTO messages (sender_id, chat_id, type, text, object_names, create_time)
-                    VALUES (
-                               rand_user_id,
-                               i,
-                               msg_type,
-                               CASE
-                                   WHEN msg_type = 0 THEN CASE (j % 20)
-                                                              WHEN 1 THEN 'おはようございます！ / Good morning!'
-                                                              WHEN 2 THEN '今日もよろしくお願いします。'
-                                                              WHEN 3 THEN '了解しました。 / Roger.'
-                                                              WHEN 4 THEN 'ありがとうございます！ / Thanks!'
-                                                              WHEN 5 THEN 'いいアイデアですね。 / Good idea.'
-                                                              WHEN 6 THEN '検討してみます。'
-                                                              WHEN 7 THEN 'なるほど、そうですね。'
-                                                              WHEN 8 THEN 'お疲れ様です。'
-                                                              WHEN 9 THEN 'よろしくお願いします！'
-                                                              WHEN 10 THEN '了解です。 / OK.'
-                                                              WHEN 11 THEN '收到 / 了解'
-                                                              WHEN 12 THEN 'Good job!'
-                                                              WHEN 13 THEN '加油 / Ganbatte'
-                                                              WHEN 14 THEN 'Thank you very much.'
-                                                              WHEN 15 THEN '时间を確認します。'
-                                                              WHEN 16 THEN '会议的议题 / Agenda'
-                                                              WHEN 17 THEN '资料を確認しました。'
-                                                              WHEN 18 THEN 'Any questions?'
-                                                              WHEN 19 THEN 'I will join.'
-                                                              ELSE 'Hello!'
-                                       END
-                                   ELSE NULL
-                                   END,
-                               CASE
-                                   WHEN msg_type = 1 THEN CONCAT('["', CASE image_idx
-                                                                           WHEN 1 THEN img_1
-                                                                           WHEN 2 THEN img_2
-                                                                           WHEN 3 THEN img_3
-                                                                           WHEN 4 THEN img_4
-                                                                           WHEN 5 THEN img_5
-                                                                           WHEN 6 THEN img_6
-                                                                           WHEN 7 THEN img_7
-                                                                           WHEN 8 THEN img_8
-                                                                           WHEN 9 THEN img_9
-                                                                           WHEN 10 THEN img_10
-                                                                           WHEN 11 THEN img_11
-                                                                           WHEN 12 THEN img_12
-                                                                           ELSE img_13
-                                       END, '"]')
-                                   ELSE NULL
-                                   END,
-                               DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 43200) MINUTE)
-                           );
+                        -- 直接将该 ID 写入 JSON 数组，不新增 object
+                        INSERT INTO messages (sender_id, chat_id, type, object_ids, create_time)
+                        VALUES (rand_user_id, i, 1, CONCAT('[', v_seed_id, ']'), DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1000) MINUTE));
+                    END IF;
 
                     SET j = j + 1;
-                    SET msg_count = msg_count + 1;
                 END WHILE;
-
             SET i = i + 1;
         END WHILE;
     COMMIT;
 
+    -- =============================================
+    -- Step 7: 生成垃圾数据 (Pending GC Test)
+    -- =============================================
+    SET i = 1;
+    WHILE i <= 10 DO
+            INSERT INTO objects (object_name, original_name, content_type, category, status, create_time)
+            VALUES (
+                       CONCAT('temp/orphan_', UUID(), '.jpg'),
+                       'deleted_soon.jpg',
+                       'image/jpeg',
+                       'GENERAL',
+                       0, -- Status 0 = PENDING
+                       DATE_SUB(NOW(), INTERVAL 48 HOUR) -- 48小时前，理应被GC
+                   );
+            SET i = i + 1;
+        END WHILE;
+    COMMIT;
+
+    -- 恢复环境
     SET FOREIGN_KEY_CHECKS = 1;
     SET UNIQUE_CHECKS = 1;
     SET AUTOCOMMIT = 1;
 
-    SELECT 'Multi-language test data generation completed!' AS result;
-    SELECT CONCAT('Users: ', COUNT(*)) AS summary FROM users;
-    SELECT CONCAT('Chats: ', COUNT(*)) AS summary FROM chats;
-    SELECT CONCAT('Messages: ', COUNT(*)) AS summary FROM messages;
-    SELECT CONCAT('Chat Members: ', COUNT(*)) AS summary FROM chat_members;
+    SELECT 'Data Generation Complete (No Clone Mode).' AS result;
+    SELECT CONCAT('Total Objects: ', (SELECT COUNT(*) FROM objects)) AS Total_Objects;
+    SELECT 'Objects count should be roughly 40 (30 seeds + 10 garbage).' AS Expected;
+    SELECT CONCAT('Users Count: ', (SELECT COUNT(*) FROM users)) AS Users;
+    SELECT CONCAT('Chats Count: ', (SELECT COUNT(*) FROM chats)) AS Chats;
+    SELECT CONCAT('Messages Count: ', (SELECT COUNT(*) FROM messages)) AS Messages;
+
 END$$
 
 DELIMITER ;
 
--- =============================================
--- 3. 执行存储过程
--- =============================================
-CALL generate_japanese_test_data();
+-- 执行生成
+CALL generate_test_data();

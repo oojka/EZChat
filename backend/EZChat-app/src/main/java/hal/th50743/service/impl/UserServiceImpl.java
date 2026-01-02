@@ -6,6 +6,7 @@ import hal.th50743.mapper.ChatMapper;
 import hal.th50743.mapper.ChatMemberMapper;
 import hal.th50743.mapper.UserMapper;
 import hal.th50743.pojo.*;
+import hal.th50743.service.FileService;
 import hal.th50743.service.OssMediaService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
@@ -38,6 +39,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
     private final MinioOSSOperator minioOSSOperator;
+    private final FileService fileService;
     private final ChatMemberMapper chatMemberMapper;
     private final ChatMapper chatMapper;
     private final OssMediaService ossMediaService;
@@ -51,8 +53,8 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public UserVO getUserInfoByUid(String uid) {
-        // 直接获取用户实体，减少 ID 转换的往返查询
-        User user = userMapper.getUserByUid(uid);
+        // 使用 JOIN 查询，获取头像 object_name
+        User user = userMapper.findByUidWithAvatar(uid);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
@@ -130,7 +132,18 @@ public class UserServiceImpl implements UserService {
         u.setUid(userReq.getUid());
         u.setNickname(userReq.getNickname());
         if (userReq.getAvatar() != null) {
-            u.setAvatarObject(userReq.getAvatar().getObjectName());
+            String avatarObjectName = userReq.getAvatar().getObjectName();
+            // 查询 objects 表，获取 object_id（逻辑约束：验证对象存在）
+            FileEntity objectEntity = fileService.findByObjectName(avatarObjectName);
+            if (objectEntity != null) {
+                u.setObjectId(objectEntity.getId());
+                // 激活对象（如果还未激活）
+                fileService.activateAvatarFile(avatarObjectName);
+                log.debug("Updated user avatar: objectId={}, objectName={}", objectEntity.getId(), avatarObjectName);
+            } else {
+                log.warn("Avatar object not found in objects table: {}", avatarObjectName);
+                // 逻辑约束：如果对象不存在，不设置 object_id（保持为 NULL 或抛出异常）
+            }
         }
         u.setBio(userReq.getBio());
         u.setUpdateTime(LocalDateTime.now());

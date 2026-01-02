@@ -2,6 +2,10 @@
 import {ref} from 'vue'
 import {ChatLineRound, User} from '@element-plus/icons-vue'
 import AsideList from '@/views/layout/components/AsideList.vue'
+import UserItem from '@/components/UserItem.vue'
+import {useUserStore} from '@/stores/userStore.ts'
+import {useWebsocketStore} from '@/stores/websocketStore.ts'
+import {storeToRefs} from 'pinia'
 
 // 当前激活的视图类型：'friends' | 'chat'
 const activeView = ref<'friends' | 'chat'>('chat')
@@ -9,6 +13,12 @@ const activeView = ref<'friends' | 'chat'>('chat')
 const switchView = (view: 'friends' | 'chat') => {
   activeView.value = view
 }
+
+// 用户信息相关
+const userStore = useUserStore()
+const { loginUserInfo } = storeToRefs(userStore)
+const websocketStore = useWebsocketStore()
+const { status } = storeToRefs(websocketStore)
 </script>
 
 <template>
@@ -42,6 +52,17 @@ const switchView = (view: 'friends' | 'chat') => {
       <Transition name="page-fade" mode="out-in">
         <AsideList :key="activeView" :type="activeView" />
       </Transition>
+    </div>
+
+    <!-- 3. 用户信息区域 -->
+    <div class="aside-footer" v-if="loginUserInfo">
+      <UserItem
+        :avatar="loginUserInfo.avatar?.blobThumbUrl || loginUserInfo.avatar?.objectThumbUrl || loginUserInfo.avatar?.blobUrl || loginUserInfo.avatar?.objectUrl"
+        :nickname="loginUserInfo.nickname"
+        :uid="loginUserInfo.uid"
+        :is-online="status === 'OPEN'"
+        class="footer-user-card"
+      />
     </div>
   </div>
 </template>
@@ -135,4 +156,16 @@ const switchView = (view: 'friends' | 'chat') => {
 
 .page-fade-enter-from { opacity: 0; transform: translateY(4px); }
 .page-fade-leave-to { opacity: 0; transform: translateY(-4px); }
+
+.aside-footer {
+  padding: 12px 16px;
+  background-color: var(--bg-page);
+  border-top: 1px solid var(--el-border-color-light);
+  flex-shrink: 0;
+}
+
+.footer-user-card {
+  background: var(--bg-card);
+  border: 1px solid var(--el-border-color-light);
+}
 </style>

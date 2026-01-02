@@ -2,13 +2,17 @@ package hal.th50743.service.impl;
 
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
+import hal.th50743.mapper.ChatMemberMapper;
+import hal.th50743.mapper.ChatInviteMapper;
 import hal.th50743.pojo.*;
 import hal.th50743.service.AuthService;
 import hal.th50743.service.ChatService;
+import hal.th50743.service.FileService;
 import hal.th50743.service.FormalUserService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.JwtUtils;
 import hal.th50743.utils.LoginVOBuilder;
+import hal.th50743.utils.InviteCodeUtils;
 import hal.th50743.utils.PasswordUtils;
 import io.minio.MinioOSSOperator;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +36,10 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtils jwtUtils;
     private final FormalUserService formalUserService;
     private final UserService userService;
+    private final FileService fileService;
     private final ChatService chatService;
+    private final ChatInviteMapper chatInviteMapper;
+    private final ChatMemberMapper chatMemberMapper;
 
     // ============================================================
     // 1. 辅助工具方法 (Helpers)
@@ -112,17 +119,24 @@ public class AuthServiceImpl implements AuthService {
 
             // 1. 创建基础 User 信息
             String avatarObjectName = parseAvatarName(req.getAvatar());
-            User userReq = new User(
-                    null,
-                    null, // uid 由数据库或雪花算法生成
-                    req.getNickname(),
-                    avatarObjectName,
-                    null,
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    null
-            );
+            Integer objectId = null;
+            if (avatarObjectName != null) {
+                // 查询 objects 表获取 id
+                FileEntity objectEntity = fileService.findByObjectName(avatarObjectName);
+                if (objectEntity != null) {
+                    objectId = objectEntity.getId();
+                    log.debug("Set user avatar objectId: {}", objectId);
+                } else {
+                    log.warn("Avatar object not found during registration: {}", avatarObjectName);
+                }
+            }
+            // 使用 setter 方法创建 User 对象（避免构造函数参数顺序问题）
+            User userReq = new User();
+            userReq.setNickname(req.getNickname());
+            userReq.setObjectId(objectId);
+            userReq.setLastSeenAt(LocalDateTime.now());
+            userReq.setCreateTime(LocalDateTime.now());
+            userReq.setUpdateTime(LocalDateTime.now());
 
             User userRes = userService.add(userReq);
 
@@ -181,16 +195,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 1. 创建临时访客用户 (不记录 username 账号，仅记录 nickname)
-        User userReq = new User(
-                null,
-                null,
-                guestReq.getNickname(),
-                null, // TODO: 可根据性别或随机数分配默认头像
-                null,
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                null);
+        // 使用 setter 方法创建 User 对象（避免构造函数参数顺序问题）
+        User userReq = new User();
+        userReq.setNickname(guestReq.getNickname());
+        userReq.setLastSeenAt(LocalDateTime.now());
+        userReq.setCreateTime(LocalDateTime.now());
+        userReq.setUpdateTime(LocalDateTime.now());
 
         User userRes = userService.add(userReq);
 
@@ -211,5 +221,58 @@ public class AuthServiceImpl implements AuthService {
             log.error("访客加入聊天室失败: chatCode={}", guestReq.getChatCode());
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to join chat room as guest: chatCode=" + guestReq.getChatCode());
         }
+    }
+
+    /**
+     * 邀请码免密加入（访客）
+     *
+     * @param req 邀请加入请求
+     * @return LoginVO（包含 token）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public LoginVO inviteGuest(InviteGuestReq req) {
+        if (req == null) throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
+        if (req.getChatCode() == null || req.getChatCode().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "chatCode is required");
+        }
+        if (req.getInviteCode() == null || req.getInviteCode().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "inviteCode is required");
+        }
+        if (req.getNickname() == null || req.getNickname().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Nickname is required for guest access");
+        }
+
+        // 1) 校验房间 join_enabled（关闭加入时，邀请码也不可用）
+        ChatJoinInfo joinInfo = chatService.getJoinInfo(req.getChatCode());
+        if (joinInfo == null || joinInfo.getChatId() == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
+        }
+        if (joinInfo.getJoinEnabled() != null && joinInfo.getJoinEnabled() == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat");
+        }
+
+        // 2) 消费邀请码（原子递增 used_count；过期/撤销/次数用尽都会失败）
+        String hash = InviteCodeUtils.sha256Hex(req.getInviteCode());
+        int consumed = chatInviteMapper.consume(req.getChatCode(), hash);
+        if (consumed <= 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid or expired invite code");
+        }
+
+        // 3) 创建临时用户
+        // 使用 setter 方法创建 User 对象（避免构造函数参数顺序问题）
+        User userReq = new User();
+        userReq.setNickname(req.getNickname());
+        userReq.setLastSeenAt(LocalDateTime.now());
+        userReq.setCreateTime(LocalDateTime.now());
+        userReq.setUpdateTime(LocalDateTime.now());
+        User userRes = userService.add(userReq);
+
+        // 4) 免密入群（即使房间设置了密码）
+        // 业务原因：邀请码已被消费，代表“免密加入权限”；因此此处不走 chatService.join 的密码校验分支
+        chatMemberMapper.insertIgnore(joinInfo.getChatId(), userRes.getId(), LocalDateTime.now());
+
+        // 5) 返回 JWT（访客无 username，用 nickname 作为标识）
+        return LoginVOBuilder.build(userRes.getUid(), userRes.getNickname(), jwtUtils);
     }
 }

@@ -26,9 +26,9 @@ public class Message {
     private String text;
     
     /**
-     * 存储附件对象名的 JSON 字符串
+     * 存储图片对象ID列表的 JSON 字符串（格式：JSON 数组，如 [1,2,3]）
      */
-    private String objectNames;
+    private String objectIds;
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

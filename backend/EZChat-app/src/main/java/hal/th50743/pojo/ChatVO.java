@@ -51,6 +51,10 @@ public class ChatVO {
      */
     private List<ChatMemberVO> chatMembers;
 
-    // 临时属性，用于数据转换
-    private String avatarName;
+    /**
+     * 临时字段，用于 JOIN 查询获取 object_name
+     * <p>
+     * 业务说明：通过 LEFT JOIN objects 表获取头像对象名，用于构建 Image 对象
+     */
+    private transient String avatarObjectName;
 }

@@ -65,7 +65,7 @@ export const useChatMemberList = () => {
       .map((m) => ({
         ...m,
         // 视图显示使用实时状态 (sMap)，确保变灰动画立即开始
-        isOnline: Boolean(sMap.get(m.uid) ?? m.online),
+        online: Boolean(sMap.get(m.uid) ?? m.online),
       }))
   })
 
