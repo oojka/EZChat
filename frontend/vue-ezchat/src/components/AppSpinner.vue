@@ -56,12 +56,23 @@ withDefaults(defineProps<Props>(), {
 }
 
 .app-spinner-container.is-absolute {
-  position: relative;
-  inset: auto;
-  background: transparent;
+  /* 局部遮蔽：覆盖父容器（父容器需 position: relative）并居中内容 */
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 磨砂玻璃：与全局 Dialog/Notification 风格统一 */
+  background: var(--bg-glass-overlay, var(--bg-glass));
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass);
+  border-radius: inherit;
   background-image: none;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   padding: 0;
 }
 
@@ -72,8 +83,9 @@ html.dark .app-spinner-container {
     radial-gradient(circle at 100% 100%, var(--primary-light) 0%, transparent 70%);
 }
 
+/* 暗黑模式下仍然保持磨砂底色（避免看起来像“全白/全透明”的突兀遮罩） */
 html.dark .app-spinner-container.is-absolute {
-  background: transparent;
+  background: var(--bg-glass-overlay, var(--bg-glass));
   background-image: none;
 }
 
@@ -116,8 +128,8 @@ html.dark .blob-2 { background: #0a0a0a; opacity: 0.02; }
   text-align: center;
 }
 
-/* 轻量淡入：适用于局部加载 */
-.app-spinner-container { animation: fadeIn 0.25s ease; }
+/* 轻量淡入：仅用于局部加载（absolute=true）。全屏遮蔽时不使用淡入，避免闪烁/跳变。 */
+.app-spinner-container.is-absolute { animation: fadeIn 0.25s ease; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 

@@ -34,4 +34,18 @@ public class AppInitController {
         return Result.success(res);
     }
 
+    /**
+     * 获取应用初始化状态（轻量版：只用于渲染 chatList）
+     *
+     * 业务目的：
+     * - refresh 首屏更快：只返回 AsideList 必要字段，不携带每个群的成员列表
+     *
+     * @return Result<AppInitVO> 包含初始化数据的统一响应结果
+     */
+    @GetMapping("/chat-list")
+    public Result getChatListInit() {
+        AppInitVO res = appInitService.getInitChatListState();
+        return Result.success(res);
+    }
+
 }

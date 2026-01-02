@@ -2,6 +2,7 @@
 import type {ChatMember} from '@/type'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
 import {storeToRefs} from 'pinia'
+import SmartAvatar from '@/components/SmartAvatar.vue'
 
 interface Props { member: ChatMember; isMe: boolean }
 defineProps<Props>()
@@ -14,9 +15,14 @@ const { wsDisplayState } = storeToRefs(websocketStore)
   <div class="member-item" :class="{ 'is-me': isMe, 'is-offline': !member.online }">
     <div class="avatar-wrapper">
       <el-badge is-dot :offset="[-2, 34]" :type="isMe ? wsDisplayState.type : (member.online ? 'success' : 'info')" class="status-dot">
-        <el-avatar :size="40" :src="member.avatar.objectThumbUrl ? member.avatar.objectUrl : member.avatar.objectThumbUrl" class="member-avatar">
-          {{ member.nickname?.charAt(0) }}
-        </el-avatar>
+        <SmartAvatar
+          class="member-avatar"
+          :size="40"
+          shape="square"
+          :thumb-url="member.avatar.blobThumbUrl || member.avatar.objectThumbUrl"
+          :url="member.avatar.blobUrl || member.avatar.objectUrl"
+          :text="member.nickname"
+        />
       </el-badge>
     </div>
 

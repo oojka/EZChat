@@ -52,6 +52,17 @@ public interface OssMediaService {
     void deleteObject(String objectNameOrUrl);
 
     /**
+     * 获取对象访问 URL（按需刷新预签名链接）
+     * <p>
+     * 业务目的：
+     * - 前端只保存 objectName，真正展示/预览时再向后端获取最新 URL，避免预签名过期
+     *
+     * @param objectName MinIO 对象名（建议为原图 objectName）
+     * @return 可访问 URL（public 为永久链接，private 为预签名链接）
+     */
+    String getImageUrl(String objectName);
+
+    /**
      * 存储对象 DTO
      *
      * @param objectName  对象名（MinIO objectName）

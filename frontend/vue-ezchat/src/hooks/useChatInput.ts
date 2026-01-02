@@ -6,10 +6,13 @@ import {useUserStore} from '@/stores/userStore.ts'
 import {useMessageStore} from '@/stores/messageStore.ts' // 引入 messageStore
 import {Cooldown} from '@/utils/cooldown.ts'
 import { compressImage } from '@/utils/imageCompressor'
+import { isAllowedImageFile } from '@/utils/fileTypes'
+import i18n from '@/i18n'
 
 const updateLock = new Cooldown(5000, 10, 10000)
 
 export const useChatInput = () => {
+  const { t } = i18n.global
   const userStore = useUserStore()
   const { loginUser } = storeToRefs(userStore)
 
@@ -36,21 +39,21 @@ export const useChatInput = () => {
 
   // 1. 上传前校验：格式与大小
   const beforePictureUpload: UploadProps['beforeUpload'] = async (rawFile) => {
-    const isImage =
-      rawFile.type === 'image/jpeg' || rawFile.type === 'image/png' || rawFile.type === 'image/gif'
+    // 放宽图片类型限制：允许常见 image/*（并用扩展名兜底）
+    const isImage = isAllowedImageFile(rawFile as File)
     const isLtSize = rawFile.size / 1024 / 1024 < 10 // 限制 10MB
 
     if (!isImage) {
-      ElMessage.error('画像はJPG/PNG/GIF形式のみ可能です')
+      ElMessage.error(t('validation.image_format'))
       return false
     }
     if (!isLtSize) {
-      ElMessage.error('画像サイズは10MB以下にしてください')
+      ElMessage.error(t('validation.image_size'))
       return false
     }
     if (!updateLock.canExecute) {
       const sec = updateLock.getRemainingTime()
-      ElMessage.warning(`操作が頻繁すぎます。あと ${sec} 秒待ってください。`)
+      ElMessage.warning(t('auth.too_fast', { sec }))
       return false
     }
     // 2) 压缩图片（失败则回退原图），并把 File 返回给 el-upload 替换上传内容

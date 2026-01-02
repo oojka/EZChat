@@ -5,6 +5,7 @@ import {registerApi} from '@/api/Auth.ts'
 import {useI18n} from 'vue-i18n'
 import {getPasswordReg, USERNAME_REG} from '@/utils/validators.ts'
 import { compressImage } from '@/utils/imageCompressor'
+import { isAllowedImageFile } from '@/utils/fileTypes'
 
 export function useRegister() {
   const { t } = useI18n()
@@ -52,7 +53,8 @@ export function useRegister() {
   })
 
   const beforeAvatarUpload = async (rawFile: File) => {
-    if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
+    // 放宽图片类型限制：允许常见 image/*（并用扩展名兜底）
+    if (!isAllowedImageFile(rawFile)) {
       ElMessage.error(t('validation.image_format')); return false
     } else if (rawFile.size / 1024 / 1024 > 10) {
       ElMessage.error(t('validation.image_size')); return false

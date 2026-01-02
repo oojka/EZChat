@@ -66,7 +66,7 @@
     "confirm_password_required": "비밀번호는 필수이며 일치해야 합니다.",
     "password_mismatch": "비밀번호가 일치하지 않습니다.",
     "avatar_required": "프로필 이미지를 선택해 주세요.",
-    "image_format": "JPG 또는 PNG 형식의 이미지만 지원됩니다.",
+    "image_format": "이미지 파일만 지원됩니다.",
     "image_size": "이미지 크기는 10MB를 초과할 수 없습니다.",
     "room_name_required": "룸 이름을 입력해 주세요.",
     "room_name_length": "룸 이름은 20자를 초과할 수 없습니다."
@@ -128,7 +128,7 @@
     "f_easy_desc": "직관적인 디자인"
   },
   "chat": {
-    "chat_list": "받은 편지함",
+    "chat_list": "채팅 목록",
     "members": "멤버",
     "room_id": "ID",
     "room_info": "룸 설정",
@@ -150,11 +150,12 @@
     "ws_connected": "온라인",
     "ws_connecting": "연결 중...",
     "ws_closed": "오프라인",
-    "ws_unknown": "알 수 없음"
+    "ws_unknown": "알 수 없음",
+    "ws_send_error": "전송에 실패했습니다. 다시 시도해 주세요."
   },
   "create_chat": {
     "title": "새 룸 만들기",
-    "subtitle": "새로운 커뮤니티의 시작",
+    "subtitle": "새 룸을 만들어 보세요",
     "avatar_label": "아이콘",
     "change_avatar": "편집",
     "avatar_hint": "권장: 500x500px 이상",
@@ -166,11 +167,17 @@
     "capacity_title": "용량",
     "capacity_desc": "제한 없는 멤버",
     "room_name": "룸 이름",
-    "room_name_placeholder": "예: 주말 게이머",
+    "room_name_placeholder": "예: 스터디 그룹",
     "password_join": "액세스 제어",
     "password_info_title": "참여 방법",
     "password_info_desc": "ON: 룸 ID + 비밀번호로 참여 가능.\nOFF: 비공개 (유효한 초대 링크로만 참여 가능).\n*생성 후에도 룸 설정에서 변경할 수 있습니다.",
     "submit": "룸 만들기",
+    "result": "결과",
+    "success": "생성 성공",
+    "fail": "생성 실패",
+    "success_msg": "룸이 성공적으로 생성되었습니다.",
+    "fail_msg": "생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+    "enter_now": "바로 입장",
     "expiry_title": "링크 만료",
     "custom_date": "사용자 지정 날짜",
     "day_n": "{n}일"

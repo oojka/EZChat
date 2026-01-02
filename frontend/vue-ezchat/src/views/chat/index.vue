@@ -4,7 +4,7 @@ import MessageArea from '@/views/chat/layout/MessageArea.vue'
 import InputArea from '@/views/chat/layout/InputArea.vue'
 import RightAside from '@/views/chat/layout/RightAside.vue'
 import ChatHeader from '@/views/chat/layout/ChatHeader.vue'
-import ChatSkeleton from '@/views/chat/components/ChatSkeleton.vue'
+import MessageSkeleton from '@/views/chat/components/MessageSkeleton.vue'
 import {useMessageStore} from '@/stores/messageStore.ts'
 import {storeToRefs} from 'pinia'
 import {ArrowLeft, ArrowRight} from '@element-plus/icons-vue'
@@ -62,7 +62,7 @@ onUnmounted(() => stopResizing())
         <el-main class="chat-left-panel">
           <div class="message-panel">
             <Transition name="chat-fade" mode="in-out">
-              <ChatSkeleton v-if="chatViewIsLoading" />
+              <MessageSkeleton v-if="chatViewIsLoading" />
               <MessageArea v-else />
             </Transition>
           </div>

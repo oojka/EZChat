@@ -1,5 +1,5 @@
 import request from '../utils/request'
-import type {ChatRoom, Result} from '@/type'
+import type {ChatMember, ChatRoom, Result} from '@/type'
 
 
 /**
@@ -10,3 +10,12 @@ import type {ChatRoom, Result} from '@/type'
  */
 export const getChatRoomApi = (chatCode: string): Promise<Result<ChatRoom>> =>
   request.get(`/chat/${chatCode}`)
+
+/**
+ * 获取聊天室成员列表（按 chatCode 懒加载）
+ *
+ * - 后端接口：GET `/chat/{chatCode}/members`
+ * - 业务目的：右侧成员栏按需拉取，避免 refresh 初始化阶段全量加载所有群成员
+ */
+export const getChatMembersApi = (chatCode: string): Promise<Result<ChatMember[]>> =>
+  request.get(`/chat/${chatCode}/members`)

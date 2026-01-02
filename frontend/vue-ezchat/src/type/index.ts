@@ -51,15 +51,15 @@ export interface ChatRoom {
   chatName : string //
   ownerUid? : string //
   joinEnabled?: number //
-  lastActiveAt : string //
+  lastActiveAt?: string //
   createTime? : string //
   updateTime? : string //
-  unreadCount : number //
-  onLineMemberCount : number
-  memberCount : number
-  avatar : Image //
-  lastMessage : Message
-  chatMembers : ChatMember[]
+  unreadCount?: number //
+  onLineMemberCount?: number
+  memberCount?: number
+  avatar?: Image //
+  lastMessage?: Message
+  chatMembers?: ChatMember[]
 }
 
 export interface ChatMember {

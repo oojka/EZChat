@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import {ref} from 'vue'
 import {Link, Plus} from '@element-plus/icons-vue'
 import ChatItem from '@/views/layout/components/ChatItem.vue'
 import UserItem from '@/components/UserItem.vue'
@@ -13,7 +13,7 @@ import {useI18n} from 'vue-i18n'
 
 const { t } = useI18n()
 const roomStore = useRoomStore()
-const { roomList, currentRoomCode } = storeToRefs(roomStore)
+const { roomList, currentRoomCode, isRoomListLoading } = storeToRefs(roomStore)
 const userStore = useUserStore()
 const { loginUserInfo } = storeToRefs(userStore)
 const websocketStore = useWebsocketStore()
@@ -25,9 +25,7 @@ const handleSelectChat = (chatCode: string) => {
   router.push(`/chat/${chatCode}`)
 }
 
-onMounted(async () => {
-  await roomStore.initRoomList()
-})
+// 房间列表由 appStore.initializeApp(refresh) 统一触发；此处不再重复请求，避免刷新期间并发打满。
 </script>
 
 <template>
@@ -41,6 +39,10 @@ onMounted(async () => {
     </div>
 
     <div class="list-content">
+      <!-- 刷新/初始化期间：优先展示 Skeleton，避免“先出现 1 条，再补齐” -->
+      <div v-if="isRoomListLoading && (!roomList || roomList.length === 0)" class="chat-skeleton">
+        <el-skeleton animated :rows="6" />
+      </div>
       <div v-if="roomList && roomList.length > 0" class="chat-items">
         <ChatItem
           v-for="chat in roomList"
@@ -57,7 +59,7 @@ onMounted(async () => {
 
     <div class="aside-footer" v-if="loginUserInfo">
       <UserItem
-        :avatar="loginUserInfo.avatar?.objectThumbUrl"
+        :avatar="loginUserInfo.avatar?.blobThumbUrl || loginUserInfo.avatar?.objectThumbUrl || loginUserInfo.avatar?.blobUrl || loginUserInfo.avatar?.objectUrl"
         :nickname="loginUserInfo.nickname"
         :uid="loginUserInfo.uid"
         :is-online="status === 'OPEN'"

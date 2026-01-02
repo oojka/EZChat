@@ -66,7 +66,7 @@
     "confirm_password_required": "パスワードは必須で、一致する必要があります。",
     "password_mismatch": "パスワードが一致しません。",
     "avatar_required": "プロフィール画像を選択してください。",
-    "image_format": "JPG または PNG 形式の画像のみサポートされています。",
+    "image_format": "画像ファイルのみサポートされています。",
     "image_size": "画像サイズは 10MB 以下にしてください。",
     "room_name_required": "ルーム名が必要です。",
     "room_name_length": "ルーム名は 20 文字以内で入力してください。"
@@ -128,7 +128,7 @@
     "f_easy_desc": "直感的なデザイン"
   },
   "chat": {
-    "chat_list": "受信箱",
+    "chat_list": "チャット一覧",
     "members": "メンバー",
     "room_id": "ID",
     "room_info": "ルーム設定",
@@ -150,11 +150,12 @@
     "ws_connected": "オンライン",
     "ws_connecting": "接続中...",
     "ws_closed": "オフライン",
-    "ws_unknown": "不明"
+    "ws_unknown": "不明",
+    "ws_send_error": "送信に失敗しました。もう一度お試しください。"
   },
   "create_chat": {
     "title": "ルーム新規作成",
-    "subtitle": "新しいコミュニティの始まりです",
+    "subtitle": "新しいルームを作成します",
     "avatar_label": "アイコン",
     "change_avatar": "編集",
     "avatar_hint": "推奨：500x500px 以上",
@@ -166,11 +167,17 @@
     "capacity_title": "容量",
     "capacity_desc": "無制限メンバー",
     "room_name": "ルーム名",
-    "room_name_placeholder": "例：週末ゲーマー",
+    "room_name_placeholder": "例：勉強会",
     "password_join": "アクセス制御",
     "password_info_title": "参加方法",
     "password_info_desc": "ON：ルームID + パスワードで参加可能。\nOFF：非公開（有効な招待リンクからのみ参加可能）。\n※作成後もルーム設定で変更できます。",
     "submit": "ルームを作成",
+    "result": "結果",
+    "success": "作成に成功しました",
+    "fail": "作成に失敗しました",
+    "success_msg": "ルームを作成しました。",
+    "fail_msg": "作成に失敗しました。時間をおいて再度お試しください。",
+    "enter_now": "今すぐ入室",
     "expiry_title": "リンク有効期限",
     "custom_date": "カスタム日時",
     "day_n": "{n} 日"

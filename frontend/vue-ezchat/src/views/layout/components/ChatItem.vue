@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {defineProps, onMounted, onUnmounted, ref, watch} from 'vue'
+import {onMounted, onUnmounted, ref, watch} from 'vue'
 import dayjs from 'dayjs'
 import isToday from 'dayjs/plugin/isToday'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -10,6 +10,7 @@ import 'dayjs/locale/ko'
 import type {ChatRoom} from '@/type'
 import {useMessageStore} from '@/stores/messageStore.ts'
 import {useI18n} from 'vue-i18n'
+import SmartAvatar from '@/components/SmartAvatar.vue'
 
 const { t, locale } = useI18n()
 const messageStore = useMessageStore()
@@ -58,7 +59,14 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 <template>
   <div class="chat-item" :class="{ 'is-active': isActive }">
     <div class="avatar-wrapper">
-      <el-avatar :size="50" :src="chat.avatar.objectThumbUrl" :alt="chat.chatName" class="avatar" />
+      <SmartAvatar
+        class="avatar"
+        :size="50"
+        shape="square"
+        :thumb-url="chat.avatar?.blobThumbUrl || chat.avatar?.objectThumbUrl || ''"
+        :url="chat.avatar?.blobUrl || chat.avatar?.objectUrl || ''"
+        :text="chat.chatName"
+      />
     </div>
 
     <div class="info-container">
@@ -69,8 +77,8 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
       <div class="row2">
         <div class="last-message">{{ messageStore.formatPreviewMessage(chat.lastMessage) }}</div>
-        <div class="badge-wrapper" v-if="chat.unreadCount > 0">
-          <el-badge :value="chat.unreadCount" :max="99" class="unread-badge" />
+        <div class="badge-wrapper" v-if="(chat.unreadCount || 0) > 0">
+          <el-badge :value="chat.unreadCount || 0" :max="99" class="unread-badge" />
         </div>
       </div>
     </div>

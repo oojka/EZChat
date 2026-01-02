@@ -92,7 +92,8 @@ router.afterEach((to) => {
   const appStore = useAppStore()
 
   setTimeout(() => {
-    appStore.isAppLoading = false
+    // 路由切换 Loading 不应该覆盖“应用初始化 Loading”
+    if (!appStore.isAppInitializing) appStore.isAppLoading = false
   }, 200)
 
   const defaultTitle = 'EZ Chat'

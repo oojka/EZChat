@@ -11,6 +11,9 @@
   --primary-light: #e0f2fe;
   --primary-dark: #337ecc;
 
+  /* Element Plus Light Vars（用于全局 Spinner 等组件保持一致） */
+  --el-border-color-light: #dcdfe6;
+
   --text-900: #0f172a;
   --text-700: #334155;
   --text-500: #64748b;
@@ -21,6 +24,8 @@
   --bg-aside: #ffffff;
 
   --bg-glass: rgba(255, 255, 255, 0.65);
+  /* 局部遮蔽层（例如 RightAside 的加载遮罩）：比 dialog 更透明，能看出背后内容被磨砂 */
+  --bg-glass-overlay: rgba(255, 255, 255, 0.42);
   --blur-glass: blur(24px) saturate(180%);
   --border-glass: rgba(255, 255, 255, 0.5);
   --shadow-glass: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
@@ -55,6 +60,8 @@ html.dark {
   --bg-aside: #131314;
 
   --bg-glass: rgba(30, 31, 32, 0.75);
+  /* 暗黑模式下的局部遮蔽：避免“全黑/全透明”，保持磨砂层次 */
+  --bg-glass-overlay: rgba(30, 31, 32, 0.55);
   --blur-glass: blur(24px) saturate(200%);
   --border-glass: rgba(255, 255, 255, 0.06);
   --shadow-glass: 0 16px 48px 0 rgba(0, 0, 0, 0.6);

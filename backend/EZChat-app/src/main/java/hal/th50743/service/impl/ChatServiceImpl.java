@@ -103,6 +103,31 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    /**
+     * 将 ChatMember 列表转换为 ChatMemberVO 列表（包含头像 URL）
+     *
+     * 业务目的：
+     * - 统一成员列表的输出格式（右侧成员栏/聊天室详情复用）
+     * - 避免 Controller 层做对象拼装，保持 Controller → Service → Mapper 的职责清晰
+     */
+    private List<ChatMemberVO> toChatMemberVOList(List<ChatMember> members, Map<Integer, Session> onlineUsers) {
+        if (members == null || members.isEmpty()) return Collections.emptyList();
+        List<ChatMemberVO> memberVOList = new ArrayList<>();
+        for (ChatMember m : members) {
+            boolean isOnline = m.getUserId() != null && onlineUsers.containsKey(m.getUserId());
+            ChatMemberVO vo = new ChatMemberVO();
+            vo.setUid(m.getUid());
+            vo.setNickname(m.getNickname());
+            vo.setOnline(isOnline);
+            vo.setLastSeenAt(m.getLastSeenAt());
+            if (m.getAvatarObject() != null) {
+                vo.setAvatar(ImageUtils.buildImage(m.getAvatarObject(), minioOSSOperator));
+            }
+            memberVOList.add(vo);
+        }
+        return memberVOList;
+    }
+
     // ============================================================
     // 2. 业务初始化逻辑 (App Initialization)
     // ============================================================
@@ -157,6 +182,78 @@ public class ChatServiceImpl implements ChatService {
         return new AppInitVO(chatVOList, new ArrayList<>(uniqueUserStatusMap.values()));
     }
 
+    /**
+     * 获取用户的聊天列表及成员在线状态（轻量版）
+     *
+     * 业务目的：
+     * - refresh 初始化只优先渲染 chatList（AsideList）
+     * - 不返回每个房间的 chatMembers，减少数据量与头像预取压力
+     *
+     * @param userId 用户ID
+     * @return AppInitVO（chatList + userStatusList）
+     */
+    @Override
+    public AppInitVO getChatVOListAndMemberStatusListLite(Integer userId) {
+        // 1) chatList 基础字段（不含成员列表）
+        List<ChatVO> chatVOList = chatMapper.getChatVOListByUserId(userId);
+        if (chatVOList == null || chatVOList.isEmpty()) {
+            return new AppInitVO(Collections.emptyList(), Collections.emptyList());
+        }
+
+        // 2) 轻量成员列表：用于聚合在线人数与 userStatusList（不含 nickname/avatar）
+        Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
+        List<ChatMemberLite> liteMembers = chatMemberMapper.getChatMemberLiteListByUserId(userId);
+
+        // 2.1) per-room 在线人数统计（chatCode -> onlineCount）
+        Map<String, Integer> onlineCountMap = new HashMap<>();
+        // 2.2) 全局唯一用户状态表（uid 去重）
+        Map<String, UserStatus> uniqueUserStatusMap = new HashMap<>();
+
+        for (ChatMemberLite m : liteMembers) {
+            boolean isOnline = m.getUserId() != null && onlineUsers.containsKey(m.getUserId());
+            onlineCountMap.merge(m.getChatCode(), isOnline ? 1 : 0, Integer::sum);
+            uniqueUserStatusMap.putIfAbsent(
+                    m.getUid(),
+                    new UserStatus(m.getUid(), isOnline, m.getLastSeenAt())
+            );
+        }
+
+        // 3) 遍历 chatList：补齐头像、最后消息、未读数与在线人数（但不填 chatMembers）
+        Map<String, Integer> unreadCountMap = messageMapper.getUnreadCountMapByUserId(userId).stream()
+                .collect(Collectors.toMap(
+                        row -> (String) row.get("chatCode"),
+                        row -> ((Number) row.get("unreadCount")).intValue(),
+                        (v1, v2) -> v1));
+        Map<String, MessageVO> lastMessageMap = messageMapper.getLastMessageListByUserId(userId);
+
+        for (ChatVO c : chatVOList) {
+            // 头像处理
+            if (c.getAvatarName() != null) {
+                c.setAvatar(ImageUtils.buildImage(c.getAvatarName(), minioOSSOperator));
+                c.setAvatarName(null);
+            }
+
+            // 最后消息处理
+            MessageVO lastMsg = lastMessageMap.get(c.getChatCode());
+            if (lastMsg != null) {
+                lastMsg.setImages(ImageUtils.buildImagesFromJson(lastMsg.getObjectNames(), objectMapper, minioOSSOperator));
+                lastMsg.setObjectNames(null);
+                c.setLastMessage(lastMsg);
+                c.setLastActiveAt(lastMsg.getCreateTime());
+            } else {
+                c.setLastActiveAt(c.getCreateTime());
+            }
+
+            // 未读数
+            c.setUnreadCount(unreadCountMap.getOrDefault(c.getChatCode(), 0));
+            // 在线人数（初始化阶段只提供计数，不提供 chatMembers）
+            c.setOnLineMemberCount(onlineCountMap.getOrDefault(c.getChatCode(), 0));
+            c.setChatMembers(null);
+        }
+
+        return new AppInitVO(chatVOList, new ArrayList<>(uniqueUserStatusMap.values()));
+    }
+
     // ============================================================
     // 3. 房间详情与权限逻辑 (Chat Detail & Security)
     // ============================================================
@@ -186,6 +283,24 @@ public class ChatServiceImpl implements ChatService {
             assembleChatVO(chatVO, onlineUsers, lastMsg, unreadCount, members);
         }
         return chatVO;
+    }
+
+    /**
+     * 获取聊天室成员列表（按 chatCode 懒加载）
+     *
+     * 业务目的：
+     * - 右侧成员栏按需拉取成员列表，避免 refresh 初始化阶段全量加载所有群成员
+     *
+     * @param userId   当前用户内部 ID
+     * @param chatCode 聊天室对外 ID
+     * @return 成员列表（VO）
+     */
+    @Override
+    public List<ChatMemberVO> getChatMemberVOList(Integer userId, String chatCode) {
+        Integer chatId = getChatId(userId, chatCode);
+        Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
+        List<ChatMember> members = chatMemberMapper.getChatMemberListByChatId(chatId);
+        return toChatMemberVOList(members, onlineUsers);
     }
 
     /**

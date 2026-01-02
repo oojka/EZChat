@@ -5,6 +5,7 @@ import {getUserInfoApi} from '@/api/User.ts'
 import {loginApi} from '@/api/Auth.ts'
 import {ElMessage} from 'element-plus'
 import {useWebsocketStore} from '@/stores/websocketStore.ts' // 引入 websocketStore
+import { useImageStore } from '@/stores/imageStore'
 
 /**
  * UserStore：管理登录态与当前用户信息
@@ -28,6 +29,23 @@ export const useUserStore = defineStore('user', () => {
   })
 
   const userStatusList = ref<UserStatus[]>([])
+  /**
+   * 重置 Store 内存状态（不清除 localStorage）
+   *
+   * 业务场景：
+   * - App 初始化前：先清空内存态，避免上一次会话残留数据污染本次初始化
+   * - 账号切换：先 reset 再按 localStorage 重新拉取
+   *
+   * 注意：
+   * - 该方法不会触发 logout（不会删除 localStorage，也不会主动跳转）
+   */
+  const resetState = () => {
+    // 只清空内存态，持久化由调用方决定
+    loginUser.value = { uid: '', username: '', token: '' }
+    loginUserInfo.value = undefined
+    userStatusList.value = []
+  }
+
 
   // =========================
   // 2. Actions
@@ -54,24 +72,56 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
+   * 从 localStorage 恢复登录用户（仅恢复 token/uid/username，不发请求）
+   *
+   * 业务目的：
+   * - refresh 时优先“同步恢复 token”，让后续 API/WS 尽快可用
+   * - 用户详情（昵称/头像）可后台再拉取，不阻塞首屏
+   *
+   * @returns 是否恢复成功
+   */
+  const restoreLoginUserFromStorage = (): boolean => {
+    const rowString: string | null = localStorage.getItem('loginUser')
+    if (!rowString) return false
+    try {
+      loginUser.value = JSON.parse(rowString)
+      return !!loginUser.value?.token
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 拉取并更新登录用户详情（昵称/头像等）
+   *
+   * 业务目的：
+   * - 将“用户详情请求”从 refresh 主链路中解耦，避免黑屏转圈时间被拉长
+   */
+  const fetchLoginUserInfo = async () => {
+    if (!loginUser.value?.uid) return
+    const result = await getUserInfoApi(loginUser.value.uid)
+    if (result) {
+      const imageStore = useImageStore()
+      const prevAvatar = loginUserInfo.value?.avatar
+      loginUserInfo.value = result.data
+      // Store 更新后：预取自己的头像缩略图 blob（不阻塞初始化）
+      if (prevAvatar && loginUserInfo.value?.avatar) {
+        imageStore.revokeUnusedBlobs([prevAvatar], [loginUserInfo.value.avatar])
+      }
+      if (loginUserInfo.value?.avatar) imageStore.ensureThumbBlobUrl(loginUserInfo.value.avatar).then(() => {})
+    }
+  }
+
+  /**
    * 初始化用户信息 (通常在 App 启动或页面刷新时调用)
    */
   const initLoginUserInfo = async () => {
-    const rowString: string | null = localStorage.getItem('loginUser')
-    if (rowString) {
-      try {
-        // 1. 恢复 Token 等基础信息
-        loginUser.value = JSON.parse(rowString)
-
-        // 2. 根据 UID 拉取详细用户信息
-        const result = await getUserInfoApi(loginUser.value.uid)
-        if (result) {
-          loginUserInfo.value = result.data
-        }
-      } catch (e) {
-        ElMessage.error('ログイン情報取得に失敗しました。')
-        logout()
-      }
+    try {
+      if (!restoreLoginUserFromStorage()) return
+      await fetchLoginUserInfo()
+    } catch (e) {
+      ElMessage.error('ログイン情報取得に失敗しました。')
+      logout()
     }
   }
 
@@ -110,7 +160,10 @@ export const useUserStore = defineStore('user', () => {
     userStatusList,
     getToken,
     initLoginUserInfo,
+    restoreLoginUserFromStorage,
+    fetchLoginUserInfo,
     loginRequest,
     logout,
+    resetState,
   }
 })

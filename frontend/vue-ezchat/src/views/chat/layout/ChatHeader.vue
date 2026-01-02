@@ -13,7 +13,7 @@ const { currentRoom } = storeToRefs(roomStore)
   <div class="chat-header-container">
     <div class="header-left">
       <div class="room-info" v-if="currentRoom">
-        <el-avatar :size="40" :src="currentRoom.avatar.objectThumbUrl" class="room-avatar">
+        <el-avatar :size="40" :src="currentRoom.avatar?.objectThumbUrl" class="room-avatar">
           <el-icon><UserFilled /></el-icon>
         </el-avatar>
         <div class="text-info">

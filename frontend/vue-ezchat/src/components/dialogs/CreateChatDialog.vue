@@ -80,7 +80,13 @@ const handleAvatarUploadSuccess = (response: any, uploadFile: any, fileList: any
   >
     <div class="create-dialog-container">
       <!-- 关闭按钮 -->
-      <el-button v-if="createStep !== 4" class="close-btn" :icon="Close" circle @click="handleClose" />
+      <el-button
+        v-if="createStep !== 4"
+        class="close-btn"
+        :icon="Close"
+        circle
+        @click.stop="handleClose"
+      />
       
       <!-- 头部：进度条和标题 -->
       <div class="create-header">
@@ -259,11 +265,12 @@ html.dark :deep(.ez-modern-dialog) {
 
 .close-btn {
   position: absolute;
-  right: -16px;
-  top: -12px;
-  z-index: 10;
+  right: 12px;
+  top: 12px;
+  z-index: 50;
+  pointer-events: auto;
   background: var(--bg-page);
-  border: none;
+  border: 1px solid var(--el-border-color-light);
   color: var(--text-500);
   width: 32px;
   height: 32px;
@@ -282,12 +289,13 @@ html.dark :deep(.ez-modern-dialog) {
 /* --- Header --- */
 .create-header {
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  padding-top: 4px;
 }
 
 .progress-section {
-  margin-bottom: 12px;
-  padding: 0 40px;
+  margin-bottom: 10px;
+  padding: 0 24px;
 }
 
 :deep(.custom-progress .el-progress-bar__outer) {

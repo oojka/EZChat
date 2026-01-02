@@ -8,8 +8,8 @@ import {useAppStore} from '@/stores/appStore.ts'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
 import {showMessageNotification} from '@/utils/notification.ts'
-import axios from 'axios'
 import i18n from '@/i18n' // 引入 i18n
+import { useImageStore } from '@/stores/imageStore'
 
 // 兼容性更好的 ID 生成器
 /**
@@ -33,6 +33,7 @@ function generateTempId() {
 export const useMessageStore = defineStore('message', () => {
   const router = useRouter()
   const { t } = i18n.global // 获取翻译函数
+  const imageStore = useImageStore()
 
   // --- 状态定义 ---
   const currentMessageList = ref<Message[]>([])
@@ -40,24 +41,6 @@ export const useMessageStore = defineStore('message', () => {
   const loadingMessages = ref(false)
   const noMoreMessages = ref(false)
   const isLoading = ref<boolean>(false)
-
-  // --- Blob 处理逻辑 ---
-  /**
-   * 获取图片的 Blob URL
-   *
-   * 业务原因：对 private 预签名 URL/跨域资源，浏览器直接展示时可能触发重复请求；
-   * 转成 Blob URL 后可以更可控地管理生命周期（记得 revoke）。
-   */
-  const fetchBlob = async (url: string): Promise<string | undefined> => {
-    if (!url) return undefined
-    try {
-      const response = await axios.get(url, { responseType: 'blob' })
-      return URL.createObjectURL(response.data)
-    } catch (e) {
-      console.error('[Blob] Failed to load image:', url, e)
-      return undefined
-    }
-  }
 
   /**
    * 为消息里的图片补齐 blobUrl / blobThumbUrl
@@ -68,13 +51,9 @@ export const useMessageStore = defineStore('message', () => {
     for (const msg of messages) {
       if (!msg.images || msg.images.length === 0) continue
       for (const img of msg.images) {
-        if (img.blobUrl || img.blobThumbUrl) continue
-        if (img.objectUrl) {
-          fetchBlob(img.objectUrl).then(url => { if (url) img.blobUrl = url })
-        }
-        if (img.objectThumbUrl) {
-          fetchBlob(img.objectThumbUrl).then(url => { if (url) img.blobThumbUrl = url })
-        }
+        // 原图 Blob 改为按需拉取（预览时再加载），这里只处理缩略图即可
+        if (img.blobThumbUrl) continue
+        imageStore.ensureThumbBlobUrl(img).then(() => {})
       }
     }
   }
@@ -87,12 +66,25 @@ export const useMessageStore = defineStore('message', () => {
   const revokeAllBlobs = () => {
     currentMessageList.value.forEach(msg => {
       msg.images?.forEach(img => {
-        if (img.blobUrl) URL.revokeObjectURL(img.blobUrl)
-        if (img.blobThumbUrl) URL.revokeObjectURL(img.blobThumbUrl)
-        img.blobUrl = undefined
-        img.blobThumbUrl = undefined
+        imageStore.revokeImageBlobs(img)
       })
     })
+  }
+
+  /**
+   * 重置 Store 业务数据（不重置 UI 状态）
+   *
+   * 业务场景：App 初始化/账号切换前，清空消息列表并释放 Blob URL，避免内存泄漏与跨房间串图。
+   *
+   * 注意：
+   * - 这里只清“业务数据”（消息列表、分页边界、Blob 缓存）
+   * - 不应重置 loading / skeleton / 过渡动画等“纯 UI 状态”，避免 UI 闪烁或状态被意外覆盖
+   */
+  const resetState = () => {
+    revokeAllBlobs()
+    imageStore.resetState()
+    currentMessageList.value = []
+    noMoreMessages.value = false
   }
 
   // --- 业务逻辑 ---
@@ -239,7 +231,7 @@ export const useMessageStore = defineStore('message', () => {
       return
     }
     const chat = roomStore.getRoomByCode(message.chatCode)
-    const sender = chat?.chatMembers.find((m) => m.uid === message.sender)
+    const sender = chat?.chatMembers?.find((m) => m.uid === message.sender)
     if (chat && sender) {
       // 通知预览文案：图片消息用 [画像] 标签避免空文本
       message.text = formatPreviewMessage(message)
@@ -253,7 +245,9 @@ export const useMessageStore = defineStore('message', () => {
   /**
    * 格式化预览消息 (国际化适配)
    */
-  const formatPreviewMessage = (message: Message): string => {
+  const formatPreviewMessage = (message?: Message | null): string => {
+    // 初始化阶段 chatList-only 可能没有 lastMessage，需要容错
+    if (!message) return `[${t('chat.new_message')}]`
     let result = message.text || ''
     if (message.images && message.images.length > 0) {
       // 使用翻译后的 [画像] 标签
@@ -264,12 +258,14 @@ export const useMessageStore = defineStore('message', () => {
   }
 
   watch(
-    () => router.currentRoute.value.params.chatCode,
-    async (newCode) => {
+    () => [router.currentRoute.value.params.chatCode, useAppStore().isAppInitializing] as const,
+    async ([newCode, isAppInitializing]) => {
       const roomStore = useRoomStore()
       const appStore = useAppStore()
       const { currentRoomCode } = storeToRefs(roomStore)
       const { isAppLoading } = storeToRefs(appStore)
+      // 初始化期间不拉取消息：避免“先拉取 → 又被 reset 清空”或 token 未就绪导致数据异常
+      if (isAppInitializing) return
       const code = (newCode as string) || ''
       if (code && code !== currentRoomCode.value) {
         revokeAllBlobs()
@@ -297,5 +293,6 @@ export const useMessageStore = defineStore('message', () => {
     handleAck,
     receiveMessage,
     formatPreviewMessage,
+    resetState,
   }
 })

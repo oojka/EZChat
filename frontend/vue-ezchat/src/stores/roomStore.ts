@@ -2,7 +2,9 @@ import {computed, ref} from 'vue'
 import {defineStore, storeToRefs} from 'pinia'
 import type {ChatRoom, Message} from '@/type'
 import {initApi} from '@/api/AppInit.ts'
+import { getChatMembersApi } from '@/api/Chat'
 import {useUserStore} from '@/stores/userStore.ts'
+import { useImageStore } from '@/stores/imageStore'
 
 /**
  * RoomStore：管理聊天室列表与“当前所在房间”
@@ -23,6 +25,33 @@ export const useRoomStore = defineStore('room', () => {
   const _roomList = ref<ChatRoom[]>([])
   // 当前选中的房间代码
   const currentRoomCode = ref('')
+  // 房间列表加载状态：用于 refresh 时避免 UI “先出现 1 条，再补齐”的割裂感
+  const isRoomListLoading = ref(false)
+  // 房间列表是否已完成一次加载（用于控制 updateRoomInfo 的行为）
+  const hasRoomListLoaded = ref(false)
+  // 列表尚未加载完成时的“待合并房间信息”（例如 message 接口返回的 chatRoom）
+  const pendingRoomInfoMap = new Map<string, ChatRoom>()
+
+  /**
+   * 当前房间成员列表加载状态（按 chatCode）
+   *
+   * 业务目的：右侧成员栏需要一个“独立于 messageList”的 loading 状态，用于局部遮蔽。
+   */
+  const memberListLoadingMap = ref<Record<string, boolean>>({})
+  /**
+   * 重置 Store 内存状态
+   *
+   * 业务场景：App 初始化/账号切换前，清空房间列表与当前选中房间，防止旧数据残留。
+   */
+  const resetState = () => {
+    _roomList.value = []
+    currentRoomCode.value = ''
+    isRoomListLoading.value = false
+    hasRoomListLoaded.value = false
+    pendingRoomInfoMap.clear()
+    memberListLoadingMap.value = {}
+  }
+
 
   // =========================================
   // 2. 计算属性 (Getters)
@@ -61,6 +90,9 @@ export const useRoomStore = defineStore('room', () => {
    */
   const initRoomList = async () => {
     try {
+      isRoomListLoading.value = true
+      const imageStore = useImageStore()
+      const prevAvatars = _roomList.value.map(r => r.avatar).filter(Boolean) as any
       // 1) 从后端拉取：chatList + userStatusList
       const result = await initApi()
       if (result?.data) {
@@ -79,8 +111,31 @@ export const useRoomStore = defineStore('room', () => {
           })
         }
       }
+
+      // 1.5) 合并“加载期间缓存的 roomInfo”（避免 refresh 时先插入 1 条）
+      if (pendingRoomInfoMap.size > 0 && _roomList.value.length > 0) {
+        for (const [code, info] of pendingRoomInfoMap.entries()) {
+          const target = _roomList.value.find(r => r.chatCode === code)
+          if (target) {
+            Object.assign(target, {
+              ...info,
+              chatMembers: info.chatMembers || target.chatMembers,
+            })
+          }
+        }
+        pendingRoomInfoMap.clear()
+      }
+
+      // 2) 列表头像缩略图：在 Store 更新后异步预取 blob（不阻塞主流程）
+      const rooms = _roomList.value || []
+      const newAvatars = rooms.map(r => r.avatar).filter(Boolean) as any
+      imageStore.revokeUnusedBlobs(prevAvatars as any, newAvatars as any)
+      imageStore.prefetchThumbs(newAvatars, 6)
     } catch (e) {
       console.error('[ERROR] [RoomStore] Init API Error:', e)
+    } finally {
+      isRoomListLoading.value = false
+      hasRoomListLoaded.value = true
     }
   }
 
@@ -89,6 +144,15 @@ export const useRoomStore = defineStore('room', () => {
    */
   const updateRoomInfo = (newRoomInfo: ChatRoom) => {
     if (!newRoomInfo || !newRoomInfo.chatCode) return
+    const imageStore = useImageStore()
+
+    // 列表尚未加载完成时：只缓存，不插入（避免 refresh 时只出现“当前房间 1 条”）
+    if (!hasRoomListLoaded.value && _roomList.value.length === 0) {
+      pendingRoomInfoMap.set(newRoomInfo.chatCode, newRoomInfo)
+      // 头像仍可提前预取（不影响列表长度）
+      if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => {})
+      return
+    }
     // 业务目的：进入房间后拿到更完整的 ChatRoom 信息（例如成员列表），需要覆盖到列表里
     const target = _roomList.value.find(r => r.chatCode === newRoomInfo.chatCode)
     if (target) {
@@ -99,7 +163,57 @@ export const useRoomStore = defineStore('room', () => {
     } else {
       _roomList.value.push(newRoomInfo)
     }
+
+    // 房间信息更新后：按需预取房间头像与成员头像缩略图（避免刷新/切换时头像加载慢）
+    if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => {})
+    const members = newRoomInfo.chatMembers || []
+    imageStore.prefetchThumbs(members.map(m => m.avatar), 6)
   }
+
+  /**
+   * 获取聊天室成员列表（按 chatCode 懒加载）
+   *
+   * 业务目的：
+   * - refresh 初始化只拉 chatList；成员列表在进入房间/展开右侧栏时再请求
+   * - 避免一次性拉取所有群成员导致网络与图片预取拥塞
+   *
+   * @param chatCode 聊天室对外 ID
+   */
+  const fetchRoomMembers = async (chatCode: string) => {
+    if (!chatCode) return
+    const target = _roomList.value.find(r => r.chatCode === chatCode)
+    if (!target) return
+    if (target.chatMembers && target.chatMembers.length > 0) return
+
+    // 避免重复请求
+    if (memberListLoadingMap.value[chatCode]) return
+    memberListLoadingMap.value = { ...memberListLoadingMap.value, [chatCode]: true }
+    try {
+      const res = await getChatMembersApi(chatCode)
+      const members = res?.data || []
+      target.chatMembers = members
+      target.memberCount = members.length
+      target.onLineMemberCount = members.filter(m => m.online).length
+
+      // 成员头像缩略图预取：异步触发，不阻塞 UI
+      const imageStore = useImageStore()
+      imageStore.prefetchThumbs(members.map(m => m.avatar).filter(Boolean) as any, 6)
+    } catch (e) {
+      console.error('[ERROR] [RoomStore] Fetch members failed:', e)
+    } finally {
+      const { [chatCode]: _, ...rest } = memberListLoadingMap.value
+      memberListLoadingMap.value = rest
+    }
+  }
+
+  /**
+   * 当前房间成员列表是否加载中
+   */
+  const isCurrentRoomMembersLoading = computed(() => {
+    const code = currentRoomCode.value
+    if (!code) return false
+    return Boolean(memberListLoadingMap.value[code])
+  })
 
   /**
    * 更新用户在线状态并重新计算房间在线人数
@@ -144,10 +258,14 @@ export const useRoomStore = defineStore('room', () => {
     roomList,
     currentRoomCode,
     currentRoom,
+    isRoomListLoading,
     getRoomByCode, // 导出此方法
     initRoomList,
     updateRoomInfo,
     updateMemberStatus,
     updateRoomPreview,
+    fetchRoomMembers,
+    isCurrentRoomMembersLoading,
+    resetState,
   }
 })

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static hal.th50743.utils.FileNameFormater.getSafeName;
 
@@ -31,6 +32,7 @@ public class OssMediaServiceImpl implements OssMediaService {
 
     private static final int DEFAULT_THUMB_MAX_W = 400;
     private static final int DEFAULT_THUMB_MAX_H = 400;
+    private static final int DEFAULT_IMAGE_URL_EXPIRY_MINUTES = 30;
 
     private final MinioOSSOperator minioOSSOperator;
 
@@ -99,6 +101,30 @@ public class OssMediaServiceImpl implements OssMediaService {
     public void deleteObject(String objectNameOrUrl) {
         // 删除逻辑由 MinioOSSOperator 统一处理：会同时尝试删除对应缩略图
         minioOSSOperator.delete(objectNameOrUrl);
+    }
+
+    /**
+     * 获取对象访问 URL（按需刷新预签名链接）
+     * <p>
+     * 业务目的：
+     * - 前端预览原图时，只携带 objectName 向后端请求最新 URL
+     * - 避免“预签名过期导致图片打不开”的问题，同时降低消息列表接口返回体积
+     *
+     * @param objectName MinIO 对象名（建议为原图 objectName）
+     * @return 可访问 URL（public 为永久链接，private 为预签名链接）
+     */
+    @Override
+    public String getImageUrl(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "objectName 不能为空");
+        }
+        // 限制前缀：只允许 public/private 目录，避免任意对象名被探测
+        String lower = objectName.toLowerCase();
+        if (!lower.startsWith("public/") && !lower.startsWith("private/")) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "非法的 objectName");
+        }
+        // 统一走 getImageUrls：内部会处理 public/private 分流
+        return minioOSSOperator.getImageUrls(objectName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES, TimeUnit.MINUTES).getUrl();
     }
 
     /**

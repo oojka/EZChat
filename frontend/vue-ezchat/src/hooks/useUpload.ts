@@ -55,7 +55,8 @@ export function useUpload(uploadApiUrl: string) {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
             uploadProgress.value = percent
-            onProgress(progressEvent) // 通知 el-upload 更新进度条
+            // element-plus 的 onProgress 期望的是 UploadProgressEvent，这里将 axios 事件转成最小兼容结构
+            onProgress?.({ percent } as any) // 通知 el-upload 更新进度条
           }
         }
       })

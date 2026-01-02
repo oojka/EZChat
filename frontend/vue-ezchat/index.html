@@ -10,11 +10,77 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
   <title>Loading...</title>
+  <!-- 首屏主题同步：在 Vue 挂载前设置 html.dark，避免加载动画“闪浅色” -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('theme');
+        var isDark = saved ? saved === 'dark'
+          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
   <style>
+      :root {
+          color-scheme: light;
+          /* 与 src/assets/main.css 保持一致的设计 tokens（首屏阶段自包含） */
+          --primary: #409eff;
+          --primary-light: #e0f2fe;
+
+          --text-900: #0f172a;
+          --text-500: #64748b;
+
+          --bg-page: #f8fafc;
+          --bg-card: #ffffff;
+
+          --bg-glass: rgba(255, 255, 255, 0.65);
+          --blur-glass: blur(24px) saturate(180%);
+          --border-glass: rgba(255, 255, 255, 0.5);
+          /* 与 AppSpinner.vue 一致：spinner 轨道色依赖该变量 */
+          --el-border-color-light: #dcdfe6;
+
+          /* Boot 专用：统一引用同一套 tokens */
+          --boot-bg-1: var(--bg-page);
+          --boot-bg-2: var(--bg-card);
+          --boot-glass: var(--bg-glass);
+          --boot-orb-1: var(--primary);
+          --boot-orb-2: #d9ecff;
+          --boot-spinner-track: rgba(64, 158, 255, 0.12);
+          --boot-spinner-head: var(--primary);
+      }
+
+      html.dark {
+          color-scheme: dark;
+          /* 与 src/assets/main.css 的暗黑 tokens 保持一致 */
+          --primary: #3b82f6;
+          --primary-light: #131314;
+
+          --text-900: #f1f3f4;
+          --text-500: #9aa0a6;
+
+          --bg-page: #131314;
+          --bg-card: #1e1f20;
+
+          --bg-glass: rgba(30, 31, 32, 0.75);
+          --blur-glass: blur(24px) saturate(200%);
+          --border-glass: rgba(255, 255, 255, 0.06);
+          /* 与 src/assets/main.css 暗黑一致 */
+          --el-border-color-light: #3c4043;
+
+          --boot-bg-1: var(--bg-page);
+          --boot-bg-2: var(--bg-card);
+          --boot-glass: var(--bg-glass);
+          --boot-orb-1: rgba(59, 130, 246, 0.55);
+          --boot-orb-2: rgba(30, 41, 59, 0.85);
+          --boot-spinner-track: rgba(255, 255, 255, 0.12);
+          --boot-spinner-head: rgba(59, 130, 246, 0.95);
+      }
+
       body {
           margin: 0;
           padding: 0;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          background: linear-gradient(135deg, var(--boot-bg-1) 0%, var(--boot-bg-2) 100%);
           min-height: 100vh;
           overflow: hidden;
           position: relative;
@@ -35,13 +101,13 @@
       }
 
       body.show-bg::before {
-          background: #a0cfff;
+          background: var(--boot-orb-1);
           top: -100px;
           left: -100px;
       }
 
       body.show-bg::after {
-          background: #d9ecff;
+          background: var(--boot-orb-2);
           bottom: -100px;
           right: -100px;
           animation-delay: -10s;
@@ -52,27 +118,50 @@
           50% { transform: translate(40px, 60px); }
       }
 
-      #app:empty {
+      /* 独立的首屏遮罩：不依赖 #app:empty，避免 Vue mount 时瞬间消失导致闪烁 */
+      #boot-loading {
           position: fixed;
           inset: 0;
           z-index: 10;
           display: flex;
+          flex-direction: column;
           justify-content: center;
           align-items: center;
-          background: rgba(255, 255, 255, 0.2);
-          backdrop-filter: blur(25px) saturate(180%);
-          -webkit-backdrop-filter: blur(25px) saturate(180%);
+          gap: 16px;
+          background: var(--boot-glass);
+          backdrop-filter: var(--blur-glass);
+          -webkit-backdrop-filter: var(--blur-glass);
+          opacity: 1;
+          transition: opacity 0.25s ease;
       }
 
-      /* 4. 复刻同款 Spinner */
-      #app:empty::after {
+      /* 4. 复刻同款 Spinner（放在上方） */
+      #boot-loading::before {
           content: "";
-          width: 40px;
-          height: 40px;
-          border: 3px solid rgba(64, 158, 255, 0.1);
-          border-top: 3px solid #409eff;
+          width: 48px;
+          height: 48px;
+          /* 与 AppSpinner.vue 一致：4px 轨道 + top 颜色 */
+          border: 4px solid var(--el-border-color-light);
+          border-top: 4px solid var(--primary);
           border-radius: 50%;
-          animation: spin 0.8s linear infinite;
+          animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+
+      /* 同款 Loading 文案（放在转圈下方，与 AppSpinner.vue 完全一致） */
+      #boot-loading::after {
+          content: "LOADING...";
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-500);
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          text-align: center;
+      }
+
+      /* Vue 接管后淡出 */
+      #boot-loading.is-hidden {
+          opacity: 0;
+          pointer-events: none;
       }
 
       @keyframes spin {
@@ -81,6 +170,7 @@
   </style>
 </head>
 <body>
+<div id="boot-loading"></div>
 <div id="app"></div>
 <script type="module" src="/src/main.ts"></script>
 </body>

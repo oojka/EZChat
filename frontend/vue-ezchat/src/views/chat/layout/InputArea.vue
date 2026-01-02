@@ -133,6 +133,7 @@ onMounted(() => editorRef.value?.focus())
 .tool-btn:hover { color: var(--text-900); background-color: var(--bg-page); }
 .preview-area { flex-shrink: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--el-border-color-light); margin-bottom: 4px; }
 .preview-item { position: relative; width: 56px; height: 56px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--el-border-color-light); flex-shrink: 0; }
+.preview-item img { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--bg-page); }
 .input-wrapper { flex: 1; min-height: 40px; overflow-y: auto; }
 .input-wrapper::-webkit-scrollbar { width: 4px; }
 .input-wrapper::-webkit-scrollbar-thumb { background: var(--text-400); border-radius: var(--radius-round); opacity: 0.2; }

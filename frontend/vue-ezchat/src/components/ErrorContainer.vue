@@ -84,7 +84,21 @@ const ERROR_DATA_MAP: Record<string, Record<string, { title: string; message: st
 const errorContent = computed(() => {
   const lang = props.locale || 'ja'
   const code = props.code.toString()
-  const data = ERROR_DATA_MAP[lang] || ERROR_DATA_MAP['en']
+  // lang 可能来自外部输入，无法保证一定在 ERROR_DATA_MAP key 内，这里做安全兜底
+  const data =
+    (ERROR_DATA_MAP as Record<string, Record<string, { title: string; message: string }>>)[lang]
+    ?? ERROR_DATA_MAP['en']
+  // 极端兜底：理论上 en 一定存在；但为了通过严格 TS（Record<string, ...> 会让索引结果可能为 undefined）
+  if (!data) {
+    return {
+      type: 'warning' as const,
+      icon: InfoFilled,
+      title: 'An Error Occurred',
+      message: 'An unexpected error occurred.',
+      btnBack: 'BACK',
+      btnHome: 'HOME',
+    }
+  }
 
   const configMap: Record<string, { type: 'info' | 'warning' | 'error'; icon: Component }> = {
     '404': { type: 'info', icon: CircleCloseFilled },
@@ -100,8 +114,8 @@ const errorContent = computed(() => {
   return {
     ...config,
     ...content,
-    btnBack: data['btn_back'].title,
-    btnHome: data['btn_home'].title
+    btnBack: data['btn_back']?.title ?? 'BACK',
+    btnHome: data['btn_home']?.title ?? 'HOME'
   }
 })
 

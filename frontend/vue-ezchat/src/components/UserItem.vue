@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {UserFilled} from '@element-plus/icons-vue'
+import SmartAvatar from '@/components/SmartAvatar.vue'
 
 interface Props {
   avatar?: string
@@ -21,7 +22,14 @@ const emit = defineEmits<{ (e: 'click'): void }>()
   <div class="user-item-wrapper" :class="{ 'is-offline': !isOnline, 'is-clickable': clickable }" @click="clickable && emit('click')">
     <div class="avatar-section">
       <el-badge is-dot :offset="[-2, 34]" :type="isOnline ? 'success' : 'info'" :disabled="!showBadge">
-        <el-avatar :size="40" :src="avatar" class="user-avatar"><el-icon><UserFilled /></el-icon></el-avatar>
+        <SmartAvatar
+          class="user-avatar"
+          :size="40"
+          shape="square"
+          :thumb-url="avatar"
+          :url="avatar"
+          :text="nickname"
+        />
       </el-badge>
     </div>
     <div class="info-section">

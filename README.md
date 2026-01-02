@@ -13,6 +13,8 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 - **聊天室 / Rooms**：通过 chatCode 获取房间信息并进入聊天 / join rooms via chatCode
 - **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
 - **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成）/ uploads with conditional thumbnails
+- **图片优化 / Image optimization**：前端预压缩（提升上传体验）+ 后端规范化（兼容/隐私）/ client-side compression + server-side normalization
+- **刷新体验优化 / Refresh UX**：refresh 时优先加载 chatList，成员/消息按需并行加载，减少黑屏与等待 / load chat list first on refresh; members & messages are lazy/parallel to reduce blank screen
 - **国际化 / i18n**：`zh/en/ja/ko/zh-tw` / multi-language UI
 - **暗黑模式 / Dark mode**：Element Plus 暗黑变量 / Element Plus dark theme vars
 
@@ -91,6 +93,7 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `user_id` (PK) | 对应 `users.id` | references `users.id` |
 | `username` (UNIQUE) | 登录用户名 | login username |
 | `password_hash` | 密码哈希（BCrypt） | password hash (BCrypt) |
+| `token` (NULL) | 长期 Token（可选） | long-term token (optional) |
 | `last_login_time` | 最后登录时间 | last login time |
 
 `chats`
@@ -121,6 +124,7 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `id` (PK) | 消息内部ID | internal message id |
 | `sender_id` | 发送者 `users.id` | sender `users.id` |
 | `chat_id` | 房间 `chats.id` | chat `chats.id` |
+| `type` (tinyint) | 消息类型：0文本/1图片/2混合 | message type: 0 text / 1 image / 2 mixed |
 | `text` | 文本内容（可空） | text content (nullable) |
 | `object_names` | MinIO 对象名列表（JSON 字符串） | list of MinIO object names (JSON string) |
 | `create_time` / `update_time` | 创建/更新时间 | created/updated timestamps |
@@ -226,6 +230,70 @@ Vite dev proxy rules:
   - `4001`: Token Expired
   - `4002`: Authentication Failed
 
+### 消息类型 / Message type
+
+后端会为消息计算 `type` 字段（并在 DB 中持久化）：  
+Backend computes and persists `type` for each message:
+
+- `0`: Text（仅文本）/ only text
+- `1`: Image（仅图片）/ only images
+- `2`: Mixed（文本 + 图片）/ text + images
+
+前端渲染规则：  
+Frontend rendering rules:
+
+- `type=0`：只渲染文字气泡 / render text bubble only
+- `type=1`：只渲染图片列表（避免空文本气泡）/ render images only (no empty bubble)
+- `type=2`：文字 + 图片都渲染 / render both
+
+### 刷新初始化与加载策略 / Refresh initialization & loading strategy
+
+refresh 场景下，前端采用“分阶段加载”以减少首屏阻塞：  
+On refresh, frontend uses a staged initialization to reduce first-paint blocking:
+
+- **阶段 1（阻塞）/ Stage 1 (blocking)**：先拉取 chatList + userStatusList，确保 AsideList 可用  
+  Fetch chat list + user status first so the chat list renders ASAP.
+- **阶段 2（并行/按需）/ Stage 2 (parallel/lazy)**：
+  - **成员列表 / Members**：右侧成员栏进入房间后按需调用 `GET /chat/{chatCode}/members`，并异步预取成员头像缩略图  
+    Right-side member list is lazy-loaded per room, then member avatar thumbs are prefetched async.
+  - **消息列表 / Messages**：退出初始化后再拉取 `GET /message?chatCode=...&timeStamp=...`，消息图片缩略图异步预取  
+    Messages load after initialization is released; message image thumbs are prefetched async.
+
+Loading 视觉策略：  
+Loading visuals:
+
+- **全局遮蔽 / Global overlay**：由 `App.vue` 统一控制，全屏 Loading 结束时使用 View Transitions API 做淡出（不影响 root 过渡）  
+  Controlled in `App.vue`; fade-out uses View Transitions API (root transitions disabled to avoid flicker).
+- **局部遮蔽 / Local overlay**：右侧成员栏使用 `AppSpinner` 的 `absolute=true` 模式，磨砂玻璃（Glassmorphism）遮罩叠加在内容上  
+  Right-side member area uses `AppSpinner(absolute=true)` as a glass overlay on top of existing content.
+
+### 上传与图片处理链路 / Upload & image processing pipeline
+
+当前工程采用“双层处理”策略：  
+This project uses a two-stage pipeline:
+
+- **前端预压缩 / Client-side compression**：
+  - 依赖：`browser-image-compression`
+  - 逻辑：上传前压缩并尽量转为 JPEG；压缩失败会自动回退原图上传
+- **后端规范化 / Server-side normalization**：
+  - 自动旋转（EXIF Orientation）
+  - 去元数据/EXIF（通过重编码输出 JPEG）
+  - 统一输出 JPEG（质量约 0.85，最大边 2048）
+  - GIF 动图默认原样保留（避免丢失动效）
+
+原图加载策略：  
+Original image strategy:
+
+- **原图 Blob 按需拉取 / On-demand original blob**：仅在打开预览时拉取原图 Blob；若本地 URL 失效，会调用 `GET /media/url?objectName=...` 获取最新 URL 再重试  
+  Original blobs are fetched only when opening preview; if cached URL fails, frontend requests a fresh URL and retries.
+
+后端上传/删除统一入口（便于未来扩展“文件功能”）：  
+Unified backend entry for uploads/deletes (ready for future file features):
+
+- `hal.th50743.service.OssMediaService`
+- `hal.th50743.service.impl.OssMediaServiceImpl`
+- 删除对象：`OssMediaService.deleteObject(objectNameOrUrl)`（会联动删除缩略图）
+
 ### 主要后端路由 / Main backend routes
 
 > 说明 / Note：以下路径均是**后端真实路径**（不含 `/api` 前缀）。  
@@ -236,11 +304,471 @@ Vite dev proxy rules:
 - `POST /auth/guest`
 - `POST /auth/register/upload`
 - `GET  /init`
+- `GET  /init/chat-list`（轻量初始化：chatList + userStatusList）
 - `GET  /chat/{chatCode}`
+- `GET  /chat/{chatCode}/members`（成员列表懒加载）
 - `GET  /message?chatCode=...&timeStamp=...`
 - `POST /message/upload`
+- `GET  /media/url?objectName=...`（获取最新图片访问 URL）
 - `GET  /user/{uid}`
 - `POST /user`
+
+---
+
+## API 接口文档 / API Reference
+
+### 通用约定 / Common conventions
+
+- **Base URL**：
+  - **开发期 / Dev**：前端通过 Vite proxy 使用 `/api/*`（例如 `/api/init/chat-list`）  
+    Frontend uses `/api/*` via Vite proxy in dev (e.g. `/api/init/chat-list`).
+  - **后端真实路径 / Backend**：文档以下均为**不含 `/api`** 的真实后端路径  
+    All endpoints below are backend real paths (**no `/api` prefix**).
+- **鉴权 / Auth**：
+  - 除 `/auth/**` 外，其他接口都需要请求头 `token: <jwt>`  
+    All endpoints except `/auth/**` require header `token: <jwt>`.
+- **响应格式 / Response**：
+  - REST 接口统一返回 `Result`（`status=1` 成功，`status=0` 失败；成功 `code=200`）  
+    All REST APIs return `Result` (`status=1` success, `status=0` failure; success uses `code=200`).
+
+成功示例 / Success example:
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {}
+}
+```
+
+失败示例 / Failure example:
+
+```json
+{
+  "status": 0,
+  "code": 42001,
+  "message": "Chat room not found",
+  "data": null
+}
+```
+
+---
+
+### 认证 / Auth (`/auth/*`)
+
+#### `POST /auth/login`（正式用户登录 / Formal login）
+
+- **业务功能 / Purpose**：用户名密码登录，返回 JWT token（后续放在 `token` header）  
+  Login with username/password and returns JWT token.
+- **Auth**：无需 token / no token
+- **Request (JSON)**：
+
+```json
+{ "username": "alice", "password": "P@ssw0rd!" }
+```
+
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": { "uid": "20000001", "username": "alice", "token": "eyJhbGciOi..." }
+}
+```
+
+#### `POST /auth/register`（注册并登录 / Register + login）
+
+- **业务功能 / Purpose**：创建正式用户并返回 token（前端一般先上传头像拿到 `avatar.objectName` 再提交注册）  
+  Creates a formal user and returns token (frontend typically uploads avatar first to get `avatar.objectName`).
+- **Auth**：无需 token / no token
+- **Request (JSON)**（字段来自 `FormalUserRegisterReq`）:
+
+```json
+{
+  "username": "alice",
+  "password": "P@ssw0rd!",
+  "confirmPassword": "P@ssw0rd!",
+  "nickname": "Alice",
+  "avatar": {
+    "objectName": "public/avatars/20000001.jpg",
+    "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000001.jpg",
+    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg"
+  }
+}
+```
+
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": { "uid": "20000001", "username": "alice", "token": "eyJhbGciOi..." }
+}
+```
+
+#### `POST /auth/register/upload`（注册头像上传 / Upload avatar for register）
+
+- **业务功能 / Purpose**：上传头像（后端会生成缩略图并返回 Image 信息）  
+  Upload avatar (backend generates thumbnail and returns Image).
+- **Auth**：无需 token / no token
+- **Request**：`multipart/form-data`，字段名 `file`
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "objectName": "public/avatars/20000001.jpg",
+    "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000001.jpg",
+    "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000001_thumb.jpg"
+  }
+}
+```
+
+#### `POST /auth/guest`（访客加入房间 / Guest join）
+
+- **业务功能 / Purpose**：用 chatCode + 昵称加入房间，返回访客 token  
+  Join a room as guest and returns token.
+- **Auth**：无需 token / no token
+- **Request (JSON)**（字段来自 `GuestReq`）：
+
+```json
+{ "chatCode": "20000022", "password": "", "nickname": "Guest-01" }
+```
+
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": { "uid": "90000001", "username": "guest", "token": "eyJhbGciOi..." }
+}
+```
+
+---
+
+### 初始化 / Init (`/init/*`)
+
+#### `GET /init/chat-list`（轻量初始化 / Lite init for chat list）
+
+- **业务功能 / Purpose**：refresh 首屏优先拿到 chatList + userStatusList（不返回每个房间的成员列表）  
+  Fetch chat list + user status for fast refresh (no per-room member list).
+- **Auth**：需要 `token` / requires `token`
+- **Request headers**：
+  - `token: <jwt>`
+- **Response (mock)**（字段来自 `AppInitVO` + `ChatVO`）：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "chatList": [
+      {
+        "chatCode": "20000022",
+        "chatName": "Study Group",
+        "ownerUid": "20000001",
+        "avatar": {
+          "objectName": "public/chats/20000022.jpg",
+          "objectUrl": "http://localhost:9000/ezchat/public/chats/20000022.jpg",
+          "objectThumbUrl": "http://localhost:9000/ezchat/public/chats/20000022_thumb.jpg"
+        },
+        "unreadCount": 3,
+        "onLineMemberCount": 5,
+        "memberCount": 12,
+        "lastActiveAt": "2026-01-02T10:20:30",
+        "lastMessage": { "sender": "20000003", "chatCode": "20000022", "type": 0, "text": "hi", "images": null, "createTime": "2026-01-02T10:20:30" }
+      }
+    ],
+    "userStatusList": [
+      { "uid": "20000003", "online": true, "updateTime": "2026-01-02T10:20:00" }
+    ]
+  }
+}
+```
+
+#### `GET /init`（完整初始化 / Full init）
+
+- **业务功能 / Purpose**：返回更完整的初始化数据（可能包含更多房间聚合字段）  
+  Full init (may include more aggregated room data).
+- **Auth**：需要 `token` / requires `token`
+
+---
+
+### 聊天室 / Chat (`/chat/*`)
+
+#### `GET /chat/{chatCode}`（获取房间详情 / Get room detail）
+
+- **业务功能 / Purpose**：进入房间时获取完整 `ChatVO`（包含成员、未读数、最后消息等）  
+  Fetch full room detail `ChatVO` (members, unread, last message, etc.).
+- **Auth**：需要 `token` / requires `token`
+- **Path**：`chatCode`（对外房间号 / public room code）
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "chatCode": "20000022",
+    "chatName": "Study Group",
+    "memberCount": 12,
+    "onLineMemberCount": 5,
+    "chatMembers": [
+      {
+        "uid": "20000003",
+        "nickname": "Bob",
+        "online": true,
+        "lastSeenAt": "2026-01-02T10:10:00",
+        "avatar": {
+          "objectName": "public/avatars/20000003.jpg",
+          "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000003.jpg",
+          "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg"
+        }
+      }
+    ]
+  }
+}
+```
+
+#### `GET /chat/{chatCode}/members`（成员列表懒加载 / Lazy members）
+
+- **业务功能 / Purpose**：右侧成员栏按需获取成员列表，避免 refresh 阶段全量加载所有房间成员  
+  Lazy-load members for right sidebar to avoid heavy init.
+- **Auth**：需要 `token` / requires `token`
+- **Response (mock)**：`ChatMemberVO[]`
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "uid": "20000003",
+      "nickname": "Bob",
+      "online": true,
+      "lastSeenAt": "2026-01-02T10:10:00",
+      "avatar": {
+        "objectName": "public/avatars/20000003.jpg",
+        "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000003.jpg",
+        "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg"
+      }
+    }
+  ]
+}
+```
+
+#### `POST /chat`（创建房间 / Create room）
+
+- **业务功能 / Purpose**：创建聊天室（当前实现为占位，后续可补齐）  
+  Create chat room (currently stub).
+- **Auth**：需要 `token` / requires `token`
+- **Response**：`Result.success()`（无 data / no data）
+
+---
+
+### 消息 / Message (`/message/*`)
+
+#### `GET /message?chatCode=...&timeStamp=...`（拉取消息列表 / Get messages）
+
+- **业务功能 / Purpose**：
+  - 拉取指定房间消息列表（可分页：传入 `timeStamp` 获取更早历史）  
+    Fetch messages for a chat (pagination via `timeStamp`).
+  - 服务端会同步更新当前用户在该房间的 `last_seen_at`（已读游标）  
+    Server updates membership `last_seen_at`.
+- **Auth**：需要 `token` / requires `token`
+- **Query**：
+  - `chatCode`：必填
+  - `timeStamp`：可选，格式为 `LocalDateTime` 字符串，例如 `2026-01-02T10:00:00`
+- **Response (mock)**：`data` 为对象，包含 `messageList` 与 `chatRoom`
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "messageList": [
+      {
+        "sender": "20000003",
+        "chatCode": "20000022",
+        "type": 2,
+        "text": "hello",
+        "images": [
+          {
+            "objectName": "private/messages/20000022/abc.jpg",
+            "objectUrl": "https://minio.example.com/presigned/original...",
+            "objectThumbUrl": "https://minio.example.com/presigned/thumb..."
+          }
+        ],
+        "createTime": "2026-01-02T10:20:30"
+      }
+    ],
+    "chatRoom": { "chatCode": "20000022", "chatName": "Study Group" }
+  }
+}
+```
+
+#### `POST /message/upload`（上传消息图片 / Upload message image）
+
+- **业务功能 / Purpose**：上传聊天图片，返回 `Image`（含缩略图 URL）  
+  Upload chat image and returns `Image` (with thumbnail URL).
+- **Auth**：需要 `token` / requires `token`
+- **Request**：`multipart/form-data`，字段名 `file`
+- **Response (mock)**：
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "objectName": "private/messages/20000022/abc.jpg",
+    "objectUrl": "https://minio.example.com/presigned/original...",
+    "objectThumbUrl": "https://minio.example.com/presigned/thumb..."
+  }
+}
+```
+
+---
+
+### 媒体 / Media (`/media/*`)
+
+#### `GET /media/url?objectName=...`（刷新图片 URL / Refresh image URL）
+
+- **业务功能 / Purpose**：前端在预览原图时按需获取最新预签名 URL（避免过期）  
+  Fetch a fresh presigned URL for preview to avoid expiration.
+- **Auth**：需要 `token` / requires `token`
+- **Query**：
+  - `objectName`：必填（建议传原图 objectName）
+- **Response (mock)**：`data` 为 URL 字符串
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": "https://minio.example.com/presigned/original?X-Amz-Algorithm=..."
+}
+```
+
+---
+
+### 用户 / User (`/user/*`)
+
+#### `GET /user/{uid}`（获取用户信息 / Get user profile）
+
+- **业务功能 / Purpose**：获取用户公开信息（含权限校验：本人或共同群成员）  
+  Get user profile (authorized: self or same-room member).
+- **Auth**：需要 `token` / requires `token`
+- **Response (mock)**：`UserVO`
+
+```json
+{
+  "status": 1,
+  "code": 200,
+  "message": "success",
+  "data": {
+    "uid": "20000003",
+    "nickname": "Bob",
+    "bio": "Hello",
+    "avatar": {
+      "objectName": "public/avatars/20000003.jpg",
+      "objectUrl": "http://localhost:9000/ezchat/public/avatars/20000003.jpg",
+      "objectThumbUrl": "http://localhost:9000/ezchat/public/avatars/20000003_thumb.jpg"
+    }
+  }
+}
+```
+
+#### `POST /user`（更新用户信息 / Update profile）
+
+- **业务功能 / Purpose**：更新昵称/头像/简介（用户 ID 由后端从 token 注入）  
+  Update nickname/avatar/bio (user id injected from token).
+- **Auth**：需要 `token` / requires `token`
+- **Request (JSON)**（字段来自 `UserReq`）：
+
+```json
+{
+  "uid": "20000003",
+  "nickname": "Bob (Updated)",
+  "bio": "New bio",
+  "avatar": { "objectName": "public/avatars/20000003.jpg" }
+}
+```
+
+- **Response**：当前实现返回 **HTTP 200 + 空响应体**（建议后续改为 `Result.success()` 以保持一致性）  
+  Current implementation returns **HTTP 200 with empty body** (recommended to return `Result.success()` for consistency).
+
+---
+
+### WebSocket 协议 / WebSocket protocol
+
+- **Endpoint**：`/websocket/{token}`（示例：`ws://localhost:8080/websocket/<token>`）
+- **心跳 / Heartbeat**：
+  - Client → `PING{chatCode}`（例如 `PING20000022`）
+  - Server → `PONG`
+- **消息封装 / Envelope**：服务端推送消息统一为：
+
+```json
+{ "isSystemMessage": 0, "type": "MESSAGE", "data": { } }
+```
+
+- **常见 type / Common types**：
+  - `MESSAGE`：聊天消息（data 为 `MessageVO`）
+  - `ACK`：发送确认（data 为 `tempId`）
+  - `USER_STATUS`：在线状态广播（data 为 `UserStatus`）
+
+- **客户端发送消息 / Client → Server (mock)**（字段来自 `MessageReq`）：
+
+```json
+{
+  "sender": "20000003",
+  "chatCode": "20000022",
+  "text": "hello",
+  "images": [
+    { "objectUrl": "https://minio.example.com/presigned/original..." }
+  ],
+  "tempId": "kq3f2v7x"
+}
+```
+
+- **服务端广播消息 / Server → Clients (mock)**：
+
+```json
+{
+  "isSystemMessage": 0,
+  "type": "MESSAGE",
+  "data": {
+    "sender": "20000003",
+    "chatCode": "20000022",
+    "type": 2,
+    "text": "hello",
+    "images": [
+      {
+        "objectName": "private/messages/20000022/abc.jpg",
+        "objectUrl": "https://minio.example.com/presigned/original...",
+        "objectThumbUrl": "https://minio.example.com/presigned/thumb..."
+      }
+    ],
+    "createTime": "2026-01-02T10:20:30"
+  }
+}
+```
+
+---
 
 ### 统一响应与异常处理 / Unified response & exception handling
 

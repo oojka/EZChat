@@ -59,6 +59,7 @@ watch(() => currentRoomCode.value, async (newVal) => {
 watch(() => currentMessageList.value.length, (newLen, oldLen) => {
   if (newLen > oldLen && currentMessageList.value.length > 0) {
     const latestMsg = currentMessageList.value[0]
+    if (!latestMsg) return
     if (latestMsg.sender === loginUserInfo.value?.uid) {
       scrollToBottom()
     } else {

@@ -66,7 +66,7 @@
     "confirm_password_required": "Password is required and must match.",
     "password_mismatch": "Passwords do not match.",
     "avatar_required": "Please select a profile image.",
-    "image_format": "Only JPG or PNG images are supported.",
+    "image_format": "Only image files are supported.",
     "image_size": "Image size must be under 10MB.",
     "room_name_required": "Room name is required.",
     "room_name_length": "Room name cannot exceed 20 characters."
@@ -128,7 +128,7 @@
     "f_easy_desc": "Intuitive design"
   },
   "chat": {
-    "chat_list": "Inbox",
+    "chat_list": "Chats",
     "members": "Members",
     "room_id": "ID",
     "room_info": "Room Settings",
@@ -150,11 +150,12 @@
     "ws_connected": "Online",
     "ws_connecting": "Connecting...",
     "ws_closed": "Offline",
-    "ws_unknown": "Unknown"
+    "ws_unknown": "Unknown",
+    "ws_send_error": "Failed to send. Please try again."
   },
   "create_chat": {
     "title": "Create New Room",
-    "subtitle": "Start a new community",
+    "subtitle": "Start a new room",
     "avatar_label": "Icon",
     "change_avatar": "Edit",
     "avatar_hint": "Recommended: 500x500px+",
@@ -166,11 +167,17 @@
     "capacity_title": "Capacity",
     "capacity_desc": "Unlimited members",
     "room_name": "Room Name",
-    "room_name_placeholder": "e.g. Weekend Gamers",
+    "room_name_placeholder": "e.g. Study Group",
     "password_join": "Access Control",
     "password_info_title": "Joining Method",
     "password_info_desc": "ON: Allow joining via Room ID + Password.\nOFF: Private (Joining restricted to valid Invite Links only).\n*You can adjust this later in Room Settings.",
     "submit": "Create Room",
+    "result": "Result",
+    "success": "Created successfully",
+    "fail": "Creation failed",
+    "success_msg": "Room created successfully.",
+    "fail_msg": "Failed to create room. Please try again.",
+    "enter_now": "Enter now",
     "expiry_title": "Link Expiry",
     "custom_date": "Custom Date",
     "day_n": "{n} Days"

@@ -126,6 +126,27 @@ export const useWebsocketStore = defineStore('websocket', () => {
     }
   }
 
+  /**
+   * 重置 Store 业务数据（不重置 UI 状态）
+   *
+   * 业务场景：App 初始化/账号切换前，主动断开 WS 并清理连接相关数据，防止旧连接残留导致“串房间/串账号”。
+   *
+   * 注意：
+   * - 这里的目标是“断开旧连接”
+   * - 不应重置 wsDisplayState 等纯 UI 展示状态（由 status 的 watch 自然驱动）
+   */
+  const resetState = () => {
+    // 1) 清理延迟状态计时器
+    if (statusTimer) {
+      clearTimeout(statusTimer)
+      statusTimer = null
+    }
+    // 2) 主动关闭底层连接（useWebsocket 会标记为主动关闭，不触发重连）
+    close()
+    // 3) 重置初始化标记
+    isInitialized.value = false
+  }
+
   return {
     status,
     wsDisplayState,
@@ -133,5 +154,6 @@ export const useWebsocketStore = defineStore('websocket', () => {
     initWS,
     sendData, // 导出供 messageStore 使用
     close,
+    resetState,
   }
 })

@@ -90,7 +90,8 @@ export const getPasswordReg = (options: PasswordOptions = {}): RegExp => {
  * @param val 输入值
  */
 export const isValidUsername = (val: unknown): boolean => {
-  return !!val && USERNAME_REG.test(val)
+  if (typeof val !== 'string') return false
+  return USERNAME_REG.test(val)
 }
 
 /**

@@ -2,6 +2,7 @@ package hal.th50743.service;
 
 import hal.th50743.pojo.AppInitVO;
 import hal.th50743.pojo.Chat;
+import hal.th50743.pojo.ChatMemberVO;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.JoinChatReq;
 
@@ -31,6 +32,18 @@ public interface ChatService {
     AppInitVO getChatVOListAndMemberStatusList(Integer userId);
 
     /**
+     * 获取用户的聊天列表及成员在线状态（轻量版）
+     *
+     * 业务目的：
+     * - refresh 初始化优先渲染 chatList（AsideList）
+     * - 不返回 chatMembers，避免初始化阶段数据量过大与头像预取过慢
+     *
+     * @param userId 用户ID
+     * @return 初始化数据视图对象（chatList + userStatusList）
+     */
+    AppInitVO getChatVOListAndMemberStatusListLite(Integer userId);
+
+    /**
      * 加入聊天室
      *
      * @param joinChatReq 加入请求参数
@@ -46,6 +59,18 @@ public interface ChatService {
      * @return 聊天室视图对象
      */
     ChatVO getChat(Integer userId, String chatCode);
+
+    /**
+     * 获取聊天室成员列表（按 chatCode 懒加载）
+     *
+     * 业务目的：
+     * - 右侧成员栏按需拉取成员列表，避免 refresh 初始化阶段全量加载所有群成员
+     *
+     * @param userId   当前用户内部 ID
+     * @param chatCode 聊天室对外 ID
+     * @return 成员列表（VO）
+     */
+    List<ChatMemberVO> getChatMemberVOList(Integer userId, String chatCode);
 
     /**
      * 根据 ChatCode 获取 ChatId

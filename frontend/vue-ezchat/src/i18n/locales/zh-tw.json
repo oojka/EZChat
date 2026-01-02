@@ -66,7 +66,7 @@
     "confirm_password_required": "密碼必填且必須一致。",
     "password_mismatch": "兩次輸入的密碼不一致。",
     "avatar_required": "請選擇頭像圖片。",
-    "image_format": "僅支援 JPG 或 PNG 格式的圖片。",
+    "image_format": "僅支援圖片檔案格式。",
     "image_size": "圖片大小不能超過 10MB。",
     "room_name_required": "請輸入房間名稱。",
     "room_name_length": "房間名稱不能超過 20 個字元。"
@@ -128,7 +128,7 @@
     "f_easy_desc": "直觀設計"
   },
   "chat": {
-    "chat_list": "收件箱",
+    "chat_list": "聊天列表",
     "members": "成員",
     "room_id": "ID",
     "room_info": "房間設定",
@@ -150,11 +150,12 @@
     "ws_connected": "在線",
     "ws_connecting": "連線中...",
     "ws_closed": "離線",
-    "ws_unknown": "未知"
+    "ws_unknown": "未知",
+    "ws_send_error": "傳送失敗，請重試"
   },
   "create_chat": {
     "title": "建立新房間",
-    "subtitle": "開始一個新的社群",
+    "subtitle": "快速建立一個新房間",
     "avatar_label": "圖示",
     "change_avatar": "編輯",
     "avatar_hint": "推薦：500x500px 以上",
@@ -166,11 +167,17 @@
     "capacity_title": "容量",
     "capacity_desc": "無限制成員",
     "room_name": "房間名稱",
-    "room_name_placeholder": "例如：週末遊戲組",
+    "room_name_placeholder": "例如：學習小組",
     "password_join": "訪問控制",
     "password_info_title": "加入方式",
     "password_info_desc": "開啟：允許透過 房間ID + 密碼 加入。\n關閉：私密（僅限透過有效邀請連結加入）。\n*建立後可在房間設定中隨時修改。",
     "submit": "建立房間",
+    "result": "結果",
+    "success": "建立成功",
+    "fail": "建立失敗",
+    "success_msg": "房間建立成功",
+    "fail_msg": "建立失敗，請稍後重試",
+    "enter_now": "立即進入",
     "expiry_title": "連結有效期",
     "custom_date": "自訂日期",
     "day_n": "{n} 天"

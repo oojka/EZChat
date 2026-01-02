@@ -148,10 +148,6 @@ public final class ImageUtils {
             return new NormalizedFile(inputBytes, guessExtension(file.getOriginalFilename()), contentType);
         }
 
-        int w = image.getWidth();
-        int h = image.getHeight();
-        boolean needDownscale = w > maxDimension || h > maxDimension;
-
         // 2) 使用 Thumbnailator 重编码输出 JPEG：达到“旋转修正 + 去元数据 + 统一格式”
         try (ByteArrayInputStream input = new ByteArrayInputStream(inputBytes);
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -164,12 +160,10 @@ public final class ImageUtils {
                     // 质量压缩（在体积与观感之间取平衡）
                     .outputQuality(quality);
 
-            if (needDownscale) {
-                builder.size(maxDimension, maxDimension);
-            } else {
-                // 不放大：保持原尺寸，仅重编码
-                builder.scale(1.0);
-            }
+            // 重要约束（业务要求）：不降低分辨率（不做任何 resize/downscale）
+            // 这里固定 scale(1.0)，仅做重编码（JPEG）、EXIF 方向修正与去元数据。
+            // 说明：maxDimension 参数保留用于兼容旧调用方（未来如需限制大图可再引入开关）。
+            builder.scale(1.0);
 
             builder.toOutputStream(output);
             byte[] outBytes = output.toByteArray();

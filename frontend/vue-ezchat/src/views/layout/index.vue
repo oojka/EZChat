@@ -2,23 +2,21 @@
 import MainHeader from '@/views/layout/layout/MainHeader.vue'
 import MainAside from '@/views/layout/layout/MainAside.vue'
 import {useAppStore} from '@/stores/appStore.ts'
-import {storeToRefs} from 'pinia'
 import {onMounted} from 'vue'
 
 const appStore = useAppStore()
-const { isAppLoading, showLoadingSpinner } = storeToRefs(appStore)
 const { initializeApp } = appStore
 
 onMounted(async () => {
-  // 刷新页面时的初始化：开启全局加载，不显示转圈
-  showLoadingSpinner.value = false
+  // 刷新页面时的初始化：由 App.vue 统一展示全局 Loading 遮罩与 Spinner
   await initializeApp()
 })
 </script>
 
 <template>
   <div class="common-layout">
-    <el-container class="outer-container" v-if="!isAppLoading">
+    <!-- 不要在此处用 v-if 卸载布局：避免刷新初始化期间反复 mount 导致数据/订阅状态异常 -->
+    <el-container class="outer-container">
       <el-header class="header">
         <MainHeader />
       </el-header>
@@ -28,7 +26,8 @@ onMounted(async () => {
         </el-aside>
         <el-main class="main-content">
           <div class="main-container">
-            <RouterView></RouterView>
+            <!-- Chat 视图的骨架/加载表现由 chat/index.vue 自己控制（左侧 MessageSkeleton + 右侧 AppSpinner） -->
+            <RouterView />
           </div>
         </el-main>
       </el-container>

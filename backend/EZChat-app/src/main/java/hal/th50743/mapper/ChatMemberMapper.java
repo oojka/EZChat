@@ -1,6 +1,7 @@
 package hal.th50743.mapper;
 
 import hal.th50743.pojo.ChatMember;
+import hal.th50743.pojo.ChatMemberLite;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.time.LocalDateTime;
@@ -38,6 +39,18 @@ public interface ChatMemberMapper {
      * @return 成员详情列表
      */
     List<ChatMember> getChatMemberListByUserId(Integer userId);
+
+    /**
+     * 获取“轻量成员列表”（用于初始化聚合在线状态/在线人数）
+     *
+     * 业务目的：
+     * - refresh 初始化阶段只需要 userId/uid/lastSeenAt 与 chatCode
+     * - 避免携带 nickname/avatar 等字段导致数据量过大
+     *
+     * @param userId 当前用户内部 ID（users.id）
+     * @return 轻量成员列表
+     */
+    List<ChatMemberLite> getChatMemberLiteListByUserId(Integer userId);
 
     /**
      * 获取指定聊天室的所有成员详情列表

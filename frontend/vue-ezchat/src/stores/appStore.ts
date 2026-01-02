@@ -3,6 +3,7 @@ import {nextTick, ref, watch} from 'vue'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useRoomStore} from '@/stores/roomStore.ts'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
+import {useMessageStore} from '@/stores/messageStore.ts'
 import router from '@/router'
 import i18n from '@/i18n'
 
@@ -32,6 +33,10 @@ export const useAppStore = defineStore('app', () => {
   const isAppLoading = ref(false)
   const showLoadingSpinner = ref(true)
   const loadingText = ref('初期化...')
+  // App 初始化中的保护标记：用于避免路由守卫过早关闭 Loading
+  const isAppInitializing = ref(false)
+  // refresh 全屏 Loading 的“最短展示时长”（毫秒）：用于缓解骨架屏切换的突兀感
+  const MIN_REFRESH_LOADING_MS = 600
 
   // =========================================
   // 1. 自动检测暗黑模式
@@ -163,12 +168,25 @@ export const useAppStore = defineStore('app', () => {
     const userStore = useUserStore()
     const roomStore = useRoomStore()
     const websocketStore = useWebsocketStore()
+    const messageStore = useMessageStore()
+    const refreshLoadingStartAt = type === 'refresh' ? Date.now() : 0
 
     try {
-      // refresh 才展示全局加载；login 场景通常已有页面过渡
-      if (type === 'refresh') isAppLoading.value = true
-      // 1) 恢复登录用户信息（会读取 localStorage）
-      await userStore.initLoginUserInfo()
+      // refresh：尽早标记“初始化中”，避免 messageStore/router 等并发逻辑提前触发拉取
+      if (type === 'refresh') {
+        isAppInitializing.value = true
+        isAppLoading.value = true
+      }
+
+      // 0) App 初始化前先清空所有 Store 内存态，避免历史会话残留
+      websocketStore.resetState()
+      roomStore.resetState()
+      messageStore.resetState()
+      userStore.resetState()
+
+      // 1) refresh 场景“关键链路”：仅同步恢复 token，让页面尽快可用
+      // 用户详情/房间列表等慢请求放到后台，避免黑屏转圈时间被拉长
+      const hasToken = token || userStore.restoreLoginUserFromStorage()
       const finalToken = token || userStore.loginUser.token
 
       if (!finalToken) {
@@ -177,21 +195,28 @@ export const useAppStore = defineStore('app', () => {
         return
       }
 
-      // 2) 并行任务：拉取房间列表 + 建立 WS（WS 状态已 OPEN 时不重复建连）
-      const tasks = []
-      tasks.push(roomStore.initRoomList())
+      // 2) 启动 WS（不等待握手完成）
       if (websocketStore.status !== 'OPEN') websocketStore.initWS(finalToken)
-      await Promise.all(tasks)
+
+      // 3) refresh 优先加载 chatList：先把 AsideList 的 roomList 拉齐，再撤掉全屏遮蔽
+      // 用户详情不影响 chatList，可后台加载
+      userStore.fetchLoginUserInfo().then(() => {})
+      await roomStore.initRoomList()
 
     } catch (error) {
       console.error('[ERROR] [AppStore] Initialization failed:', error)
     } finally {
-      // 3) 小延迟收起 Loading：避免极短请求导致 UI 闪烁
-      setTimeout(() => {
-        isAppLoading.value = false
-        showLoadingSpinner.value = true
-        loadingText.value = 'Initializing...'
-      }, 200)
+      // refresh：chatList 加载完成后再撤掉遮蔽，并开始渲染 chatView 区域
+      if (type === 'refresh') {
+        // 1) 保证最短展示时长（缓解骨架屏切换突兀）
+        const elapsed = Date.now() - refreshLoadingStartAt
+        const remain = Math.max(0, MIN_REFRESH_LOADING_MS - elapsed)
+        setTimeout(() => {
+          isAppLoading.value = false
+          // 2) 遮蔽撤掉后再解除“初始化中”，允许 chatView/消息开始加载
+          isAppInitializing.value = false
+        }, remain)
+      }
     }
   }
 
@@ -199,6 +224,7 @@ export const useAppStore = defineStore('app', () => {
     isAppLoading,
     showLoadingSpinner,
     loadingText,
+    isAppInitializing,
     isDark,
     toggleTheme,
     changeLanguage,

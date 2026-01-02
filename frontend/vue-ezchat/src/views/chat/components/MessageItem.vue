@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import {computed, ref, watchEffect} from 'vue'
 import {Loading, Picture as IconPicture, WarningFilled} from '@element-plus/icons-vue'
+import { ElImageViewer } from 'element-plus'
+import SmartAvatar from '@/components/SmartAvatar.vue'
 import type {ChatRoom, Message} from '@/type'
 import {useUserStore} from '@/stores/userStore.ts'
+import {useImageStore} from '@/stores/imageStore'
 import {storeToRefs} from 'pinia'
 
 const props = defineProps<{
@@ -12,6 +15,7 @@ const props = defineProps<{
 
 const userStore = useUserStore()
 const { loginUserInfo } = storeToRefs(userStore)
+const imageStore = useImageStore()
 
 const isMe = computed(() => props.msg.sender === loginUserInfo.value?.uid)
 
@@ -20,31 +24,16 @@ const senderInfo = computed(() => {
   return props.currentChat.chatMembers.find((m) => m.uid === props.msg.sender)
 })
 
-// Image fallback strategy (Thumbnail -> Original -> Text)
-const currentAvatarUrl = ref<string>('')
-
-watchEffect(() => {
-  const thumb = senderInfo.value?.avatar?.objectThumbUrl || ''
-  const original = senderInfo.value?.avatar?.objectUrl || ''
-  currentAvatarUrl.value = thumb || original || ''
-})
-
-/**
- * el-avatar error handler:
- * - If thumbnail fails, switch to original and return false (retry load, don't show text yet)
- * - If original fails (or doesn't exist), return true to trigger text fallback
- */
-const handleAvatarError = () => {
-  const thumb = senderInfo.value?.avatar?.objectThumbUrl || ''
-  const original = senderInfo.value?.avatar?.objectUrl || ''
-
-  if (currentAvatarUrl.value && currentAvatarUrl.value === thumb && original) {
-    currentAvatarUrl.value = original
-    return false
-  }
-
-  return true
-}
+const avatarThumbUrl = computed(() =>
+  senderInfo.value?.avatar?.blobThumbUrl
+  || senderInfo.value?.avatar?.objectThumbUrl
+  || ''
+)
+const avatarUrl = computed(() =>
+  senderInfo.value?.avatar?.blobUrl
+  || senderInfo.value?.avatar?.objectUrl
+  || ''
+)
 
 // 严格的 Emoji 正则表达式：只匹配真正的 Emoji，排除 CJK 字符、假名和标点符号
 // 匹配范围：
@@ -66,28 +55,43 @@ const renderedText = computed(() => {
     .replace(/'/g, '&#039;')
   return escaped.replace(emojiRegex, '<span class="inline-emoji">$1</span>')
 })
+
+// 大图预览（原图 blob 按需拉取）
+const viewerVisible = ref(false)
+const viewerUrls = ref<string[]>([])
+const viewerIndex = ref(0)
+
+const openViewer = async (idx: number) => {
+  const images = props.msg.images || []
+  if (images.length === 0) return
+  viewerIndex.value = idx
+  // 1) 按需拉取原图 blob（并刷新预签名 URL）
+  const urls = await Promise.all(images.map((img) => imageStore.ensureOriginalBlobUrl(img)))
+  // 2) 兜底：确保 url-list 中没有空值
+  viewerUrls.value = urls
+    .map((u, i) => u || images[i]?.objectUrl || images[i]?.objectThumbUrl)
+    .filter(Boolean) as string[]
+  viewerVisible.value = true
+}
 </script>
 
 <template>
   <li class="message-row" :class="{ 'is-me': isMe }">
-    <el-avatar
-      :key="currentAvatarUrl"
+    <SmartAvatar
+      class="user-avatar"
       :size="38"
       shape="square"
-      class="user-avatar"
-      :src="currentAvatarUrl"
-      @error="handleAvatarError"
-    >
-      <template #default v-if="!currentAvatarUrl">
-        {{ senderInfo?.nickname?.charAt(0) || '?' }}
-      </template>
-    </el-avatar>
+      :thumb-url="avatarThumbUrl"
+      :url="avatarUrl"
+      :text="senderInfo?.nickname || '?'"
+    />
 
     <div class="content-wrapper">
       <div class="nickname" v-if="!isMe">{{ senderInfo?.nickname || 'Unknown' }}</div>
 
       <div class="bubble-wrapper">
-        <div v-if="isMe" class="status-indicator">
+        <!-- 自己消息的发送状态：仅在 sending/error 时渲染，避免空占位导致“图片与头像间距异常” -->
+        <div v-if="isMe && (msg.status === 'sending' || msg.status === 'error')" class="status-indicator">
           <el-icon v-if="msg.status === 'sending'" class="is-loading status-icon"><Loading /></el-icon>
           <el-icon v-if="msg.status === 'error'" class="status-icon error"><WarningFilled /></el-icon>
         </div>
@@ -108,12 +112,10 @@ const renderedText = computed(() => {
               v-for="(img, idx) in msg.images"
               :key="idx"
               :src="img.blobThumbUrl || img.blobUrl || img.objectThumbUrl"
-              :preview-src-list="msg.images.map((i) => i.blobUrl || i.objectUrl)"
-              :initial-index="idx"
               class="img-item"
-              fit="cover"
+              fit="contain"
               loading="lazy"
-              preview-teleported
+              @click="openViewer(idx)"
             >
               <template #placeholder><div class="img-placeholder"><el-icon class="is-loading"><Loading /></el-icon></div></template>
               <template #error><div class="img-error"><el-icon><IconPicture /></el-icon></div></template>
@@ -125,6 +127,14 @@ const renderedText = computed(() => {
       <div class="message-timeStamp" :class="{ 'is-me': isMe }">{{ msg.createTime?.replace('T', ' ').slice(0, 16) }}</div>
     </div>
   </li>
+
+  <!-- 自定义大图预览：等原图准备好后再打开，避免预签名过期/重复下载 -->
+  <el-image-viewer
+    v-if="viewerVisible"
+    :url-list="viewerUrls"
+    :initial-index="viewerIndex"
+    @close="viewerVisible = false"
+  />
 </template>
 
 <style scoped>
@@ -138,8 +148,9 @@ html.dark .user-avatar { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); border-color
 .message-row.is-me .content-wrapper { align-items: flex-end; }
 .nickname { font-size: 11px; color: var(--text-500); margin-bottom: 2px; font-weight: 600; }
 
-.bubble-wrapper { display: flex; align-items: center; gap: 8px; width: 100%; }
-.message-row.is-me .bubble-wrapper { flex-direction: row; }
+.bubble-wrapper { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+/* 自己消息：气泡与图片靠右贴近头像；状态图标在最右侧（更贴近头像） */
+.message-row.is-me .bubble-wrapper { flex-direction: row-reverse; justify-content: flex-start; }
 
 .message-stack { display: flex; flex-direction: column; gap: 3px; max-width: 100%; }
 .message-row.is-me .message-stack { align-items: flex-end; }
@@ -214,14 +225,54 @@ html.dark .message-row.is-me .message-text-bubble {
 }
 :deep(.inline-emoji) { font-size: 1.4em; vertical-align: -0.15em; line-height: 1; display: inline-block; margin: 0 1px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
 
-.message-img-container { display: block; }
-.message-img-container.multi-imgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px; width: 320px; }
+/* 图片消息：容器负责宽度约束（<= 80%），子项填满容器，避免百分比嵌套导致异常占位 */
+.message-img-container {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 80%;
+  align-items: flex-start;
+}
+
+/* 自己消息：图片容器靠右（贴近头像），避免出现“头像与图片之间多余空隙” */
+.message-row.is-me .message-img-container {
+  align-items: flex-end;
+}
+
+.message-img-container.multi-imgs {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
 
 .img-item {
-  max-width: 300px; width: 100%; aspect-ratio: 1 / 1; border-radius: var(--radius-base); cursor: pointer; display: block;
-  background-color: var(--bg-page); transition: all 0.3s ease;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-base);
+  cursor: pointer;
+  display: block;
+  background-color: var(--bg-page);
+  transition: all 0.3s ease;
   border: 1px solid var(--el-border-color-light);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.message-img-container.multi-imgs .img-item {
+  width: calc(50% - 3px);
+  max-width: calc(50% - 3px);
+}
+
+/* 覆盖 Element Plus 默认 inner：让高度随图片比例自适应 */
+::deep(.img-item .el-image__inner) {
+  width: 100%;
+  height: auto !important;
+  display: block;
+}
+
+::deep(.img-item .el-image__wrapper) {
+  width: 100%;
+  height: auto !important;
 }
 
 html.dark .img-item {
@@ -232,9 +283,14 @@ html.dark .img-item {
 html.dark .img-item:hover { filter: brightness(1) contrast(1); transform: scale(1.01); }
 
 .img-placeholder, .img-error {
-  width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
+  width: 100%;
+  min-height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background-color: var(--el-fill-color-blank);
-  color: var(--text-400); font-size: 20px;
+  color: var(--text-400);
+  font-size: 20px;
 }
 
 .status-indicator { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; }

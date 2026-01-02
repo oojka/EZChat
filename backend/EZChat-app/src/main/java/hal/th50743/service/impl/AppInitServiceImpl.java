@@ -30,4 +30,19 @@ public class AppInitServiceImpl implements AppInitService {
         Integer userId = CurrentHolder.getCurrentId();
         return chatService.getChatVOListAndMemberStatusList(userId);
     }
+
+    /**
+     * 获取初始化状态（轻量版）
+     * <p>
+     * 业务目的：
+     * - refresh 时优先让 AsideList 可用
+     * - 不返回每个房间的 chatMembers，避免初始化阶段数据量过大
+     *
+     * @return AppInitVO 初始化数据视图对象
+     */
+    @Override
+    public AppInitVO getInitChatListState() {
+        Integer userId = CurrentHolder.getCurrentId();
+        return chatService.getChatVOListAndMemberStatusListLite(userId);
+    }
 }

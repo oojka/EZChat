@@ -160,12 +160,12 @@ BEGIN
     DECLARE img_5 VARCHAR(255) DEFAULT 'private/ezchat/256d293d-ffbc-4342-b48a-51b5a9590740/0207phn003.jpg';
     DECLARE img_6 VARCHAR(255) DEFAULT 'private/ezchat/36ebf97c-ebe9-465d-a458-365d11a839df/unnamed.jpg';
     DECLARE img_7 VARCHAR(255) DEFAULT 'private/ezchat/52b93fa5-e6d8-4edd-8fcc-78d9b5f3c60e/1.jpg';
-    DECLARE img_8 VARCHAR(255) DEFAULT 'private/ezchat/53ea71e4-08c6-40a1-b4c7-f0f6dee8dc7f/file.png';
+    DECLARE img_8 VARCHAR(255) DEFAULT 'private/ezchat/27022f6a-b28c-4068-b643-3bbbafbe2266/DE294B50DF84BFCA1F72E10FC8601576.jpg';
     DECLARE img_9 VARCHAR(255) DEFAULT 'private/ezchat/54bef7cc-b3ea-457b-8c92-82f0a9047ba5/unnamed.jpg';
     DECLARE img_10 VARCHAR(255) DEFAULT 'private/ezchat/58deebf7-bdcc-4086-9895-68fa25f3cf3d/1.jpg';
     DECLARE img_11 VARCHAR(255) DEFAULT 'private/ezchat/60da2c4e-65f6-403c-8558-571350e5a76a/unnamed.jpg';
     DECLARE img_12 VARCHAR(255) DEFAULT 'private/ezchat/6668942e-8189-4076-988c-1e05a4a10dce/1.jpg';
-    DECLARE img_13 VARCHAR(255) DEFAULT 'private/ezchat/69445c53-57c8-4ea4-9949-3c31aecbec64/android-chrome-512x512.png';
+    DECLARE img_13 VARCHAR(255) DEFAULT 'private/ezchat/8c456600-1d47-4557-8c17-321ee28ccddd/oUnANr7qQCxE1AF9mAMIPRCAAuALg6fCakWDEf_tplv-dy-aweme-images_q75.jpg';
 
     -- 性能优化设置
     SET FOREIGN_KEY_CHECKS = 0;

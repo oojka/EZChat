@@ -3,6 +3,7 @@ import type {Image} from '@/type'
 import {ElMessage, type FormInstance, type FormRules, type UploadProps, type FormItemRule} from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { compressImage } from '@/utils/imageCompressor'
+import { isAllowedImageFile } from '@/utils/fileTypes'
 
 export const useCreateChat = () => {
   const { t } = useI18n()
@@ -89,7 +90,8 @@ export const useCreateChat = () => {
 
   // 1. 头像上传逻辑
   const beforeAvatarUpload: UploadProps['beforeUpload'] = async (rawFile) => {
-    const isImage = rawFile.type === 'image/jpeg' || rawFile.type === 'image/png'
+    // 放宽图片类型限制：允许常见 image/*（并用扩展名兜底）
+    const isImage = isAllowedImageFile(rawFile as File)
     const isLt2M = rawFile.size / 1024 / 1024 < 2
 
     if (!isImage) {

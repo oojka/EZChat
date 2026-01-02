@@ -66,7 +66,7 @@
     "confirm_password_required": "密码必填且必须一致。",
     "password_mismatch": "两次输入的密码不一致。",
     "avatar_required": "请选择头像图片。",
-    "image_format": "仅支持 JPG 或 PNG 格式的图片。",
+    "image_format": "仅支持图片文件格式。",
     "image_size": "图片大小不能超过 10MB。",
     "room_name_required": "请输入房间名称。",
     "room_name_length": "房间名称不能超过 20 个字符。"
@@ -128,7 +128,7 @@
     "f_easy_desc": "直观设计"
   },
   "chat": {
-    "chat_list": "收件箱",
+    "chat_list": "聊天列表",
     "members": "成员",
     "room_id": "ID",
     "room_info": "房间设置",
@@ -150,11 +150,12 @@
     "ws_connected": "在线",
     "ws_connecting": "连接中...",
     "ws_closed": "离线",
-    "ws_unknown": "未知"
+    "ws_unknown": "未知",
+    "ws_send_error": "发送失败，请重试"
   },
   "create_chat": {
     "title": "创建新房间",
-    "subtitle": "开始一个新的社区",
+    "subtitle": "快速创建一个新房间",
     "avatar_label": "图标",
     "change_avatar": "编辑",
     "avatar_hint": "推荐：500x500px 以上",
@@ -166,11 +167,17 @@
     "capacity_title": "容量",
     "capacity_desc": "无限制成员",
     "room_name": "房间名称",
-    "room_name_placeholder": "例如：周末游戏组",
+    "room_name_placeholder": "例如：学习小组",
     "password_join": "访问控制",
     "password_info_title": "加入方式",
     "password_info_desc": "开启：允许通过 房间ID + 密码 加入。\n关闭：私密（仅限通过有效邀请链接加入）。\n*创建后可在房间设置中随时修改。",
     "submit": "创建房间",
+    "result": "结果",
+    "success": "创建成功",
+    "fail": "创建失败",
+    "success_msg": "房间创建成功",
+    "fail_msg": "创建失败，请稍后重试",
+    "enter_now": "立即进入",
     "expiry_title": "链接有效期",
     "custom_date": "自定义日期",
     "day_n": "{n} 天"
