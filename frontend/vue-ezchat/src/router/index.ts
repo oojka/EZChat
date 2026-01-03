@@ -2,6 +2,7 @@ import {createRouter, createWebHistory} from 'vue-router'
 import IndexView from '@/views/index/index.vue'
 import LayoutView from '@/views/layout/index.vue'
 import ChatView from '@/views/chat/index.vue'
+import JoinView from '@/views/Join/index.vue'
 import WelcomeView from '@/views/welcome/index.vue'
 import ErrorView from '@/views/error/index.vue'
 import {useAppStore} from '@/stores/appStore'
@@ -35,6 +36,12 @@ const router = createRouter({
           component: ChatView,
           meta: { title: 'Chat Room　|　EZ Chat' },
         },
+        {
+          path: '/guest/:chatCode([0-9]{8})',
+          name: 'GuestChatRoom',
+          component: ChatView,
+          meta: { title: 'Chat Room - Guest Access　|　EZ Chat' },
+        },
       ],
     },
     {
@@ -43,9 +50,14 @@ const router = createRouter({
       meta: { title: 'EZ Chat - Home' },
     },
     {
+      path: '/Join/:chatCode([0-9]{8})',
+      component: JoinView,
+      meta: { title: 'Join ChatRoom　|　EZ Chat' },
+    },
+    {
       path: '/error',
       component: ErrorView,
-      meta: { title: '系统提示　|　EZ Chat' },
+      meta: { title: 'Error Page　|　EZ Chat' },
     },
     {
       path: '/:pathMatch(.*)*',

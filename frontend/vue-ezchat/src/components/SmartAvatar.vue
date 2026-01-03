@@ -64,6 +64,7 @@ const handleError = () => {
 const wrapperStyle = computed(() => ({
   width: `${props.size}px`,
   height: `${props.size}px`,
+  '--size': `${props.size}px`,
 }))
 
 const shapeClass = computed(() => (props.shape === 'circle' ? 'is-circle' : 'is-square'))
@@ -106,7 +107,10 @@ const firstChar = computed(() => (props.text || '?').trim().charAt(0) || '?')
   color: var(--text-500);
 }
 
-.smart-avatar.is-square { border-radius: var(--radius-base); }
+.smart-avatar.is-square { 
+  --avatar-size: var(--size);
+  border-radius: calc(var(--avatar-size) * var(--avatar-border-radius-ratio));
+}
 .smart-avatar.is-circle { border-radius: 50%; }
 
 .avatar-img {

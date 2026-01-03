@@ -13,6 +13,7 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 - **聊天室 / Rooms**：创建房间（可使用密码加入/邀请链接/一次性链接）、通过 chatCode 获取房间信息并进入聊天 / create rooms (join with password/invite links/one-time links), join rooms via chatCode
 - **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
 - **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成），统一大小限制 10MB / uploads with conditional thumbnails, unified 10MB size limit
+- **默认头像生成 / Default avatar generation**：使用 DiceBear API 自动生成默认头像（用户使用 bottts-neutral，房间使用 identicon），未上传头像时自动使用 / auto-generates default avatars via DiceBear API (bottts-neutral for users, identicon for rooms) when no avatar uploaded
 - **图片去重 / Image deduplication**：双哈希策略（前端预计算 + 后端规范化哈希）防止重复上传，节省存储空间 / dual-hash strategy (frontend pre-calculation + backend normalized hash) prevents duplicate uploads
 - **图片优化 / Image optimization**：前端预压缩（提升上传体验）+ 后端规范化（兼容/隐私）/ client-side compression + server-side normalization
 - **刷新体验优化 / Refresh UX**：refresh 时优先加载 chatList，成员/消息按需并行加载，减少黑屏与等待 / load chat list first on refresh; members & messages are lazy/parallel to reduce blank screen
@@ -303,9 +304,9 @@ This project uses a two-stage pipeline:
 - **后端规范化 / Server-side normalization**：
   - GIF 文件：**完全跳过规范化处理**，直接上传原始文件（避免丢失动效）
   - 其他图片：
-    - 自动旋转（EXIF Orientation）
-    - 去元数据/EXIF（通过重编码输出 JPEG）
-    - 统一输出 JPEG（质量约 0.85，最大边 2048）
+  - 自动旋转（EXIF Orientation）
+  - 去元数据/EXIF（通过重编码输出 JPEG）
+  - 统一输出 JPEG（质量约 0.85，最大边 2048）
 
 ### 图片去重机制 / Image deduplication mechanism
 
@@ -333,6 +334,20 @@ Unified backend entry for uploads/deletes (ready for future file features):
 - `hal.th50743.service.OssMediaService`
 - `hal.th50743.service.impl.OssMediaServiceImpl`
 - 删除对象：`OssMediaService.deleteObject(objectNameOrUrl)`（会联动删除缩略图）
+
+### 默认头像与样式统一 / Default Avatar & Style Unification
+
+**默认头像生成**：
+- 使用 DiceBear API 自动生成默认头像，支持两种类型：
+  - **用户头像**：`bottts-neutral` 风格（机器人风格，适合用户）
+  - **房间头像**：`identicon` 风格（几何图形，适合房间）
+- 组件加载时自动生成默认头像 URL 用于展示
+- 表单提交时，如果未上传头像，自动上传默认头像到服务器
+
+**头像样式统一**：
+- 所有头像使用统一的圆角比例（30%），通过全局 CSS 变量 `--avatar-border-radius-ratio` 统一管理
+- 头像上传器（注册、创建房间、访客加入）统一为方形圆角样式
+- 头像展示组件（SmartAvatar）使用按比例计算的圆角，确保视觉一致性
 
 ### 对象关联设计 / Object association design
 
@@ -1159,6 +1174,25 @@ EZChat/
 2. 后端上传时：先查 `raw_object_hash`，如果不存在再查 `normalized_object_hash`（兼容性）
 3. 最终去重：使用 `normalized_object_hash` 确保内容相同但格式不同的文件被识别为重复
 
+#### 默认头像生成机制 / Default Avatar Generation
+
+**头像类型**：
+- **用户头像（'user'）**：使用 DiceBear `bottts-neutral` 风格
+  - API: `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${seed}`
+  - 用于：用户注册、用户资料、访客模式
+- **房间头像（'room'）**：使用 DiceBear `identicon` 风格
+  - API: `https://api.dicebear.com/9.x/identicon/svg?seed=${seed}`
+  - 用于：聊天室创建、房间头像
+
+**生成时机**：
+- **展示阶段**：组件加载时（`onMounted`）生成默认头像 URL，仅用于展示，不上传
+- **上传阶段**：表单提交时，如果用户未上传头像，自动上传默认头像到服务器
+
+**实现位置**：
+- `imageStore.generateDefaultAvatarUrl(type, seed?)`：生成默认头像 URL
+- `imageStore.uploadDefaultAvatarIfNeeded(avatar, type?)`：按需上传默认头像
+- 所有头像上传器（注册、创建房间、访客加入）都支持默认头像显示和自动上传
+
 #### 对象生命周期管理 / Object Lifecycle Management
 
 **状态流转**：
@@ -1166,8 +1200,8 @@ EZChat/
 - **ACTIVE（status=1）**：已激活，关联到用户/聊天室/消息
 
 **激活时机**：
-- **用户头像**：注册/更新用户信息时激活
-- **聊天室封面**：创建聊天室时激活
+- **用户头像**：注册/更新用户信息时激活（如果未上传头像，会自动上传默认头像后激活）
+- **聊天室封面**：创建聊天室时激活（如果未上传头像，会自动上传默认头像后激活）
 - **消息图片**：消息保存成功后批量激活（`fileService.activateFilesBatch()`）
 
 **垃圾回收（GC）**：

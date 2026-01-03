@@ -35,7 +35,7 @@
     "password": "密碼",
     "password_hint": "至少 8 位字元",
     "nickname": "暱稱",
-    "nickname_placeholder": "聊天中顯示的名字",
+    "nickname_placeholder": "請輸入暱稱",
     "confirm_password": "確認密碼",
     "confirm_password_placeholder": "請再次輸入密碼",
     "welcome_back": "歡迎回來！",
@@ -104,11 +104,11 @@
   "guest": {
     "title": "開始聊天",
     "feature_id": "透過 房間ID / 邀請連結加入",
-    "feature_no_reg": "無需帳號（訪客訪問）",
-    "join_btn": "查找房間",
+    "feature_no_reg": "無需註冊 以訪客身份加入",
+    "join_btn": "立即加入",
     "join_title": "加入房間",
     "input_id": "房間ID",
-    "input_pw": "密碼（如需要）",
+    "input_pw": "密碼",
     "input_url": "貼上邀請連結",
     "join_submit": "加入"
   },

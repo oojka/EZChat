@@ -35,7 +35,7 @@
     "password": "Password",
     "password_hint": "Min. 8 characters",
     "nickname": "Display Name",
-    "nickname_placeholder": "Name shown to others",
+    "nickname_placeholder": "Please enter nickname",
     "confirm_password": "Confirm Password",
     "confirm_password_placeholder": "Re-enter password",
     "welcome_back": "Welcome back!",
@@ -104,11 +104,11 @@
   "guest": {
     "title": "Start Chatting",
     "feature_id": "Join via Room ID / Invite Link",
-    "feature_no_reg": "No Account Required (Guest Access)",
-    "join_btn": "Find a Room",
+    "feature_no_reg": "No Registration Required, Join as Guest",
+    "join_btn": "Join Now",
     "join_title": "Join Room",
     "input_id": "Room ID",
-    "input_pw": "Password (if required)",
+    "input_pw": "Password",
     "input_url": "Paste Invite URL",
     "join_submit": "Join"
   },

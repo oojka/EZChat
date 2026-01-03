@@ -275,7 +275,7 @@ const handleImageError = async (img: Image, idx: number) => {
 .message-row { display: flex; align-items: flex-start; gap: 12px; width: 100%; }
 .message-row.is-me { flex-direction: row-reverse; }
 
-.user-avatar { flex-shrink: 0; border-radius: var(--radius-base); border: 1px solid var(--el-border-color-light); transition: all 0.3s ease; }
+.user-avatar { flex-shrink: 0; border: 1px solid var(--el-border-color-light); transition: all 0.3s ease; }
 html.dark .user-avatar { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.1); }
 
 .content-wrapper { display: flex; flex-direction: column; gap: 4px; max-width: 75%; align-items: flex-start; }

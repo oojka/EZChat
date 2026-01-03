@@ -124,7 +124,6 @@ html.dark .chat-item:hover {
 
 .avatar-wrapper { margin-right: 12px; flex-shrink: 0; }
 .avatar {
-  border-radius: var(--radius-base);
   border: 1px solid var(--el-border-color-light);
   transition: transform 0.3s ease;
 }

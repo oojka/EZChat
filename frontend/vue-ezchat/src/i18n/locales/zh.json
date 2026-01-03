@@ -35,7 +35,7 @@
     "password": "密码",
     "password_hint": "至少 8 位字符",
     "nickname": "昵称",
-    "nickname_placeholder": "聊天中显示的名字",
+    "nickname_placeholder": "请输入昵称",
     "confirm_password": "确认密码",
     "confirm_password_placeholder": "请再次输入密码",
     "welcome_back": "欢迎回来！",
@@ -104,11 +104,11 @@
   "guest": {
     "title": "开始聊天",
     "feature_id": "通过 房间ID / 邀请链接加入",
-    "feature_no_reg": "无需账号（游客访问）",
-    "join_btn": "查找房间",
+    "feature_no_reg": "无需注册 以访客身份加入",
+    "join_btn": "立即加入",
     "join_title": "加入房间",
     "input_id": "房间ID",
-    "input_pw": "密码（如需要）",
+    "input_pw": "密码",
     "input_url": "粘贴邀请链接",
     "join_submit": "加入"
   },

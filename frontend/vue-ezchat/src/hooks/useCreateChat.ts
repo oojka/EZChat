@@ -11,12 +11,14 @@ import { createChatApi, getChatRoomApi } from '@/api/Chat'
 import { useAppStore } from '@/stores/appStore'
 import { useRoomStore } from '@/stores/roomStore'
 import { useRouter } from 'vue-router'
+import { useImageStore } from '@/stores/imageStore'
 
 export const useCreateChat = () => {
   const appStore = useAppStore()
   const roomStore = useRoomStore()
   const router = useRouter()
   const { t } = useI18n()
+  const imageStore = useImageStore()
 
   // ============================================================
   // Type Guards（类型守卫函数）
@@ -58,7 +60,6 @@ export const useCreateChat = () => {
   const isCreating = ref(false)
   const hasPasswordError = ref(false)
   const passwordErrorMessage = ref('')
-  const showAvatarError = ref(false)
 
   /**
    * i18n 兜底：当 key 缺失时，vue-i18n 默认会返回 key 字符串本身（truthy），
@@ -236,12 +237,6 @@ export const useCreateChat = () => {
   const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
     if (response && response.data) {
       createChatForm.value.avatar = response.data
-      // 清除头像错误状态
-      showAvatarError.value = false
-      // 触发头像字段验证
-      if (createFormRef.value) {
-        createFormRef.value.validateField('avatar', () => {})
-      }
     }
   }
   
@@ -268,7 +263,6 @@ export const useCreateChat = () => {
     createResult.value = { success: false, message: '' }
     hasPasswordError.value = false
     passwordErrorMessage.value = ''
-    showAvatarError.value = false
     if (createFormRef.value) {
       createFormRef.value.resetFields()
     }
@@ -411,27 +405,6 @@ export const useCreateChat = () => {
 
   // 3. 校验规则定义
   const createFormRules = reactive<FormRules>({
-    avatar: [
-      {
-        required: true,
-        validator: (rule: unknown, value: unknown, callback: (error?: Error) => void) => {
-          // 使用类型守卫：检查 value 是否为 Image 对象
-          // 允许 undefined（未设置头像的情况）
-          if (value === null || value === undefined) {
-            return callback(new Error(t('validation.avatar_required')))
-          }
-          if (!isImage(value)) {
-            return callback(new Error(t('validation.avatar_required')))
-          }
-          if (!value.objectUrl) {
-            callback(new Error(t('validation.avatar_required')))
-          } else {
-            callback()
-          }
-        },
-        trigger: 'change',
-      },
-    ],
     chatName: [
       { required: true, message: t('validation.room_name_required'), trigger: 'blur' },
       { min: 1, max: 20, message: t('validation.room_name_length'), trigger: 'blur' },
@@ -445,8 +418,8 @@ export const useCreateChat = () => {
     if (!createFormRef.value) return false
     let fieldsToValidate: string[] = []
     if (step === 1) {
-      // Step 1: 验证头像和房间名称
-      fieldsToValidate = ['avatar', 'chatName']
+      // Step 1: 验证房间名称
+      fieldsToValidate = ['chatName']
     } else if (step === 2) {
       // Step 2: 如果密码保护开启（joinEnableByPassword=1），则校验密码必填且一致
       if (createChatForm.value.joinEnableByPassword === 1) {
@@ -461,16 +434,8 @@ export const useCreateChat = () => {
     }
     try {
       await createFormRef.value.validateField(fieldsToValidate)
-      // Step 1 验证成功：清除头像错误
-      if (step === 1) {
-        showAvatarError.value = false
-      }
       return true
     } catch (error) {
-      // Step 1 验证失败：显示头像错误
-      if (step === 1) {
-        showAvatarError.value = true
-      }
       return false
     }
   }
@@ -494,6 +459,12 @@ export const useCreateChat = () => {
     isCreating.value = true
     try {
       await createFormRef.value!.validate()
+      
+      // 如果用户未设置头像（Image 对象为空或空串），上传默认头像
+      if (!createChatForm.value.avatar.objectUrl && !createChatForm.value.avatar.objectThumbUrl) {
+        createChatForm.value.avatar = await imageStore.uploadDefaultAvatarIfNeeded(createChatForm.value.avatar, 'room')
+      }
+      
       // API payload:
       // - joinEnable: 固定传 1（对应 DB join_enabled，全局允许加入；本期不做 UI 控制）
       // - password/passwordConfirm: 仅当 joinEnableByPassword=1 时有意义，否则后端不写 hash
@@ -525,6 +496,7 @@ export const useCreateChat = () => {
       createStep.value = 4
     } catch (error: unknown) {
       // 类型守卫：检查 error 是否为 Error 对象
+      // 捕获异常（头像上传失败、API 错误或网络错误）
       const errorMessage = error instanceof Error ? error.message : t('common.error')
       createResult.value = { success: false, message: errorMessage }
       ElMessage.error(errorMessage)
@@ -540,7 +512,6 @@ export const useCreateChat = () => {
     isCreating,
     hasPasswordError,
     passwordErrorMessage,
-    showAvatarError,
     handleCreate,
     createFormRef,
     createFormRules,

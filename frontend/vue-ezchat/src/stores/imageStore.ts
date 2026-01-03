@@ -160,7 +160,7 @@ export const useImageStore = defineStore('image', () => {
     return Array.from(
       new Map(
         images
-          .filter(Boolean)
+          .filter((img): img is Image => Boolean(img))
           .map((img) => [img.objectName || img.objectId || img.objectUrl, img])
       ).values()
     ) as Image[]
@@ -213,6 +213,73 @@ export const useImageStore = defineStore('image', () => {
     originalPromiseMap.clear()
   }
 
+  // =========================
+  // 7) 默认头像生成与上传
+  // =========================
+
+  /**
+   * 生成随机种子字符串（用于获取不同的头像图像）
+   */
+  const generateRandomSeed = (): string => {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  }
+
+  /**
+   * 生成默认头像 URL（从 DiceBear API，仅用于展示，不上传）
+   * @param type 头像类型：'user' 为用户头像，'room' 为房间头像
+   * @param seed 可选的自定义种子，如果不提供则生成随机种子
+   * @returns DiceBear API 头像 URL
+   */
+  const generateDefaultAvatarUrl = (type: 'user' | 'room' = 'user', seed?: string): string => {
+    const avatarSeed = seed || generateRandomSeed()
+    if (type === 'room') {
+      return `https://api.dicebear.com/9.x/identicon/svg?seed=${avatarSeed}`
+    }
+    // Default to 'user' type
+    return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${avatarSeed}`
+  }
+
+  /**
+   * 如果用户未上传头像，则上传默认头像
+   * @param currentAvatar 当前头像对象
+   * @param type 头像类型：'user' 为用户头像，'room' 为房间头像
+   * @returns Image 对象（如果已存在则返回原对象，否则上传默认头像后返回）
+   */
+  const uploadDefaultAvatarIfNeeded = async (currentAvatar?: Image, type: 'user' | 'room' = 'user'): Promise<Image> => {
+    // 如果头像已存在，直接返回
+    if (currentAvatar?.objectUrl || currentAvatar?.objectThumbUrl) {
+      return currentAvatar
+    }
+
+    // 生成默认头像 URL 并获取
+    const avatarUrl = generateDefaultAvatarUrl(type)
+    const response = await fetch(avatarUrl)
+    if (!response.ok) {
+      throw new Error('Failed to fetch default avatar from DiceBear API')
+    }
+    const blob = await response.blob()
+
+    // 上传到服务器
+    const formData = new FormData()
+    formData.append('file', blob, 'avatar.svg')
+
+    const uploadResponse = await fetch('/api/auth/register/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload default avatar')
+    }
+
+    const result = await uploadResponse.json()
+    if (result.code === 200 && result.data) {
+      return result.data as Image
+    }
+
+    throw new Error('Invalid upload response format')
+  }
+
   return {
     ensureThumbBlobUrl,
     ensureOriginalBlobUrl,
@@ -221,6 +288,8 @@ export const useImageStore = defineStore('image', () => {
     revokeImagesBlobs,
     revokeUnusedBlobs,
     resetState,
+    generateDefaultAvatarUrl,
+    uploadDefaultAvatarIfNeeded,
   }
 })
 

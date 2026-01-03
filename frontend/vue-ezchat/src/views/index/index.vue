@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import {ref} from 'vue'
+import {ref, watch, onMounted} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {storeToRefs} from 'pinia'
 import {useAppStore} from '@/stores/appStore.ts'
 import AppLogo from '@/components/AppLogo.vue'
@@ -9,6 +10,8 @@ import {useI18n} from 'vue-i18n'
 import {Moon, Sunny} from '@element-plus/icons-vue'
 
 const { locale, t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
 const { isDark } = storeToRefs(appStore)
 
@@ -52,6 +55,21 @@ const handleLoginFlip = () => {
   }
 }
 const handleLoginUnflip = () => { isLoginFlipped.value = false }
+
+// 处理注册查询参数
+watch(() => route.query.register, (newVal) => {
+  if (newVal === 'true') {
+    // 设置激活卡片为登录并翻转
+    activeCard.value = 'login'
+    setTimeout(() => {
+      if (activeCard.value === 'login') {
+        isLoginFlipped.value = true
+      }
+      // 清除查询参数
+      router.replace({ path: '/', query: {} })
+    }, 600)
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -185,7 +203,7 @@ html.dark .page-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translateY(-12%); /* 整体上移 */
+  transform: translateY(-5%); /* 整体上移 */
   transition: transform 0.8s var(--ease-out-expo);
 }
 

@@ -120,3 +120,101 @@ html.dark .el-badge__content--danger {
   animation-duration: 0.3s;
   animation-timing-function: ease-in-out;
 }
+
+/* =========================================
+   6. Unified Input and Button Heights
+   ========================================= */
+
+/* Unified Input Height (Large Size) */
+:deep(.el-input--large .el-input__wrapper),
+:deep(.el-form-item .el-input__wrapper[size="large"]) {
+  height: 36px !important;
+}
+
+/* Unified Button Height (Primary and Large Buttons) */
+.el-button--large,
+.el-button[type="primary"]:not(.el-button--small):not(.el-button--mini):not(.el-button--text) {
+  height: 44px;
+  line-height: 44px;
+}
+
+/* Form Action Buttons (Step buttons, Login buttons, etc.) */
+.step-btn-full,
+.step-btn-half,
+.login-btn {
+  height: 44px !important;
+  line-height: 44px !important;
+}
+
+/* =========================================
+   7. Global Text Selection Control
+   ========================================= */
+
+/* 全局禁用文字选择 */
+body,
+html {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 允许输入框文字选择 */
+.el-input__inner,
+.el-textarea__inner,
+.rich-editor {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* 允许 ID 和代码显示区域文字选择 */
+.credential-roomid-value,  /* CreateChatDialog 结果页面的房间ID */
+.credential-link-value,    /* CreateChatDialog 结果页面的邀请链接URL */
+.room-code,                 /* Join 页面的房间ID */
+.room-name {                /* Join 页面的房间名 */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* 允许消息内容文字选择 */
+.message-text,              /* MessageArea 中的消息文本 */
+.message-text-bubble {      /* 消息气泡，包含文本 */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* 注意：PasswordInput 组件已设置 user-select: none 用于安全，保持不变 */
+
+/* =========================================
+   8. Global Avatar Styles (Unified Border-Radius)
+   ========================================= */
+
+/* Avatar border-radius ratio (30% to match ChatHeader.vue) */
+:root {
+  --avatar-border-radius-ratio: 0.3;
+}
+
+/* Base class for square avatars with proportional border-radius */
+.avatar-square {
+  --avatar-size: var(--size, 40px); /* Default to 40px if --size not set */
+  border-radius: calc(var(--avatar-size) * var(--avatar-border-radius-ratio));
+}
+
+/* Utility classes for common avatar sizes (optional, for convenience) */
+.avatar-square-sm {
+  border-radius: calc(40px * var(--avatar-border-radius-ratio)); /* 12px */
+}
+
+.avatar-square-md {
+  border-radius: calc(90px * var(--avatar-border-radius-ratio)); /* 27px */
+}
+
+.avatar-square-lg {
+  border-radius: calc(150px * var(--avatar-border-radius-ratio)); /* 45px */
+}

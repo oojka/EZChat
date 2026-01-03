@@ -53,7 +53,7 @@ const { currentRoom } = storeToRefs(roomStore)
 
 .header-left { display: flex; align-items: center; }
 .room-info { display: flex; align-items: center; gap: 14px; }
-.room-avatar { border-radius: var(--radius-base); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid var(--el-border-color-light); }
+.room-avatar { border-radius: calc(40px * var(--avatar-border-radius-ratio)); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid var(--el-border-color-light); }
 
 .text-info { display: flex; flex-direction: column; gap: 1px; }
 .name-row { display: flex; align-items: baseline; gap: 6px; }

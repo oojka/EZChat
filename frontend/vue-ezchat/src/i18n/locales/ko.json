@@ -35,7 +35,7 @@
     "password": "비밀번호",
     "password_hint": "최소 8자",
     "nickname": "닉네임",
-    "nickname_placeholder": "채팅에서 표시될 이름",
+    "nickname_placeholder": "닉네임을 입력하세요",
     "confirm_password": "비밀번호 확인",
     "confirm_password_placeholder": "다시 입력하세요",
     "welcome_back": "다시 오신 것을 환영합니다!",
@@ -104,11 +104,11 @@
   "guest": {
     "title": "채팅 시작",
     "feature_id": "룸ID / 초대 링크로 참여",
-    "feature_no_reg": "계정 불필요 (게스트 액세스)",
-    "join_btn": "룸 찾기",
+    "feature_no_reg": "등록 불필요, 게스트로 참여",
+    "join_btn": "지금 참여하기",
     "join_title": "룸 참여",
     "input_id": "룸ID",
-    "input_pw": "비밀번호 (필요한 경우)",
+    "input_pw": "비밀번호",
     "input_url": "초대 URL 붙여넣기",
     "join_submit": "참여"
   },

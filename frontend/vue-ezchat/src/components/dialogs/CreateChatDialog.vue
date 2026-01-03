@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   ArrowRight,
   Camera,
@@ -15,18 +15,19 @@ import { useAppStore } from '@/stores/appStore.ts'
 import PasswordConfig from '@/components/PasswordConfig.vue'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import { useI18n } from 'vue-i18n'
+import { useImageStore } from '@/stores/imageStore'
 
 const appStore = useAppStore()
 const { createRoomVisible } = storeToRefs(appStore)
 
 const { t } = useI18n()
+const imageStore = useImageStore()
 
 const {
   createChatForm,
   createStep,
   createResult,
   isCreating,
-  showAvatarError,
   handleCreate,
   createFormRef,
   createFormRules,
@@ -44,6 +45,13 @@ const {
   copyInviteLink,
   copyRoomId,
 } = useCreateChat()
+
+const defaultAvatarUrl = ref('') // 用于展示的默认头像 URL（不上传）
+
+// 组件加载时生成默认头像 URL（仅用于展示）
+onMounted(() => {
+  defaultAvatarUrl.value = imageStore.generateDefaultAvatarUrl('room')
+})
 
 // 进度条百分比计算
 const progressPercentage = computed(() => {
@@ -100,7 +108,16 @@ const progressPercentage = computed(() => {
                       <span>{{ t('common.change') }}</span>
                     </div>
                   </div>
-                  <div v-else class="placeholder-circle-lg">
+                  <div v-else-if="defaultAvatarUrl" class="avatar-preview-lg">
+                    <img :src="defaultAvatarUrl" class="avatar-img" />
+                    <div class="edit-mask-lg">
+                      <el-icon>
+                        <Camera />
+                      </el-icon>
+                      <span>{{ t('common.change') }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="placeholder-square-lg">
                     <el-icon size="40">
                       <Picture />
                     </el-icon>
@@ -109,11 +126,6 @@ const progressPercentage = computed(() => {
                 </el-upload>
                 <div class="avatar-info-area">
                   <p class="step-hint">{{ t('create_chat.avatar_hint') || t('auth.avatar_hint') }}</p>
-                  <div class="avatar-error-container">
-                    <span v-show="showAvatarError" class="avatar-error-text">
-                      {{ t('validation.avatar_required') }}
-                    </span>
-                  </div>
                 </div>
                 <el-form-item prop="avatar" class="hidden-item" :show-message="false" />
               </div>
@@ -402,10 +414,10 @@ html.dark :deep(.ez-modern-dialog) {
 }
 
 .avatar-preview-lg,
-.placeholder-circle-lg {
+.placeholder-square-lg {
   width: 150px;
   height: 150px;
-  border-radius: 50%;
+  border-radius: calc(150px * var(--avatar-border-radius-ratio)); /* 45px (30%) */
   overflow: hidden;
   position: relative;
   cursor: pointer;
@@ -415,7 +427,7 @@ html.dark :deep(.ez-modern-dialog) {
   background: var(--bg-page);
 }
 
-.placeholder-circle-lg {
+.placeholder-square-lg {
   border: 2px dashed var(--el-border-color-light);
   display: flex;
   flex-direction: column;
@@ -425,7 +437,7 @@ html.dark :deep(.ez-modern-dialog) {
   gap: 8px;
 }
 
-.placeholder-circle-lg span {
+.placeholder-square-lg span {
   font-size: 12px;
   font-weight: 700;
 }

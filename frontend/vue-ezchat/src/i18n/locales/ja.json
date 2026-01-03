@@ -35,7 +35,7 @@
     "password": "パスワード",
     "password_hint": "最低 8 文字",
     "nickname": "表示名",
-    "nickname_placeholder": "チャットで表示される名前",
+    "nickname_placeholder": "ニックネームを入力してください",
     "confirm_password": "確認用パスワード",
     "confirm_password_placeholder": "もう一度入力",
     "welcome_back": "おかえりなさい！",
@@ -104,11 +104,11 @@
   "guest": {
     "title": "チャットを開始",
     "feature_id": "ルームID / 招待リンクで参加",
-    "feature_no_reg": "アカウント不要（ゲストアクセス）",
-    "join_btn": "ルームを探す",
+    "feature_no_reg": "登録不要、ゲストとして参加",
+    "join_btn": "今すぐ参加",
     "join_title": "ルームに参加",
     "input_id": "ルームID",
-    "input_pw": "パスワード（必要な場合）",
+    "input_pw": "パスワード",
     "input_url": "招待URLを貼り付け",
     "join_submit": "参加"
   },
