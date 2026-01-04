@@ -18,12 +18,22 @@ yarn-error.log*
 # === Backend (Maven/Spring Boot) ===
 **/target/
 *.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
 
 # === IDE / OS ===
 .idea/
 .vscode/
 *.iml
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
 
 # === Cursor / tooling ===
 # Keep these committed (project rules):

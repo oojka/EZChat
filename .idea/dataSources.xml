@@ -45,5 +45,13 @@
       <jdbc-url>jdbc:mysql://192.168.66.103:3306/web_chat01</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="jdbc:mysql://192.168.66.103:3306/web_chat01 [DEBUG]" group="​EzChatAppApplication" uuid="109739d2-0cc8-4283-baf8-8cd9620cac69">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <imported>true</imported>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://192.168.66.103:3306/web_chat01</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
