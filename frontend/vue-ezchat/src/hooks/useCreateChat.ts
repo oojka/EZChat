@@ -197,8 +197,8 @@ export const useCreateChat = () => {
             blobThumbUrl: checkResult.data.blobThumbUrl || ''
           }
           // UploadProps['onSuccess'] 的签名是 (response: unknown, uploadFile?: UploadFile, uploadFiles?: UploadFile[]) => void
-          // 定义响应类型接口，避免使用 any
-          interface UploadSuccessResponse {
+          // 定义响应类型，避免使用 any
+          type UploadSuccessResponse = {
             data: Image
           }
           const response: UploadSuccessResponse = { data: imageData }
@@ -482,8 +482,8 @@ export const useCreateChat = () => {
 
       const chatCode = result?.data?.chatCode
       const inviteCode = result?.data?.inviteCode
-      const inviteUrl = chatCode && inviteCode
-        ? `${window.location.origin}/chat/${chatCode}?invite=${inviteCode}`
+      const inviteUrl = inviteCode
+        ? `https://ez-chat.oojka.com/invite/${inviteCode}`
         : ''
 
       createResult.value = {

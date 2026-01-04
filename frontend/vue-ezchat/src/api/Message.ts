@@ -1,18 +1,24 @@
 import type {ChatRoom, Message, Result} from '@/type'
 import request from '@/utils/request.ts'
 
+export type GetMessageListApiReq = {
+  chatCode: string
+  createTime: string
+}
+
 /**
  * 拉取消息列表（支持时间戳分页）
  *
  * - 后端接口：GET `/message?chatCode=...&timeStamp=...`
  * - 业务目的：首次进入房间/上拉加载历史时获取消息
  */
-export const getMessageListApi =
-  (chatCode: string, createTime: string): Promise<Result<{
-    chatRoom : ChatRoom
-    messageList : Message[]
-  }>> =>
-  request.get('/message?chatCode=' + chatCode + '&timeStamp=' + createTime)
+export const getMessageListApi = (
+  data: GetMessageListApiReq
+): Promise<Result<{
+  chatRoom : ChatRoom
+  messageList : Message[]
+}>> =>
+  request.get('/message?chatCode=' + data.chatCode + '&timeStamp=' + data.createTime)
 
 /**
  * 删除已上传的图片对象（如果后端支持）

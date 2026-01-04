@@ -80,8 +80,8 @@
     "unexpected_error": "An unexpected error occurred.",
     "already_exists": "'{info}' is already taken.",
     "data_already_exists": "This data already exists.",
-    "not_member": "You are not a member of this room.",
-    "room_not_found": "Room not found or has been deleted.",
+    "not_member": "No access permission: You are not a member of this chat room.",
+    "room_not_found": "Room does not exist or has been disbanded.",
     "input_too_long": "Input exceeds the character limit.",
     "data_integrity_error": "Data processing error.",
     "guest_join_failed": "Failed to join as guest.",
@@ -91,7 +91,24 @@
     "file_too_large": "File is too large. Please choose a smaller one.",
     "invalid_credentials": "Incorrect username or password.",
     "network_error": "Network error. Please check your connection.",
-    "no_permission": "Permission denied."
+    "no_permission": "Permission denied.",
+    "join_disabled": "This room is disabled from joining.",
+    "password_login_disabled": "This room is disabled from joining via password.",
+    "password_required": "This room requires a password to join.",
+    "password_incorrect": "Password verification failed: incorrect password.",
+    "http_400": "Bad request",
+    "http_404": "Resource not found",
+    "http_408": "Request timeout, please try again later",
+    "http_502": "Bad gateway",
+    "http_503": "Service temporarily unavailable",
+    "http_504": "Gateway timeout",
+    "errors": {
+      "42001": "Room not found or has been deleted.",
+      "40300": "Join is disabled or password login is not enabled.",
+      "42003": "Password is required.",
+      "42004": "Incorrect password.",
+      "40000": "Bad request."
+    }
   },
   "error_pages": {
     "404": { "title": "Page Not Found", "message": "The page you're looking for doesn't exist or has been moved." },

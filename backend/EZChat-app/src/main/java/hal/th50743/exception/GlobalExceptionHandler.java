@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public Result handleBusinessException(BusinessException e) {
+    public Result<?> handleBusinessException(BusinessException e) {
         log.error("Business Exception: code={}, msg={}", e.getCode(), e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(DuplicateKeyException.class)
-    public Result handleDuplicateKeyException(DuplicateKeyException e) {
+    public Result<?> handleDuplicateKeyException(DuplicateKeyException e) {
         log.error("Database unique key violation:", e);
         String msg = e.getMessage();
         if (msg != null && msg.contains("Duplicate entry")) {
@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public Result handleDataIntegrityViolation(DataIntegrityViolationException e) {
+    public Result<?> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         log.error("Database data integrity violation:", e);
         String msg = e.getMessage();
         if (msg != null && msg.contains("Data truncation")) {
@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public Result handleException(Exception e) {
+    public Result<?> handleException(Exception e) {
         log.error("Unknown exception occurred:", e);
         // 生产环境不建议向前端暴露详细的系统异常堆栈信息
         return Result.error(ErrorCode.SYSTEM_ERROR);

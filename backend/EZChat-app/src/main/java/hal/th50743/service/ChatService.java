@@ -8,6 +8,7 @@ import hal.th50743.pojo.ChatReq;
 import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.JoinChatReq;
+import hal.th50743.pojo.ValidateChatJoinReq;
 
 import java.util.List;
 
@@ -108,5 +109,33 @@ public interface ChatService {
      * @return 创建结果（chatCode + inviteCode）
      */
     CreateChatVO createChat(Integer userId, ChatReq chatReq);
+
+    /**
+     * 验证聊天室加入请求
+     * <p>
+     * 业务目的：
+     * - 轻量级验证接口，仅验证房间是否存在、密码是否正确、是否允许加入
+     * - 不执行实际的加入操作（不创建用户、不添加成员）
+     * - 用于前端在用户提交加入表单前进行预验证
+     * <p>
+     * 支持两种验证模式：
+     * <ul>
+     *   <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
+     *   <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
+     * </ul>
+     * <p>
+     * 验证逻辑：
+     * <ol>
+     *   <li>检查房间是否存在（42001）</li>
+     *   <li>检查是否允许加入（joinEnabled == 1，否则返回 40300）</li>
+     *   <li>检查密码登录是否启用（password_hash 是否为 null，为 null 则返回 40300）</li>
+     *   <li>验证密码是否正确（42004）</li>
+     * </ol>
+     *
+     * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
+     * @return 简化的 ChatVO（仅包含 chatCode, chatName, avatar, memberCount，其他字段为 null）
+     * @throws BusinessException 如果验证失败（房间不存在、禁止加入、密码错误等）
+     */
+    ChatVO validateChatJoin(ValidateChatJoinReq req);
 
 }

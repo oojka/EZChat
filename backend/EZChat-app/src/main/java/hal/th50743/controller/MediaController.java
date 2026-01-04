@@ -47,7 +47,7 @@ public class MediaController {
      * @return 统一响应：data 为 Image 对象（包含最新的 URL 和 objectId）
      */
     @GetMapping("/url")
-    public Result getImageUrl(@RequestParam String objectName) {
+    public Result<Image> getImageUrl(@RequestParam String objectName) {
         // 1. 查询 objects 表获取 objectId
         FileEntity fileEntity = fileService.findByObjectName(objectName);
         
@@ -84,7 +84,7 @@ public class MediaController {
      * @return 统一响应：如果对象已存在，data 为 Image 对象；不存在返回 null
      */
     @GetMapping("/check")
-    public Result checkObjectExists(@RequestParam String rawHash) {
+    public Result<Image> checkObjectExists(@RequestParam String rawHash) {
         // 参数校验
         if (rawHash == null || rawHash.length() != 64) {
             return Result.error("Invalid hash format");

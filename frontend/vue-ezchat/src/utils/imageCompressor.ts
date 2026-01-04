@@ -82,6 +82,8 @@ export async function compressImage(file: File): Promise<File> {
   }
 
   try {
+    // 注意：image-compression 库的类型定义不完整，options 参数类型与实际不匹配
+    // 使用 as any 绕过类型检查（可接受的第三方库类型不匹配异常）
     const compressed = await imageCompression(file, options as any)
     // 如果压缩后体积没有明显变小，则回退原文件（避免徒增 CPU 开销）
     if (compressed.size >= file.size * 0.98) return file

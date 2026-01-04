@@ -2,8 +2,8 @@ import {ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import type {Message, UserStatus, WebSocketResult} from '@/type'
 
-// 定义 Connect 方法需要的参数接口
-interface ConnectOptions {
+// 定义 Connect 方法需要的参数类型
+type ConnectOptions = {
   onMessage: (data: Message) => void
   onUserStatus: (uid: string, isOnline: boolean) => void
   onAck: (tempId: string) => void
@@ -114,7 +114,12 @@ export function useWebsocket() {
 
         if (result.isSystemMessage) {
           if (result.type === 'ACK') {
-            currentOptions?.onAck(result.data as string)
+            // WebSocketResult.data 类型为 string，对于 ACK 类型直接使用（无需断言）
+            if (typeof result.data === 'string') {
+              currentOptions?.onAck(result.data)
+            } else {
+              console.warn('[WARN] [WS] ACK data is not a string, ignored.')
+            }
           } else if (result.type === 'USER_STATUS') {
             const userStatus: UserStatus = parseData(result.data)
             currentOptions?.onUserStatus(userStatus.uid, userStatus.online)

@@ -119,7 +119,7 @@ export const useMessageStore = defineStore('message', () => {
 
     try {
       if (!createTime) loadingMessages.value = true
-      const result = await getMessageListApi(currentRoomCode.value, createTime || '')
+      const result = await getMessageListApi({ chatCode: currentRoomCode.value, createTime: createTime || '' })
       if (result) {
         const newMessages = result.data.messageList
         const newChatRoom: ChatRoom = result.data.chatRoom
@@ -178,8 +178,10 @@ export const useMessageStore = defineStore('message', () => {
     if (!currentRoomCode.value || !loginUser.value.uid) return
 
     const imagesCopy = [...images]
-    processMessageImages([{images: imagesCopy} as Message]).then(r => {})
-     const tempId = generateTempId()
+    // 为图片预处理创建临时消息对象（processMessageImages 只需要 images 字段）
+    const tempMessageForProcessing: Pick<Message, 'images'> = { images: imagesCopy }
+    processMessageImages([tempMessageForProcessing as Message]).then(() => {})
+    const tempId = generateTempId()
 
     const hasText = !!text && text.trim().length > 0
     const hasImages = imagesCopy.length > 0
@@ -253,7 +255,7 @@ export const useMessageStore = defineStore('message', () => {
       // 使用翻译后的 [画像] 标签
       result += `[${t('chat.image')}]`.repeat(message.images.length)
     }
-    // 使用翻译后的 [新消息] 占位符
+    // 使用翻译后的 [无消息] 占位符
     return result || `[${t('chat.new_message')}]`
   }
 

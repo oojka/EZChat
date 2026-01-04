@@ -78,10 +78,10 @@
   "api": {
     "too_many_requests": "请求太快了，请稍慢一点。",
     "unexpected_error": "发生了预料之外的错误。",
-    "already_exists": "“{info}”已被占用。",
+    "already_exists": "\"{info}\"已被占用。",
     "data_already_exists": "该数据已存在。",
-    "not_member": "您不是该房间的成员。",
-    "room_not_found": "房间未找到或已被删除。",
+    "not_member": "无访问权限：您不是该聊天室的成员。",
+    "room_not_found": "房间不存在或已被解散。",
     "input_too_long": "输入内容超过字符限制。",
     "data_integrity_error": "数据处理错误。",
     "guest_join_failed": "以游客身份加入失败。",
@@ -91,7 +91,24 @@
     "file_too_large": "文件过大，请选择较小的文件。",
     "invalid_credentials": "用户名或密码错误。",
     "network_error": "网络错误，请检查您的连接。",
-    "no_permission": "权限被拒绝。"
+    "no_permission": "权限被拒绝。",
+    "join_disabled": "该房间被禁止加入。",
+    "password_login_disabled": "该房间被禁止通过密码加入。",
+    "password_required": "该房间需要密码才能加入。",
+    "password_incorrect": "密码验证失败：密码不正确。",
+    "http_400": "请求参数错误",
+    "http_404": "资源未找到",
+    "http_408": "请求超时，请稍后重试",
+    "http_502": "网关错误",
+    "http_503": "服务暂时不可用",
+    "http_504": "网关超时",
+    "errors": {
+      "42001": "房间未找到或已被删除。",
+      "40300": "加入被禁用或密码登录未启用。",
+      "42003": "密码必填。",
+      "42004": "密码错误。",
+      "40000": "请求参数错误。"
+    }
   },
   "error_pages": {
     "404": { "title": "页面未找到", "message": "您访问的页面不存在或已被移动。" },

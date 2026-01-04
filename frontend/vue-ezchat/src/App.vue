@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import {ref, watch, onMounted, onUnmounted} from 'vue'
 import {useRoute} from 'vue-router'
 import {storeToRefs} from 'pinia'
 import {useAppStore} from '@/stores/appStore.ts'
@@ -7,7 +7,7 @@ import AppSpinner from '@/components/AppSpinner.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
-const { isAppLoading, showLoadingSpinner, loadingText } = storeToRefs(appStore)
+const { isAppLoading, showLoadingSpinner, loadingText, loadingBgWhite } = storeToRefs(appStore)
 
 /**
  * 全局遮蔽层显示控制（与 Store 解耦）
@@ -52,7 +52,7 @@ watch(
       prevIsAppLoading.value = true
       return
     }
-    // Loading 结束：只在“从 true -> false”时触发 View Transition（避免首帧/重复触发导致页面乱闪）
+    // Loading 结束：只在"从 true -> false"时触发 View Transition（避免首帧/重复触发导致页面乱闪）
     const wasLoading = prevIsAppLoading.value
     prevIsAppLoading.value = false
     if (!wasLoading) {
@@ -63,6 +63,11 @@ watch(
   },
   // 不需要 immediate：避免页面首次加载时触发一次无意义的 View Transition
 )
+
+
+onUnmounted(() => {
+  // 组件卸载时的清理逻辑
+})
 </script>
 
 <template>
@@ -70,8 +75,17 @@ watch(
     <RouterView />
 
     <!-- 全局统一 Loading 遮罩层 -->
-    <div v-if="showGlobalOverlay" class="global-loading-overlay">
-      <AppSpinner v-if="showLoadingSpinner" :text="loadingText" show-text />
+    <div
+      v-if="showGlobalOverlay"
+      class="global-loading-overlay"
+      :class="{ 'loading-bg-white': loadingBgWhite }"
+    >
+      <AppSpinner
+        v-if="showLoadingSpinner"
+        :text="loadingText"
+        show-text
+        :bg-white="loadingBgWhite"
+      />
     </div>
   </div>
 </template>
@@ -86,6 +100,10 @@ watch(
   transition: background-color 0.3s ease;
   /* View Transitions API：给遮蔽层命名，便于定义离场动画 */
   view-transition-name: global-loading-overlay;
+}
+
+.global-loading-overlay.loading-bg-white {
+  background: #ffffff; /* 错误页使用全白背景 */
 }
 
 /* 禁用 View Transitions API 对整个页面(root)的默认过渡，否则会把整个 UI 一起做截屏交叉淡入淡出，导致“全乱了” */

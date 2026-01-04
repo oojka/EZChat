@@ -274,7 +274,21 @@ export const useImageStore = defineStore('image', () => {
 
     const result = await uploadResponse.json()
     if (result.code === 200 && result.data) {
-      return result.data as Image
+      const imageData = result.data
+      // 类型守卫：验证返回的数据是否为 Image 类型
+      if (
+        typeof imageData === 'object' &&
+        imageData !== null &&
+        'objectName' in imageData &&
+        'objectUrl' in imageData &&
+        'objectThumbUrl' in imageData &&
+        typeof (imageData as Record<string, unknown>).objectName === 'string' &&
+        typeof (imageData as Record<string, unknown>).objectUrl === 'string' &&
+        typeof (imageData as Record<string, unknown>).objectThumbUrl === 'string'
+      ) {
+        return imageData as Image
+      }
+      throw new Error('Invalid Image data structure in upload response')
     }
 
     throw new Error('Invalid upload response format')

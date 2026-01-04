@@ -1,11 +1,11 @@
-export interface Result<T = any> {
+export type Result<T> = {
   status: 0 | 1
   code: number
   message: string
   data: T
 }
 
-export interface Image {
+export type Image = {
   objectName: string
   objectUrl: string
   objectThumbUrl: string
@@ -15,31 +15,43 @@ export interface Image {
   blobThumbUrl : string // 缩略图 Blob URL
 }
 
-export interface LoginInfo {
+export type LoginInfo = {
   username: string
   password: string
 }
 
-export interface LoginUser {
+/**
+ * 登录用户信息（对应后端 LoginVO）
+ * 
+ * - 用于存储登录态（uid/username/token）
+ * - 供 HTTP header 和 WebSocket 连接使用
+ */
+export type LoginUser = {
   uid: string
   username: string
   token: string
 }
 
-export interface LoginUserInfo {
+/**
+ * 登录用户详细信息（对应后端 UserVO）
+ * 
+ * - 用于 UI 展示（昵称/头像/简介）
+ * - 通过 GET /user/{uid} 接口获取
+ */
+export type LoginUserInfo = {
   uid: string
   nickname: string
   avatar: Image
   bio: string
 }
 
-export interface GuestInfo {
+export type GuestInfo = {
   chatCode: string;
   password: string;
   nickName: string;
 }
 
-export interface RegisterInfo {
+export type RegisterInfo = {
   nickname: string
   username: string
   password: string
@@ -47,7 +59,7 @@ export interface RegisterInfo {
   avatar: Image
 }
 
-export interface ChatRoom {
+export type ChatRoom = {
   chatCode : string //
   chatName : string //
   ownerUid : string //
@@ -63,7 +75,7 @@ export interface ChatRoom {
   chatMembers : ChatMember[]
 }
 
-export interface ChatMember {
+export type ChatMember = {
   uid: string
   nickname: string
   avatar: Image
@@ -74,19 +86,36 @@ export interface ChatMember {
 /**
  * 创建房间返回（后端 CreateChatVO）
  */
-export interface CreateChatVO {
+export type CreateChatVO = {
   chatCode: string
   inviteCode: string
 }
 
-export interface User {
-  uid : string
-  nickname : string
-  avatar : Image
-  isOnline: 0 | 1
-}
+/**
+ * 验证聊天室加入请求 (Strict Union Version)
+ * * 利用联合类型强制执行业务逻辑：
+ * 1. ByPassword: 必须同时包含 chatCode 和 password
+ * 2. ByInvite: 必须包含 inviteCode
+ */
+export type ValidateChatJoinReq = 
+  | {
+      /** 模式1：密码验证 - chatCode 必填 */
+      chatCode: string
+      /** 模式1：密码验证 - password 必填 (与 chatCode 强绑定) */
+      password: string
+      /** 模式1下，严禁出现 inviteCode */
+      inviteCode?: never
+    }
+  | {
+      /** 模式2：邀请码验证 - inviteCode 必填 */
+      inviteCode: string
+      /** 模式2下，严禁出现 chatCode */
+      chatCode?: never
+      /** 模式2下，严禁出现 password */
+      password?: never
+    }
 
-export interface Message {
+export type Message = {
   sender: string
   chatCode: string
   /**
@@ -100,18 +129,18 @@ export interface Message {
   status : 'sending' | 'sent' | 'error' | null
 }
 
-export interface AppInitInfo {
+export type AppInitInfo = {
   chatList: ChatRoom[]
   userStatusList: UserStatus[]
 }
 
-export interface UserStatus {
+export type UserStatus = {
   uid: string
   online: boolean
   updateTime: string
 }
 
-export interface WebSocketResult {
+export type WebSocketResult = {
   isSystemMessage: 0 | 1
   type: string
   data: string

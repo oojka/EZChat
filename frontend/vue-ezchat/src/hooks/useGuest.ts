@@ -19,7 +19,11 @@ export default function () {
   )
 
   const joinAsGuest = async () => {
-    const result = await guestApi(joinChatForm.chatCode, joinChatForm.password,joinChatForm.nickName)
+    const result = await guestApi({ 
+      chatCode: joinChatForm.chatCode, 
+      password: joinChatForm.password, 
+      nickName: joinChatForm.nickName 
+    })
     if (result) {
       //提示信息
       ElMessage.success('ゲストとして参加成功しました。')

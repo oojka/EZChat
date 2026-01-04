@@ -396,6 +396,99 @@ public class ChatServiceImpl implements ChatService {
         return chatMapper.getJoinInfoByChatCode(chatCode);
     }
 
+    /**
+     * 验证聊天室加入请求
+     * <p>
+     * 业务目的：
+     * - 轻量级验证接口，仅验证房间是否存在、密码是否正确、是否允许加入
+     * - 不执行实际的加入操作（不创建用户、不添加成员）
+     * - 用于前端在用户提交加入表单前进行预验证
+     * <p>
+     * 支持两种验证模式：
+     * <ul>
+     *   <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
+     *   <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
+     * </ul>
+     * <p>
+     * 验证逻辑：
+     * <ol>
+     *   <li>判断验证模式（inviteCode 或 chatCode）</li>
+     *   <li>模式1：检查房间是否存在（42001）</li>
+     *   <li>模式1：检查是否允许加入（joinEnabled == 1，否则返回 40300）</li>
+     *   <li>模式1：检查密码登录是否启用（password_hash 是否为 null，为 null 则返回 40300）</li>
+     *   <li>模式1：验证密码是否正确（42004）</li>
+     *   <li>返回简化的 ChatVO（仅包含 chatCode, chatName, avatar, memberCount）</li>
+     * </ol>
+     *
+     * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
+     * @return 简化的 ChatVO（仅包含 chatCode, chatName, avatar, memberCount，其他字段为 null）
+     * @throws BusinessException 如果验证失败（房间不存在、禁止加入、密码错误等）
+     */
+    @Override
+    public ChatVO validateChatJoin(ValidateChatJoinReq req) {
+        // 判断验证模式
+        if (req.getInviteCode() != null && !req.getInviteCode().isBlank()) {
+            // 模式2：邀请码验证（当前未实现）
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Invite code validation not implemented yet");
+        } else if (req.getChatCode() != null && !req.getChatCode().isBlank()) {
+            // 模式1：chatCode + password 验证
+            // 检查 password 是否提供（如果提供了 chatCode，password 必填）
+            if (req.getPassword() == null || req.getPassword().isBlank()) {
+                throw new BusinessException(ErrorCode.PASSWORD_REQUIRED, "Password is required when chatCode is provided");
+            }
+
+            // 获取房间加入信息
+            ChatJoinInfo info = chatMapper.getJoinInfoByChatCode(req.getChatCode());
+            if (info == null || info.getChatId() == null) {
+                throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+            }
+
+            // 检查是否允许加入（joinEnabled == 1 才允许）
+            if (info.getJoinEnabled() == null || info.getJoinEnabled() == 0) {
+                throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat room");
+            }
+
+            // 检查密码登录是否启用（password_hash 为 null 表示禁止通过 roomID 密码方式加入）
+            if (info.getChatPasswordHash() == null || info.getChatPasswordHash().isBlank()) {
+                throw new BusinessException(ErrorCode.FORBIDDEN, "Password login is not enabled for this chat room");
+            }
+
+            // 验证密码是否正确
+            if (!PasswordUtils.matches(req.getPassword(), info.getChatPasswordHash())) {
+                throw new BusinessException(ErrorCode.PASSWORD_INCORRECT);
+            }
+
+            // 获取简化的 ChatVO
+            ChatVO chatVO = chatMapper.getChatVOByChatId(info.getChatId());
+            if (chatVO == null) {
+                throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+            }
+
+            // 构建简化的 ChatVO（只保留必要字段，其他设为 null）
+            // 头像转换：从 avatarObjectName 转换为 Image 对象
+            if (chatVO.getAvatarObjectName() != null) {
+                chatVO.setAvatar(ImageUtils.buildImage(chatVO.getAvatarObjectName(), minioOSSOperator));
+            }
+            chatVO.setAvatarObjectName(null);
+
+            // 设置其他字段为 null
+            chatVO.setOwnerUid(null);
+            chatVO.setJoinEnabled(null);
+            chatVO.setLastActiveAt(null);
+            chatVO.setCreateTime(null);
+            chatVO.setUpdateTime(null);
+            chatVO.setUnreadCount(null);
+            chatVO.setLastMessage(null);
+            chatVO.setOnLineMemberCount(null);
+            chatVO.setChatMembers(null);
+
+            return chatVO;
+        } else {
+            // 既没有提供 chatCode 也没有提供 inviteCode
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Either chatCode+password or inviteCode must be provided");
+        }
+    }
+
     // ============================================================
     // 4. 其他逻辑
     // ============================================================
@@ -554,6 +647,7 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "maxUses must be 0 or 1");
         }
 
+        // 生成邀请码并入库
         String inviteCode = InviteCodeUtils.generateInviteCode(18);
         String codeHash = InviteCodeUtils.sha256Hex(inviteCode);
         ChatInvite invite = new ChatInvite(

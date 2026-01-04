@@ -3,6 +3,7 @@ package hal.th50743.controller;
 import hal.th50743.pojo.Image;
 import hal.th50743.pojo.Result;
 import hal.th50743.service.MessageService;
+import java.util.Map;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,7 @@ public class MessageController {
      * @return 包含消息列表的统一响应结果
      */
     @GetMapping
-    public Result getMessagesByChatCode(@RequestParam String chatCode,
+    public Result<Map<String, Object>> getMessagesByChatCode(@RequestParam String chatCode,
                                            @RequestParam(required = false) String timeStamp){
         // 从线程上下文中获取当前登录用户的ID
         Integer userID = CurrentHolder.getCurrentId();
@@ -45,7 +46,7 @@ public class MessageController {
      * @return 上传成功后的图片信息
      */
     @PostMapping("/upload")
-    public Result upload(@RequestParam("file") MultipartFile file) {
+    public Result<Image> upload(@RequestParam("file") MultipartFile file) {
         Image image = messageService.upload(file);
         return Result.success(image);
     }

@@ -38,6 +38,8 @@ export const useAppStore = defineStore('app', () => {
   const isAppInitializing = ref(false)
   // refresh 全屏 Loading 的“最短展示时长”（毫秒）：用于缓解骨架屏切换的突兀感
   const MIN_REFRESH_LOADING_MS = 600
+  // Loading 背景是否为全白（用于错误页等场景）
+  const loadingBgWhite = ref(false)
 
   // =========================================
   // 1. 自动检测暗黑模式
@@ -107,7 +109,10 @@ export const useAppStore = defineStore('app', () => {
 
   initLanguage()
   // 初始化语言后，补齐 Loading 文案（与当前 locale 对齐）
-  loadingText.value = i18n.global.t('common.initializing') as unknown as string
+  // 注意：i18n.global.t() 返回类型为 string | VNode，但对于 'common.initializing' 键，返回值为 string
+  // 使用类型断言是因为我们确定该键返回 string 类型（非模板字符串）
+  const initText = i18n.global.t('common.initializing')
+  loadingText.value = typeof initText === 'string' ? initText : ''
 
   /**
    * 切换主题（暗黑/明亮）
@@ -155,6 +160,45 @@ export const useAppStore = defineStore('app', () => {
   }
 
   const createRoomVisible = ref(false)
+
+  /**
+   * 设置 favicon
+   * <p>
+   * 业务目的：
+   * - 统一管理 favicon 设置逻辑
+   * - 支持在所有组件中复用
+   *
+   * @param faviconPath 可选，favicon 路径，默认为 '/favicon_io/favicon.ico'
+   */
+  const setFavicon = (faviconPath: string = '/favicon_io/favicon.ico') => {
+    const faviconLinks = document.querySelectorAll("link[rel*='icon']")
+    
+    if (faviconLinks.length === 0) {
+      // 如果不存在 favicon link，创建一个
+      const link = document.createElement('link')
+      link.rel = 'icon'
+      link.href = faviconPath
+      document.head.appendChild(link)
+    } else {
+      // 如果已存在，更新所有 favicon 链接的 href
+      faviconLinks.forEach(link => {
+        const linkEl = link as HTMLLinkElement
+        linkEl.href = faviconPath
+      })
+    }
+  }
+
+  /**
+   * 移除 favicon
+   * <p>
+   * 业务目的：
+   * - 统一管理 favicon 移除逻辑
+   * - 支持在所有组件中复用
+   */
+  const removeFavicon = () => {
+    const faviconLinks = document.querySelectorAll("link[rel*='icon']")
+    faviconLinks.forEach(link => link.remove())
+  }
 
   /**
    * 应用初始化（页面刷新/登录后进入聊天页）
@@ -242,10 +286,13 @@ export const useAppStore = defineStore('app', () => {
     showLoadingSpinner,
     loadingText,
     isAppInitializing,
+    loadingBgWhite,
     isDark,
     toggleTheme,
     changeLanguage,
     createRoomVisible,
-    initializeApp
+    initializeApp,
+    setFavicon,
+    removeFavicon,
   }
 })

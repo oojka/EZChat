@@ -2,14 +2,19 @@
 import MainHeader from '@/views/layout/layout/MainHeader.vue'
 import MainAside from '@/views/layout/layout/MainAside.vue'
 import {useAppStore} from '@/stores/appStore.ts'
-import {onMounted} from 'vue'
+import {onMounted, onUnmounted} from 'vue'
 
 const appStore = useAppStore()
-const { initializeApp } = appStore
+const { initializeApp, setFavicon, removeFavicon } = appStore
 
 onMounted(async () => {
   // 刷新页面时的初始化：由 App.vue 统一展示全局 Loading 遮罩与 Spinner
   await initializeApp()
+  setFavicon()
+})
+
+onUnmounted(() => {
+  removeFavicon()
 })
 </script>
 

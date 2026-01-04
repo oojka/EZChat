@@ -29,7 +29,7 @@ public class AppInitController {
      * @return Result<AppInitVO> 包含初始化数据的统一响应结果
      */
     @GetMapping
-    public Result getInit(){
+    public Result<AppInitVO> getInit(){
         AppInitVO res = appInitService.getInitState();
         return Result.success(res);
     }
@@ -43,7 +43,7 @@ public class AppInitController {
      * @return Result<AppInitVO> 包含初始化数据的统一响应结果
      */
     @GetMapping("/chat-list")
-    public Result getChatListInit() {
+    public Result<AppInitVO> getChatListInit() {
         AppInitVO res = appInitService.getInitChatListState();
         return Result.success(res);
     }

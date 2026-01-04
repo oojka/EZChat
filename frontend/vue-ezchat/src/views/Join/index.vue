@@ -1,21 +1,21 @@
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
+  import { ref, onMounted, onUnmounted } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/stores/appStore.ts'
-  import { useImageStore } from '@/stores/imageStore'
+  import { useJoinChat } from '@/hooks/useJoinChat.ts'
+  import useLogin from '@/hooks/useLogin.ts'
   import AppLogo from '@/components/AppLogo.vue'
   import SmartAvatar from '@/components/SmartAvatar.vue'
   import PasswordInput from '@/components/PasswordInput.vue'
   import { Moon, Sunny, User, Camera, Picture, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
-  import type { Image } from '@/type'
   
   const { locale, t } = useI18n()
   const router = useRouter()
   const appStore = useAppStore()
   const { isDark } = storeToRefs(appStore)
-  const imageStore = useImageStore()
+  const { setFavicon, removeFavicon } = appStore
   
   const currentLangCode = {
     en: 'EN',
@@ -24,59 +24,43 @@
     ko: 'KO',
     'zh-tw': 'TW',
   }
+
+  const {
+    guestNickname,
+    guestAvatar,
+    isLoading,
+    handleGuestJoin,
+    handleLoginJoin,
+    handleAvatarSuccess,
+    roomInfo,
+    defaultAvatarUrl,
+    initRoomInfo,
+    initDefaultAvatarUrl,
+  } = useJoinChat()
   
-  // 模式切换
+  // 登录表单状态（使用 useLogin hook）
+  const { loginForm, resetLoginForm: resetLoginFormFromHook } = useLogin()
+  
+  // 模式切换（UI 逻辑）
   const showLoginMode = ref(false)
-  const isLoading = ref(false)
   
-  // 房间信息（模拟数据）
-  const roomInfo = ref({
-    chatCode: '20000022',
-    chatName: 'Design Team Weekly',
-    memberCount: 15,
-    avatar: {
-      objectThumbUrl: '',
-      objectUrl: '',
-    },
-  })
-  
-  // 访客表单
-  const guestAvatar = ref<Image>({ objectThumbUrl: '', objectUrl: '', objectName: '', blobUrl: '', blobThumbUrl: '' })
-  const guestNickname = ref('')
-  const defaultAvatarUrl = ref('') // 用于展示的默认头像 URL（不上传）
-  
-  // 登录表单
-  const loginUsername = ref('')
-  const loginPassword = ref('')
-  
-  // 页面加载时生成默认头像 URL（仅用于展示）
+  // 页面加载时初始化业务数据和 UI
   onMounted(() => {
-    defaultAvatarUrl.value = imageStore.generateDefaultAvatarUrl('user')
+    setFavicon()
+    initDefaultAvatarUrl()
+    initRoomInfo()
+  })
+
+  onUnmounted(() => {
+    removeFavicon()
   })
   
-  // 头像上传成功处理
-  const handleAvatarSuccess = (response: any) => {
-    if (response && response.data) {
-      guestAvatar.value.objectThumbUrl = response.data.objectThumbUrl || response.data.url || ''
-      guestAvatar.value.objectUrl = response.data.objectUrl || response.data.url || ''
-    }
-  }
-  
+  // 处理加入（根据模式调用不同的函数）
   const handleJoin = async () => {
-    isLoading.value = true
-    try {
-      // 如果用户未上传头像，上传默认头像
-      if (!guestAvatar.value.objectUrl && !guestAvatar.value.objectThumbUrl) {
-        guestAvatar.value = await imageStore.uploadDefaultAvatarIfNeeded(guestAvatar.value, 'user')
-      }
-      
-      // TODO: 调用实际的加入聊天室 API
-      // await joinChatApi({ avatar: guestAvatar.value, nickname: guestNickname.value })
-      
-      setTimeout(() => isLoading.value = false, 1500)
-    } catch (error) {
-      console.error('Failed to join chat:', error)
-      isLoading.value = false
+    if (showLoginMode.value) {
+      await handleLoginJoin(loginForm.username, loginForm.password)
+    } else {
+      await handleGuestJoin()
     }
   }
   
@@ -237,13 +221,13 @@
                   </div>
 
                   <div class="input-group vertical">
-                    <el-input class="username-input" v-model="loginUsername" placeholder="用户名" size="large">
+                    <el-input class="username-input" v-model="loginForm.username" placeholder="用户名" size="large">
                       <template #prefix><el-icon>
                           <User />
                         </el-icon></template>
                     </el-input>
 
-                    <PasswordInput class="password-input" v-model="loginPassword" placeholder="密码" />
+                    <PasswordInput class="password-input" v-model="loginForm.password" placeholder="密码" />
                   </div>
                 </div>
 

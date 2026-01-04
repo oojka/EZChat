@@ -7,7 +7,7 @@ export type DialogType = 'success' | 'warning' | 'info' | 'error' | 'primary' | 
  *
  * 业务目的：统一确认弹窗的样式与行为（确认/取消回调），避免页面各处重复写 ElMessageBox 配置。
  */
-interface ConfirmDialogOptions {
+type ConfirmDialogOptions = {
   title?: string
   message: string
   confirmText?: string

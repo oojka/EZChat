@@ -2,6 +2,7 @@ package hal.th50743.controller;
 
 import hal.th50743.pojo.Result;
 import hal.th50743.pojo.UserReq;
+import hal.th50743.pojo.UserVO;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class UserController {
      * @return 包含用户信息的统一响应结果
      */
     @GetMapping("/{uid}")
-    public Result getUserInfo(@PathVariable String uid) {
+    public Result<UserVO> getUserInfo(@PathVariable String uid) {
         log.info("get user info, uid={}", uid);
         return Result.success(userService.getUserInfoByUid(uid));
     }

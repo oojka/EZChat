@@ -45,7 +45,7 @@ const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\\x2f\\x
 
 export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
-interface PasswordOptions {
+type PasswordOptions = {
   min?: number
   max?: number
   level?: PasswordSecurityLevel

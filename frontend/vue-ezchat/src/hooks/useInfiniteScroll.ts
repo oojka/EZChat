@@ -6,7 +6,7 @@
  */
 import { nextTick, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 
-export interface UseInfiniteScrollOptions {
+export type UseInfiniteScrollOptions = {
   /**
    * 是否正在加载中
    */
@@ -33,7 +33,7 @@ export interface UseInfiniteScrollOptions {
   threshold?: number
 }
 
-export interface UseInfiniteScrollReturn {
+export type UseInfiniteScrollReturn = {
   /**
    * 列表容器的引用
    */

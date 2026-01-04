@@ -1,6 +1,6 @@
 import {computed, ref} from 'vue'
 import {defineStore, storeToRefs} from 'pinia'
-import type {ChatRoom, Message} from '@/type'
+import type {ChatRoom, Message, Image} from '@/type'
 import {initApi} from '@/api/AppInit.ts'
 import { getChatMembersApi } from '@/api/Chat'
 import {useUserStore} from '@/stores/userStore.ts'
@@ -86,13 +86,20 @@ export const useRoomStore = defineStore('room', () => {
   // =========================================
 
   /**
+   * 类型守卫：验证 avatar 是否为有效的 Image 对象
+   */
+  const isImage = (avatar: Image | null | undefined): avatar is Image => {
+    return avatar !== null && avatar !== undefined
+  }
+
+  /**
    * 初始化房间列表及用户在线状态
    */
   const initRoomList = async () => {
     try {
       isRoomListLoading.value = true
       const imageStore = useImageStore()
-      const prevAvatars = _roomList.value.map(r => r.avatar).filter(Boolean) as any
+      const prevAvatars = _roomList.value.map(r => r.avatar).filter(isImage)
       // 1) 从后端拉取：chatList + userStatusList
       const result = await initApi()
       if (result?.data) {
@@ -128,9 +135,9 @@ export const useRoomStore = defineStore('room', () => {
 
       // 2) 列表头像缩略图：在 Store 更新后异步预取 blob（不阻塞主流程）
       const rooms = _roomList.value || []
-      const allAvatars = rooms.map(r => r.avatar).filter(Boolean) as any
+      const allAvatars = rooms.map(r => r.avatar).filter(isImage)
       // prefetchThumbs 内部已自动去重，无需手动去重
-      imageStore.revokeUnusedBlobs(prevAvatars as any, allAvatars as any)
+      imageStore.revokeUnusedBlobs(prevAvatars, allAvatars)
       imageStore.prefetchThumbs(allAvatars, 6)
     } catch (e) {
       console.error('[ERROR] [RoomStore] Init API Error:', e)
@@ -200,7 +207,7 @@ export const useRoomStore = defineStore('room', () => {
       // 成员头像缩略图预取：异步触发，不阻塞 UI
       // prefetchThumbs 内部已自动去重，无需手动去重
       const imageStore = useImageStore()
-      imageStore.prefetchThumbs(members.map(m => m.avatar).filter(Boolean) as any, 6)
+      imageStore.prefetchThumbs(members.map(m => m.avatar).filter(isImage), 6)
     } catch (e) {
       console.error('[ERROR] [RoomStore] Fetch members failed:', e)
     } finally {

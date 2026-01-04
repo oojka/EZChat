@@ -80,8 +80,8 @@
     "unexpected_error": "發生了預料之外的錯誤。",
     "already_exists": "「{info}」已被占用。",
     "data_already_exists": "該資料已存在。",
-    "not_member": "您不是該房間的成員。",
-    "room_not_found": "房間未找到或已被刪除。",
+    "not_member": "無訪問權限：您不是該聊天室的成員。",
+    "room_not_found": "房間不存在或已被解散。",
     "input_too_long": "輸入內容超過字元限制。",
     "data_integrity_error": "資料處理錯誤。",
     "guest_join_failed": "以訪客身份加入失敗。",
@@ -91,7 +91,24 @@
     "file_too_large": "檔案過大，請選擇較小的檔案。",
     "invalid_credentials": "用戶名稱或密碼錯誤。",
     "network_error": "網路錯誤，請檢查您的連線。",
-    "no_permission": "權限被拒絕。"
+    "no_permission": "權限被拒絕。",
+    "join_disabled": "該房間被禁止加入。",
+    "password_login_disabled": "該房間被禁止通過密碼加入。",
+    "password_required": "該房間需要密碼才能加入。",
+    "password_incorrect": "密碼驗證失敗：密碼不正確。",
+    "http_400": "請求參數錯誤",
+    "http_404": "資源未找到",
+    "http_408": "請求超時，請稍後重試",
+    "http_502": "閘道錯誤",
+    "http_503": "服務暫時不可用",
+    "http_504": "閘道超時",
+    "errors": {
+      "42001": "房間未找到或已被刪除。",
+      "40300": "加入被禁用或密碼登入未啟用。",
+      "42003": "密碼必填。",
+      "42004": "密碼錯誤。",
+      "40000": "請求參數錯誤。"
+    }
   },
   "error_pages": {
     "404": { "title": "頁面未找到", "message": "您訪問的頁面不存在或已被移動。" },

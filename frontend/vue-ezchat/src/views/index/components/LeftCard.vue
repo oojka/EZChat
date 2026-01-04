@@ -7,7 +7,7 @@ import PasswordInput from '@/components/PasswordInput.vue'
 const { t } = useI18n()
 const props = defineProps<{ active: boolean; flipped: boolean }>()
 const emit = defineEmits<{ (e: 'flip'): void; (e: 'unflip'): void }>()
-const { joinChatForm, handleJoin, resetJoinForm } = useJoinChat()
+const { joinChatForm, handleJoin, resetJoinForm, isValidating } = useJoinChat()
 
 const onFlip = () => { resetJoinForm(); emit('flip') }
 const onUnflip = () => { emit('unflip'); setTimeout(() => resetJoinForm(), 800) }
@@ -59,8 +59,8 @@ const onUnflip = () => { emit('unflip'); setTimeout(() => resetJoinForm(), 800) 
             </div>
           </div>
           <div class="form-actions">
-            <el-button type="primary" @click="handleJoin" class="join-submit-btn" :disabled="!joinChatForm.chatCode && !joinChatForm.inviteUrl">{{ t('guest.join_submit') }}</el-button>
-            <el-button @click="onUnflip" class="join-cancel-btn">{{ t('common.cancel') }}</el-button>
+            <el-button type="primary" @click="handleJoin" class="join-submit-btn" :loading="isValidating" :disabled="(!joinChatForm.chatCode && !joinChatForm.inviteUrl) || isValidating">{{ t('guest.join_submit') }}</el-button>
+            <el-button @click="onUnflip" class="join-cancel-btn" :disabled="isValidating">{{ t('common.cancel') }}</el-button>
           </div>
         </el-form>
       </div>

@@ -6,6 +6,7 @@ interface Props {
   showText?: boolean
   absolute?: boolean
   showBlobs?: boolean
+  bgWhite?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
@@ -14,14 +15,18 @@ withDefaults(defineProps<Props>(), {
   text: '',
   showText: false,
   absolute: false,
-  showBlobs: true
+  showBlobs: true,
+  bgWhite: false
 })
 </script>
 
 <template>
-  <div class="app-spinner-container" :class="{ 'is-absolute': absolute }">
+  <div
+    class="app-spinner-container"
+    :class="{ 'is-absolute': absolute, 'bg-white': bgWhite }"
+  >
     <!-- 同步首页动态背景 -->
-    <div v-if="showBlobs" class="bg-blobs">
+    <div v-if="showBlobs && !bgWhite" class="bg-blobs">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
     </div>
@@ -53,6 +58,11 @@ withDefaults(defineProps<Props>(), {
   background-size: 40px 40px, 100% 100%, 100% 100%, 100% 100%;
   overflow: hidden;
   transition: background 0.8s var(--ease-out-expo);
+}
+
+.app-spinner-container.bg-white {
+  background: #ffffff !important;
+  background-image: none !important;
 }
 
 .app-spinner-container.is-absolute {

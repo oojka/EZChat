@@ -5,6 +5,8 @@ import ChatView from '@/views/chat/index.vue'
 import JoinView from '@/views/Join/index.vue'
 import WelcomeView from '@/views/welcome/index.vue'
 import ErrorView from '@/views/error/index.vue'
+import NotFoundView from '@/views/error/404.vue'
+import { useRoute } from 'vue-router'
 import {useAppStore} from '@/stores/appStore'
 import {useWebsocketStore} from '@/stores/websocketStore'
 import i18n from '@/i18n'
@@ -28,44 +30,52 @@ const router = createRouter({
           path: '',
           name: 'Welcome',
           component: WelcomeView,
-          meta: { title: 'Welcome　|　EZ Chat' },
+          meta: { title: 'Welcome' },
         },
         {
           path: ':chatCode([0-9]{8})',
           name: 'ChatRoom',
           component: ChatView,
-          meta: { title: 'Chat Room　|　EZ Chat' },
+          meta: { title: 'Chat Room' },
         },
         {
           path: '/guest/:chatCode([0-9]{8})',
           name: 'GuestChatRoom',
           component: ChatView,
-          meta: { title: 'Chat Room - Guest Access　|　EZ Chat' },
+          meta: { title: 'Chat Room - Guest Access' },
         },
       ],
     },
     {
       path: '/',
+      name: 'Home',
       component: IndexView,
       meta: { title: 'EZ Chat - Home' },
     },
     {
-      path: '/Join/:chatCode([0-9]{8})',
+      path: '/invite/:inviteCode([0-9A-Za-z]{16,24})',
+      name: 'Invite',
       component: JoinView,
-      meta: { title: 'Join ChatRoom　|　EZ Chat' },
+      meta: { title: 'Verifying Invitation... ' },
+    },
+    {
+      path: '/Join/:chatCode([0-9]{8})',
+      name: 'Join',
+      component: JoinView,
+      meta: { title: 'Join ChatRoom' },
     },
     {
       path: '/error',
+      name: 'Error',
       component: ErrorView,
-      meta: { title: 'Error Page　|　EZ Chat' },
+      meta: { title: '' },
     },
     {
-      path: '/:pathMatch(.*)*',
-      redirect: (to) => ({
-        path: '/error',
-        query: { code: '404', title: '404 - Not Found　|　EZ Chat' },
-      }),
-    },
+      path: '/:pathMatch(.*)*', 
+      name: 'NotFound',
+      component: NotFoundView,
+      meta: { title: '404 Not Found' },
+    }
   ],
 })
 
@@ -80,6 +90,7 @@ const router = createRouter({
  * - 如未来需要强制权限，请在此处校验 token，并对 `/chat/**` 做重定向
  */
 router.beforeEach((to, from, next) => {
+  const route = useRoute()
   const appStore = useAppStore()
   const websocketStore = useWebsocketStore()
 
@@ -90,20 +101,34 @@ router.beforeEach((to, from, next) => {
     websocketStore.resetState()
   }
 
+  // 如果目标是 /error，显示全白全屏遮蔽（无转圈无文字）
+  if (to.name === 'Error' || to.name === 'NotFound') {
+    appStore.loadingBgWhite = true
+    appStore.isAppLoading = true
+    appStore.showLoadingSpinner = false
+  } else {
+    appStore.loadingBgWhite = false
+    appStore.showLoadingSpinner = true
+  }
+
   // 逻辑优化：
   // 判断是否在 /chat 体系内部切换（包括欢迎页和具体房间）
   const isChatSwitch =
     (from.name === 'ChatRoom' || from.name === 'Welcome')
     && to.name === 'ChatRoom'
-  // 只有在非 /chat 内部切换，且路径确实发生变化时，才显示全局 Loading
-  if (to.path !== from.path && !isChatSwitch) {
+  // 只有在非 /chat 内部切换，且路径确实发生变化时，才显示全局 Loading（错误页已在上面单独处理）
+  if (to.path !== '/error' && to.path !== from.path && !isChatSwitch) {
     appStore.isAppLoading = true
-    // 进入聊天体系（登录后跳转 / 刷新回到 /chat）：使用“初始化...”提示
-    // 其他普通路由切换：使用“加载中...”提示
+    // 进入聊天体系（登录后跳转 / 刷新回到 /chat）：使用"初始化..."提示
+    // 其他普通路由切换：使用"加载中..."提示
     const isEnterChat = to.path.startsWith('/chat') && !from.path.startsWith('/chat')
+    // 注意：i18n.global.t() 返回类型为 string | VNode，但对于这些键，返回值为 string
+    // 使用类型守卫进行运行时类型检查，避免类型断言
+    const initText = i18n.global.t('common.initializing')
+    const loadingText = i18n.global.t('common.loading')
     appStore.loadingText = isEnterChat
-      ? (i18n.global.t('common.initializing') as unknown as string)
-      : (i18n.global.t('common.loading') as unknown as string)
+      ? (typeof initText === 'string' ? initText : '')
+      : (typeof loadingText === 'string' ? loadingText : '')
   }
   next()
 })
@@ -113,31 +138,31 @@ router.beforeEach((to, from, next) => {
  *
  * 业务目的：
  * - 关闭全局 Loading
- * - 统一设置 document.title（错误页根据错误码显示不同标题）
+ * - 统一设置 document.title（错误页标题置为空字符串，由组件自己处理）
  */
 router.afterEach((to) => {
   const appStore = useAppStore()
 
   setTimeout(() => {
-    // 路由切换 Loading 不应该覆盖“应用初始化 Loading”
+    // 路由切换 Loading 不应该覆盖"应用初始化 Loading"
     if (!appStore.isAppInitializing) appStore.isAppLoading = false
-  }, 200)
+  }, 100)
 
   const defaultTitle = 'EZ Chat'
-  const errorCode = to.query.code as string
-  const errorMap: Record<string, string> = {
-    '404': 'NOT FOUND', '403': 'FORBIDDEN', '500': 'SERVER ERROR',
-    '502': 'BAD GATEWAY', '503': 'SERVICE UNAVAILABLE',
+  
+  // 设置标题（错误页标题置为空字符串，由 error/index.vue 组件自己处理）
+  if (to.name === 'Error') {
+    document.title = ''
+  } else {
+    // 其他页面正常处理标题
+    const displayTitle = to.meta.title 
+      ? ([...to.matched].reverse().find((record) => record.meta?.title)?.meta?.title as string)
+      : ''
+    document.title = displayTitle ? `${displayTitle} | ${defaultTitle}` : defaultTitle
   }
-
-  let displayTitle = ''
-  if (to.path === '/error' && errorCode) {
-    const statusText = errorMap[errorCode] || 'ERROR'
-    displayTitle = `${errorCode} - ${statusText}　|　EZ Chat`
-  } else if (to.meta.title) {
-    displayTitle = [...to.matched].reverse().find((record) => record.meta?.title)?.meta?.title as string
-  }
-  document.title = displayTitle ? `${displayTitle} | ${defaultTitle}` : defaultTitle
+  
+  // Favicon 处理：错误页由 error/index.vue 组件自己处理（移除 favicon）
+  // 其他页面的 favicon 由 App.vue 统一管理（使用 /favicon_io/favicon.ico）
 })
 
 export default router

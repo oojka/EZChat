@@ -3,6 +3,7 @@ package hal.th50743.controller;
 import hal.th50743.exception.ErrorCode;
 import hal.th50743.pojo.*;
 import hal.th50743.service.AuthService;
+import hal.th50743.service.ChatService;
 import hal.th50743.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class AuthController {
     // 自动注入认证服务
     private final AuthService authService;
     private final UserService userService;
+    private final ChatService chatService;
 
 
     /**
@@ -33,7 +35,7 @@ public class AuthController {
      * @return 登录成功返回包含Token等信息的结果，失败则返回错误信息。
      */
     @PostMapping("/login")
-    public Result login(@RequestBody LoginReq loginReq){
+    public Result<LoginVO> login(@RequestBody LoginReq loginReq){
         // 调用认证服务执行登录逻辑
         LoginVO res = authService.login(loginReq);
         // 如果返回结果不为null，表示登录成功
@@ -52,7 +54,7 @@ public class AuthController {
      * @return 注册成功返回包含Token等信息的结果。
      */
     @PostMapping("/register")
-    public Result register(@RequestBody FormalUserRegisterReq formalUserRegisterReq){
+    public Result<LoginVO> register(@RequestBody FormalUserRegisterReq formalUserRegisterReq){
         // 调用认证服务执行用户注册逻辑
         LoginVO res = authService.userRegister(formalUserRegisterReq);
         // 注册成功后，直接返回成功响应
@@ -66,7 +68,7 @@ public class AuthController {
      * @return 上传成功后的图片信息
      */
     @PostMapping("/register/upload")
-    public Result upload(@RequestParam("file") MultipartFile file) {
+    public Result<Image> upload(@RequestParam("file") MultipartFile file) {
         Image image = userService.uploadAvatar(file);
         return Result.success(image);
     }
@@ -77,7 +79,7 @@ public class AuthController {
      * @return 加入成功返回包含Token等信息的结果，失败则返回错误信息。
      */
     @PostMapping("/guest")
-    public Result guestRegister(@RequestBody GuestReq guestReq){
+    public Result<LoginVO> guestRegister(@RequestBody GuestReq guestReq){
         // 调用认证服务处理访客加入逻辑
         LoginVO res = authService.guest(guestReq);
         // 如果返回结果为null，表示加入失败
@@ -102,9 +104,34 @@ public class AuthController {
      * @return 统一响应结果（LoginVO）
      */
     @PostMapping("/invite")
-    public Result inviteGuest(@RequestBody InviteGuestReq req) {
+    public Result<LoginVO> inviteGuest(@RequestBody InviteGuestReq req) {
         LoginVO res = authService.inviteGuest(req);
         return Result.success(res);
+    }
+
+    /**
+     * 验证聊天室加入请求
+     * <p>
+     * 业务目的：
+     * - 轻量级验证接口，仅验证房间是否存在、密码是否正确、是否允许加入
+     * - 不执行实际的加入操作（不创建用户、不添加成员）
+     * - 用于前端在用户提交加入表单前进行预验证
+     * <p>
+     * 支持两种验证模式：
+     * <ul>
+     *   <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
+     *   <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
+     * </ul>
+     * <p>
+     * 注意：此接口必须放在 AuthController 中，因为只有 `/auth` 路径可以跳过 token 检查
+     *
+     * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
+     * @return 统一响应结果（简化的 ChatVO，仅包含 chatCode, chatName, avatar, memberCount）
+     */
+    @PostMapping("/validate-join")
+    public Result<ChatVO> validateChatJoin(@RequestBody ValidateChatJoinReq req) {
+        ChatVO chatVO = chatService.validateChatJoin(req);
+        return Result.success(chatVO);
     }
 
 

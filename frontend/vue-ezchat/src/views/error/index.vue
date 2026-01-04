@@ -1,104 +1,868 @@
 <script setup lang="ts">
-import {computed} from 'vue'
-import {useRouter} from 'vue-router'
-import AppLogo from '@/components/AppLogo.vue'
-import ErrorContainer from '@/components/ErrorContainer.vue'
-import {useI18n} from 'vue-i18n'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import ErrorSpinner from './ErrorSpinner.vue'
 
-const { locale } = useI18n()
-const router = useRouter()
+// ==========================================
+// 业务逻辑
+// ==========================================
 
-const errorCode = computed(() => {
-  return (history.state?.code || '404').toString()
-})
+const route = useRoute()
 
-const handleLanguageChange = (lang: string) => {
-  locale.value = lang
-  localStorage.setItem('locale', lang)
+// ErrorSpinner 显示控制（遮蔽完成后销毁组件）
+const showErrorSpinner = ref(false)
+
+// IP 显示/隐藏功能
+const showIp = ref(false)
+const clientIp = ref('1.1.1.1')
+const currentTime = ref('')
+
+/**
+ * 获取客户端 IP
+ */
+const fetchClientIp = async (): Promise<void> => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json')
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    const data = await response.json()
+    if (data && data.ip) clientIp.value = data.ip
+  } catch (error) {
+    // 静默失败，保持默认值
+  }
 }
 
-const goHome = () => router.push('/')
-const goBack = () => router.go(-1)
+const formatLocalTime = (): string => {
+  const now = new Date()
+  const utcYear = now.getUTCFullYear()
+  const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '0')
+  const utcDay = String(now.getUTCDate()).padStart(2, '0')
+  const utcHours = String(now.getUTCHours()).padStart(2, '0')
+  const utcMinutes = String(now.getUTCMinutes()).padStart(2, '0')
+  const utcSeconds = String(now.getUTCSeconds()).padStart(2, '0')
+  return `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}:${utcSeconds} UTC`
+}
+
+onMounted(() => {
+  const router = useRouter()
+  currentTime.value = formatLocalTime()
+  fetchClientIp()
+
+  // IP 交互逻辑
+  const ipRevealBtn = document.getElementById('cf-footer-ip-reveal')
+  const ipItem = document.getElementById('cf-footer-item-ip')
+  if (ipItem && 'classList' in ipItem) ipItem.classList.remove('hidden')
+  if (ipRevealBtn) {
+    ipRevealBtn.addEventListener('click', () => { showIp.value = true })
+  }
+
+  // 显示遮蔽，随机 8-16 秒后关闭
+  if (route.query.code != '500') {
+    showErrorSpinner.value = true
+    const randomDelay = Math.floor(Math.random() * (16000 - 8000 + 1)) + 8000
+    setTimeout(() => {
+      showErrorSpinner.value = false
+      router.replace('/error?code=500').catch(() => { })
+      document.title = 'ez-chat.oojka.com | 500: Internal server error'
+    }, randomDelay)
+  } else {
+    document.title = 'ez-chat.oojka.com | 500: Internal server error'
+  }
+})
+
 </script>
 
 <template>
-  <!-- 增加 force-light 类名以强制锁定白天模式 -->
-  <div class="error-page-wrapper force-light">
-    <div class="bg-blobs">
-      <div class="blob blob-1"></div>
-      <div class="blob blob-2"></div>
-    </div>
-
-    <div class="content-container">
-      <div class="logo-header">
-        <!-- 强制 Logo 颜色为深色 -->
-        <AppLogo :size="80" color="#0f172a" />
+  <ErrorSpinner v-if="showErrorSpinner" />
+  <div id="cf-wrapper" class="error-page-wrapper">
+    <div id="cf-error-details" class="p-0">
+      <header class="mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8">
+        <h1 class="inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2">
+          <span class="inline-block" style="margin-right: 5px;">Internal server error</span>
+          <span class="code-label">Error code 500</span>
+        </h1>
+        <div>
+          Visit
+          <a href="https://www.cloudflare.com/" target="_blank" rel="noopener noreferrer">cloudflare.com</a>
+          for more information.
+        </div>
+        <div class="mt-3">{{ currentTime }}</div>
+      </header>
+      <div class="my-8 bg-gradient-gray">
+        <div class="w-240 lg:w-full mx-auto">
+          <div class="clearfix md:px-8">
+            <div id="cf-browser-status"
+              class="relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+              <div class="relative mb-10 md:m-0">
+                <span class="cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat"></span>
+                <span
+                  class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+              </div>
+              <span class="md:block w-full truncate">You</span>
+              <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+                Browser
+              </h3>
+              <span class="leading-1.3 text-2xl" style="color: #9bca3e">Working</span>
+            </div>
+            <div id="cf-cloudflare-status"
+              class="cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+              <a
+                href="https://www.cloudflare.com/5xx-error-landing/?utm_source=errorcode_500&utm_campaign=ez-chat.oojka.com">
+                <div class="relative mb-10 md:m-0">
+                  <span class="cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat"></span>
+                  <span
+                    class="cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+                </div>
+              </a>
+              <span class="md:block w-full truncate">Tokyo</span>
+              <a class="brand-link"
+                href="https://www.cloudflare.com/5xx-error-landing/?utm_source=errorcode_500&utm_campaign=ez-chat.oojka.com">
+                <h3 class="brand-title md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+                  Cloudflare
+                </h3>
+              </a>
+              <span class="leading-1.3 text-2xl" style="color: #bd2426">Error</span>
+            </div>
+            <div id="cf-host-status"
+              class="relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+              <div class="relative mb-10 md:m-0">
+                <span class="cf-icon-server block md:hidden h-20 bg-center bg-no-repeat"></span>
+                <span
+                  class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+              </div>
+              <span class="md:block w-full truncate">Website</span>
+              <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+                Host
+              </h3>
+              <span class="leading-1.3 text-2xl" style="color: #9bca3e">Working</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <ErrorContainer
-        :code="errorCode"
-        :locale="locale"
-        @home="goHome"
-        @back="goBack"
-        @change-lang="handleLanguageChange"
-      />
+      <div class="w-240 lg:w-full mx-auto mb-8 lg:px-8">
+        <div class="clearfix">
+          <div class="w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed">
+            <h2 class="text-3xl font-normal leading-1.3 mb-4">What happened?</h2>
+            There is an internal server error on Cloudflare&#39;s network.
+          </div>
+          <div class="w-1/2 md:w-full float-left leading-relaxed">
+            <h2 class="text-3xl font-normal leading-1.3 mb-4">What can I do?</h2>
+            Please try again in a few minutes.
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
+        <p class="text-13">
+          <span class="cf-footer-item sm:block sm:mb-1">
+            Ray ID: <strong class="font-semibold">0123456789abcdef</strong>
+          </span>
+          <span class="cf-footer-separator sm:hidden">&bull;</span>
+          <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
+            Your IP:
+            <button v-if="!showIp" type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">
+              Click to reveal
+            </button>
+            <span v-if="showIp" id="cf-footer-ip">{{ clientIp }}</span>
+            <span class="cf-footer-separator sm:hidden">&bull;</span>
+          </span>
+
+          <span class="cf-footer-item sm:block sm:mb-1">
+            <span>Performance &amp; security by</span>
+            <a rel="noopener noreferrer" href="https://www.cloudflare.com/" id="brand_link"
+              target="_blank">Cloudflare</a>
+          </span>
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* --- 核心：强制锁定白天模式变量 --- */
-.error-page-wrapper.force-light {
-  /* 覆盖全局变量，确保子组件也变回白天模式 */
-  --bg-page: #f8fafc;
-  --bg-card: #ffffff;
-  --text-900: #0f172a;
-  --text-700: #334155;
-  --text-500: #64748b;
-  --text-400: #94a3b8;
-  --primary-light: #e0f2fe;
-  --border-glass: rgba(255, 255, 255, 0.4);
-  --bg-glass: rgba(255, 255, 255, 0.5);
-  --shadow-glass: 0 12px 40px 0 rgba(31, 38, 135, 0.05);
-  --el-border-color-light: #f1f5f9;
+/* 错误页独立样式：完全写死数值，不依赖 main.css 的 CSS 变量 */
 
-  position: relative; height: 100vh; width: 100vw;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
-  font-family: 'Inter', 'Noto Sans JP', sans-serif;
-  color: var(--text-900);
+#cf-wrapper.error-page-wrapper {
+  background-color: #ffffff;
+  min-height: 100vh;
+  width: 100%;
 }
 
-/* 强制背景动效为白天模式 */
-.bg-blobs { position: absolute; inset: -50%; z-index: 0; pointer-events: none; animation: global-rotate 150s linear infinite; }
-.blob {
-  position: absolute; filter: blur(120px); opacity: 0.4;
-  transition: all 1s var(--ease-out-expo);
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  animation: blob-breathe 20s ease-in-out infinite;
-}
-.blob-1 { background: #60a5fa; width: 600px; height: 600px; top: 25%; left: 25%; }
-.blob-2 { background: #93c5fd; width: 700px; height: 700px; bottom: 25%; right: 25%; animation-delay: -10s; }
-
-/* 禁用任何来自 .dark 的覆盖 */
-:deep(.dark) .blob { filter: blur(120px) !important; }
-:deep(.dark) .blob-1 { background: #60a5fa !important; opacity: 0.4 !important; }
-:deep(.dark) .blob-2 { background: #93c5fd !important; opacity: 0.4 !important; }
-
-@keyframes global-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes blob-breathe {
-  0%, 100% { transform: scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; opacity: 0.3; }
-  50% { transform: scale(1.5); border-radius: 60% 40% 30% / 70% 50% 60% 40%; opacity: 0.7; }
+.container {
+  width: 100%;
 }
 
-.content-container { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 80%; max-width: 900px; margin-top: -15vh; }
-.logo-header { margin-bottom: 60px; }
+.bg-white {
+  background-color: #fff;
+  background-color: rgba(255, 255, 255, 1);
+}
 
-/* 强制 ErrorContainer 内部样式 */
-:deep(.error-container) {
-  background: var(--bg-glass) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  border: 1px solid var(--border-glass) !important;
-  box-shadow: var(--shadow-glass) !important;
+.bg-center {
+  background-position: 50%;
+}
+
+.bg-no-repeat {
+  background-repeat: no-repeat;
+}
+
+.border-gray-300 {
+  border-color: #ebebeb;
+  border-color: rgba(235, 235, 235, 1);
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+
+.border-solid {
+  border-style: solid;
+}
+
+.border-0 {
+  border-width: 0;
+}
+
+.border {
+  border-width: 1px;
+}
+
+.border-t {
+  border-top-width: 1px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.block {
+  display: block;
+}
+
+.inline-block {
+  display: inline-block;
+}
+
+.table {
+  display: table;
+}
+
+.hidden {
+  display: none;
+}
+
+.float-left {
+  float: left;
+}
+
+.clearfix:after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.font-mono {
+  font-family: monaco, courier, monospace;
+}
+
+.font-light {
+  font-weight: 300;
+}
+
+.font-normal {
+  font-weight: 400;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.h-12 {
+  height: 3rem;
+}
+
+.h-20 {
+  height: 5rem;
+}
+
+.text-13 {
+  font-size: 13px;
+}
+
+.text-15 {
+  font-size: 15px;
+}
+
+.text-60 {
+  font-size: 60px;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+}
+
+.leading-tight {
+  line-height: 1.25;
+}
+
+.leading-normal {
+  line-height: 1.5;
+}
+
+.leading-relaxed {
+  line-height: 1.625;
+}
+
+.leading-1\.3 {
+  line-height: 1.3;
+}
+
+.my-8 {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mt-3 {
+  margin-top: 0.75rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.ml-4 {
+  margin-left: 1rem;
+}
+
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+.mb-10 {
+  margin-bottom: 2.5rem;
+}
+
+.ml-10 {
+  margin-left: 2.5rem;
+}
+
+.mb-15 {
+  margin-bottom: 3.75rem;
+}
+
+.-ml-6 {
+  margin-left: -1.5rem;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.p-0 {
+  padding: 0;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.py-10 {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
+.py-15 {
+  padding-top: 3.75rem;
+  padding-bottom: 3.75rem;
+}
+
+.pr-6 {
+  padding-right: 1.5rem;
+}
+
+.pt-10 {
+  padding-top: 2.5rem;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.relative {
+  position: relative;
+}
+
+.left-1\/2 {
+  left: 50%;
+}
+
+.-bottom-4 {
+  bottom: -1rem;
+}
+
+.resize {
+  resize: both;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-black-dark {
+  color: #404040;
+  color: rgba(64, 64, 64, 1);
+}
+
+.text-gray-600 {
+  color: #999;
+  color: rgba(153, 153, 153, 1);
+}
+
+.text-red-error {
+  color: #bd2426;
+  color: rgba(189, 36, 38, 1);
+}
+
+.text-green-success {
+  color: #9bca3e;
+  color: rgba(155, 202, 62, 1);
+}
+
+.antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w-12 {
+  width: 3rem;
+}
+
+.w-240 {
+  width: 60rem;
+}
+
+.w-1\/2 {
+  width: 50%;
+}
+
+.w-1\/3 {
+  width: 33.333333%;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.transition {
+  -webkit-transition-property:
+    background-color,
+    border-color,
+    color,
+    fill,
+    stroke,
+    opacity,
+    box-shadow,
+    -webkit-transform;
+  transition-property:
+    background-color,
+    border-color,
+    color,
+    fill,
+    stroke,
+    opacity,
+    box-shadow,
+    -webkit-transform;
+  transition-property:
+    background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-property:
+    background-color,
+    border-color,
+    color,
+    fill,
+    stroke,
+    opacity,
+    box-shadow,
+    transform,
+    -webkit-transform;
+}
+
+body,
+html {
+  color: #404040;
+  color: rgba(64, 64, 64, 1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Roboto,
+    Helvetica Neue,
+    Arial,
+    Noto Sans,
+    sans-serif,
+    Apple Color Emoji,
+    Segoe UI Emoji,
+    Segoe UI Symbol,
+    Noto Color Emoji;
+  font-size: 16px;
+}
+
+*,
+body,
+html {
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #2f7bbf;
+  color: rgba(47, 123, 191, 1);
+  text-decoration: none;
+  -webkit-transition-timing-function: ease;
+  transition-timing-function: ease;
+  -webkit-transition-duration: 0.2s;
+  transition-duration: 0.2s;
+  -webkit-transition-property: background-color, border-color, color;
+  transition-property: background-color, border-color, color;
+}
+
+a:hover {
+  color: #f68b1f;
+  color: rgba(246, 139, 31, 1);
+}
+
+img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+#what-happened-section p {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+strong {
+  font-weight: 600;
+}
+
+.bg-gradient-gray {
+  background-image: -webkit-linear-gradient(top, #dedede, #ebebeb 3%, #ebebeb 97%, #dedede);
+}
+
+.cf-error-source:after {
+  position: absolute;
+  background-color: #fff;
+  background-color: rgba(255, 255, 255, 1);
+  width: 2.5rem;
+  height: 2.5rem;
+  -webkit-transform: translateX(0) translateY(0) rotate(45deg) skewX(0) skewY(0) scaleX(1) scaleY(1);
+  -ms-transform: translateX(0) translateY(0) rotate(45deg) skewX(0) skewY(0) scaleX(1) scaleY(1);
+  transform: translateX(0) translateY(0) rotate(45deg) skewX(0) skewY(0) scaleX(1) scaleY(1);
+  content: '';
+  bottom: -1.75rem;
+  left: 50%;
+  margin-left: -1.25rem;
+  box-shadow: 0 0 4px 4px #dedede;
+}
+
+@media screen and (max-width: 720px) {
+  .cf-error-source:after {
+    display: none;
+  }
+}
+
+.cf-icon-browser {
+  background-image: url(data:image/svg+xml;utf8,%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%2080.7362%22%3E%3Cpath%20d%3D%22M89.8358.1636H10.1642C4.6398.1636.1614%2C4.6421.1614%2C10.1664v60.4033c0%2C5.5244%2C4.4784%2C10.0028%2C10.0028%2C10.0028h79.6716c5.5244%2C0%2C10.0027-4.4784%2C10.0027-10.0028V10.1664c0-5.5244-4.4784-10.0028-10.0027-10.0028ZM22.8323%2C9.6103c1.9618%2C0%2C3.5522%2C1.5903%2C3.5522%2C3.5521s-1.5904%2C3.5522-3.5522%2C3.5522-3.5521-1.5904-3.5521-3.5522%2C1.5903-3.5521%2C3.5521-3.5521ZM12.8936%2C9.6103c1.9618%2C0%2C3.5522%2C1.5903%2C3.5522%2C3.5521s-1.5904%2C3.5522-3.5522%2C3.5522-3.5521-1.5904-3.5521-3.5522%2C1.5903-3.5521%2C3.5521-3.5521ZM89.8293%2C70.137H9.7312V24.1983h80.0981v45.9387ZM89.8293%2C16.1619H29.8524v-5.999h59.977v5.999Z%22%20style%3D%22fill%3A%20%23999%3B%22/%3E%3C/svg%3E);
+}
+
+.cf-icon-cloud {
+  background-image: url(data:image/svg+xml;utf8,%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20152%2078.9141%22%3E%3Cpath%20d%3D%22M132.2996%2C77.9927v-.0261c10.5477-.2357%2C19.0305-8.8754%2C19.0305-19.52%2C0-10.7928-8.7161-19.5422-19.4678-19.5422-2.9027%2C0-5.6471.6553-8.1216%2C1.7987C123.3261%2C18.6624%2C105.3419.9198%2C83.202.9198c-17.8255%2C0-32.9539%2C11.5047-38.3939%2C27.4899-3.0292-2.2755-6.7818-3.6403-10.8622-3.6403-10.0098%2C0-18.1243%2C8.1145-18.1243%2C18.1243%2C0%2C1.7331.258%2C3.4033.7122%2C4.9905-.2899-.0168-.5769-.0442-.871-.0442-8.2805%2C0-14.993%2C6.7503-14.993%2C15.0772%2C0%2C8.2795%2C6.6381%2C14.994%2C14.8536%2C15.0701v.0054h.1069c.0109%2C0%2C.0215.0016.0325.0016s.0215-.0016.0325-.0016%22%20style%3D%22fill%3A%20%23999%3B%22/%3E%3C/svg%3E);
+}
+
+.cf-icon-server {
+  background-image: url(data:image/svg+xml;utf8,%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2095%2075%22%3E%3Cpath%20d%3D%22M94.0103%2C45.0775l-12.9885-38.4986c-1.2828-3.8024-4.8488-6.3624-8.8618-6.3619l-49.91.0065c-3.9995.0005-7.556%2C2.5446-8.8483%2C6.3295L1.0128%2C42.8363c-.3315.971-.501%2C1.9899-.5016%2C3.0159l-.0121%2C19.5737c-.0032%2C5.1667%2C4.1844%2C9.3569%2C9.3513%2C9.3569h75.2994c5.1646%2C0%2C9.3512-4.1866%2C9.3512-9.3512v-17.3649c0-1.0165-.1657-2.0262-.4907-2.9893ZM86.7988%2C65.3097c0%2C1.2909-1.0465%2C2.3374-2.3374%2C2.3374H9.9767c-1.2909%2C0-2.3374-1.0465-2.3374-2.3374v-18.1288c0-1.2909%2C1.0465-2.3374%2C2.3374-2.3374h74.4847c1.2909%2C0%2C2.3374%2C1.0465%2C2.3374%2C2.3374v18.1288Z%22%20style%3D%22fill%3A%20%23999%3B%22/%3E%3Ccircle%20cx%3D%2274.6349%22%20cy%3D%2256.1889%22%20r%3D%224.7318%22%20style%3D%22fill%3A%20%23999%3B%22/%3E%3Ccircle%20cx%3D%2259.1472%22%20cy%3D%2256.1889%22%20r%3D%224.7318%22%20style%3D%22fill%3A%20%23999%3B%22/%3E%3C/svg%3E);
+}
+
+.cf-icon-ok {
+  background-image: url(data:image/svg+xml;utf8,%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2224%22%20r%3D%2223.4815%22%20style%3D%22fill%3A%20%239bca3e%3B%22/%3E%3Cpolyline%20points%3D%2217.453%2024.9841%2021.7183%2030.4504%2030.2076%2016.8537%22%20style%3D%22fill%3A%20none%3B%20stroke%3A%20%23fff%3B%20stroke-linecap%3A%20round%3B%20stroke-linejoin%3A%20round%3B%20stroke-width%3A%204px%3B%22/%3E%3C/svg%3E);
+}
+
+.cf-icon-error {
+  background-image: url(data:image/svg+xml;utf8,%3Csvg%20id%3D%22a%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2047.9145%2047.9641%22%3E%3Ccircle%20cx%3D%2223.9572%22%20cy%3D%2223.982%22%20r%3D%2223.4815%22%20style%3D%22fill%3A%20%23bd2426%3B%22/%3E%3Cline%20x1%3D%2219.0487%22%20y1%3D%2219.0768%22%20x2%3D%2227.8154%22%20y2%3D%2228.8853%22%20style%3D%22fill%3A%20none%3B%20stroke%3A%20%23fff%3B%20stroke-linecap%3A%20round%3B%20stroke-linejoin%3A%20round%3B%20stroke-width%3A%203px%3B%22/%3E%3Cline%20x1%3D%2227.8154%22%20y1%3D%2219.0768%22%20x2%3D%2219.0487%22%20y2%3D%2228.8853%22%20style%3D%22fill%3A%20none%3B%20stroke%3A%20%23fff%3B%20stroke-linecap%3A%20round%3B%20stroke-linejoin%3A%20round%3B%20stroke-width%3A%203px%3B%22/%3E%3C/svg%3E);
+}
+
+#cf-wrapper .feedback-hidden {
+  display: none;
+}
+
+#cf-wrapper .feedback-success {
+  min-height: 33px;
+  line-height: 33px;
+}
+
+#cf-wrapper .cf-button {
+  color: #0051c3;
+  font-size: 13px;
+  border-color: #0045a6;
+  -webkit-transition-timing-function: ease;
+  transition-timing-function: ease;
+  -webkit-transition-duration: 0.2s;
+  transition-duration: 0.2s;
+  -webkit-transition-property: background-color, border-color, color;
+  transition-property: background-color, border-color, color;
+}
+
+#cf-wrapper .cf-button:hover {
+  color: #fff;
+  background-color: #003681;
+}
+
+.cf-error-footer .hidden {
+  display: none;
+}
+
+.cf-error-footer .cf-footer-ip-reveal-btn {
+  -webkit-appearance: button;
+  -moz-appearance: button;
+  appearance: button;
+  text-decoration: none;
+  background: none;
+  color: inherit;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: #0051c3;
+  -webkit-transition: color 0.15s ease;
+  transition: color 0.15s ease;
+}
+
+.cf-error-footer .cf-footer-ip-reveal-btn:hover {
+  color: #ee730a;
+}
+
+.code-label {
+  background-color: #d9d9d9;
+  color: #313131;
+  font-weight: 500;
+  border-radius: 1.25rem;
+  font-size: 0.75rem;
+  line-height: 4.5rem;
+  padding: 0.25rem 0.5rem;
+  height: 4.5rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+@media (max-width: 639px) {
+  .sm\:block {
+    display: block;
+  }
+
+  .sm\:hidden {
+    display: none;
+  }
+
+  .sm\:mb-1 {
+    margin-bottom: 0.25rem;
+  }
+
+  .sm\:mb-2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .sm\:py-4 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .sm\:px-8 {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .sm\:text-left {
+    text-align: left;
+  }
+}
+
+@media (max-width: 720px) {
+  .md\:border-gray-400 {
+    border-color: #dedede;
+    border-color: rgba(222, 222, 222, 1);
+  }
+
+  .md\:border-solid {
+    border-style: solid;
+  }
+
+  .md\:border-0 {
+    border-width: 0;
+  }
+
+  .md\:border-b {
+    border-bottom-width: 1px;
+  }
+
+  .md\:block {
+    display: block;
+  }
+
+  .md\:inline-block {
+    display: inline-block;
+  }
+
+  .md\:hidden {
+    display: none;
+  }
+
+  .md\:float-none {
+    float: none;
+  }
+
+  .md\:text-3xl {
+    font-size: 1.875rem;
+  }
+
+  .md\:m-0 {
+    margin: 0;
+  }
+
+  .md\:mt-0 {
+    margin-top: 0;
+  }
+
+  .md\:mb-2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .md\:p-0 {
+    padding: 0;
+  }
+
+  .md\:py-8 {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .md\:px-8 {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .md\:pr-0 {
+    padding-right: 0;
+  }
+
+  .md\:pb-10 {
+    padding-bottom: 2.5rem;
+  }
+
+  .md\:top-0 {
+    top: 0;
+  }
+
+  .md\:right-0 {
+    right: 0;
+  }
+
+  .md\:left-auto {
+    left: auto;
+  }
+
+  .md\:text-left {
+    text-align: left;
+  }
+
+  .md\:w-full {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1023px) {
+  .lg\:text-sm {
+    font-size: 0.875rem;
+  }
+
+  .lg\:text-2xl {
+    font-size: 1.5rem;
+  }
+
+  .lg\:text-4xl {
+    font-size: 2.25rem;
+  }
+
+  .lg\:leading-relaxed {
+    line-height: 1.625;
+  }
+
+  .lg\:px-8 {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .lg\:pt-6 {
+    padding-top: 1.5rem;
+  }
+
+  .lg\:w-full {
+    width: 100%;
+  }
+}
+
+.brand-title {
+  color: #2f7bbf
+}
+
+.brand-link:hover .brand-title {
+  color: #f68b1f;
 }
 </style>

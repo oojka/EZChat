@@ -20,6 +20,6 @@ export const getImageUrlApi = (objectName: string): Promise<Result<string>> =>
  * @returns 如果对象已存在，返回 Image 对象；不存在返回 null
  */
 export const checkObjectExistsApi = (rawHash: string): Promise<Result<Image | null>> =>
-  request.get<Image | null>('/media/check?rawHash=' + encodeURIComponent(rawHash))
+  request.get('/media/check?rawHash=' + encodeURIComponent(rawHash))
 
 

@@ -1,9 +1,12 @@
 package hal.th50743.controller;
 
 import hal.th50743.pojo.ChatReq;
+import hal.th50743.pojo.ChatMemberVO;
+import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.Result;
 import hal.th50743.service.ChatService;
+import java.util.List;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +32,7 @@ public class ChatController {
      * @return 统一响应结果
      */
     @PostMapping
-    public Result createChat(@RequestBody ChatReq chatReq) {
+    public Result<CreateChatVO> createChat(@RequestBody ChatReq chatReq) {
         Integer userId = CurrentHolder.getCurrentId();
         CreateChatVO res = chatService.createChat(userId, chatReq);
         return Result.success(res);
@@ -43,7 +46,7 @@ public class ChatController {
      * @return 包含聊天室详情的统一响应结果
      */
     @GetMapping("/{chatCode}")
-    public Result getChat(@PathVariable String chatCode) {
+    public Result<ChatVO> getChat(@PathVariable String chatCode) {
         Integer userId = CurrentHolder.getCurrentId();
         return Result.success(chatService.getChat(userId, chatCode));
     }
@@ -58,7 +61,7 @@ public class ChatController {
      * @return 统一响应结果（成员列表）
      */
     @GetMapping("/{chatCode}/members")
-    public Result getChatMembers(@PathVariable String chatCode) {
+    public Result<List<ChatMemberVO>> getChatMembers(@PathVariable String chatCode) {
         Integer userId = CurrentHolder.getCurrentId();
         return Result.success(chatService.getChatMemberVOList(userId, chatCode));
     }

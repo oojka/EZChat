@@ -1,5 +1,5 @@
 import {reactive, ref} from 'vue'
-import {type LoginInfo} from '@/type'
+import {type LoginInfo, type LoginUser, type Result} from '@/type'
 import {useRouter} from 'vue-router'
 import {useAppStore} from '@/stores/appStore.ts'
 import {useUserStore} from '@/stores/userStore.ts'
@@ -42,6 +42,56 @@ export default function () {
   }
 
   const isLoading = ref<boolean>(false)
+
+  /**
+   * 执行登录（可复用的登录逻辑）
+   * <p>
+   * 业务目的：
+   * - 提供可复用的登录逻辑，供其他 hook 调用
+   * - 执行登录 API 调用和 token 保存
+   * - 不处理导航，由调用方决定后续流程
+   *
+   * @param username 用户名
+   * @param password 密码
+   * @returns Promise<Result<LoginUser>>
+   */
+  const executeLogin = async (username: string, password: string): Promise<Result<LoginUser>> => {
+    // 验证用户名和密码
+    if (!username || username.trim() === '') {
+      throw new Error(t('validation.username_required') || '用户名不能为空')
+    }
+    if (!USERNAME_REG.test(username.trim())) {
+      throw new Error('用户名格式错误')
+    }
+    if (!password || password.trim() === '') {
+      throw new Error(t('validation.password_required') || '密码不能为空')
+    }
+
+    try {
+      const data = await loginRequest(username.trim(), password)
+      if (data) {
+        return {
+          status: 1,
+          code: 200,
+          message: '',
+          data: data,
+        }
+      }
+      return {
+        status: 0,
+        code: 500,
+        message: '登录失败',
+        data: null!,
+      }
+    } catch (error) {
+      return {
+        status: 0,
+        code: 500,
+        message: error instanceof Error ? error.message : '登录失败',
+        data: null!,
+      }
+    }
+  }
 
   const login = async () => {
     if (!loginFormRef.value) return
@@ -90,6 +140,7 @@ export default function () {
     isLocked,
     secondsLeft,
     login,
+    executeLogin,
     resetLoginForm
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch, onMounted} from 'vue'
+import {ref, watch, onMounted, onUnmounted} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {storeToRefs} from 'pinia'
 import {useAppStore} from '@/stores/appStore.ts'
@@ -14,6 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const { isDark } = storeToRefs(appStore)
+const { setFavicon, removeFavicon } = appStore
 
 const currentLangCode = {
   en: 'EN', ja: 'JP', zh: 'CN', ko: 'KO', 'zh-tw': 'TW'
@@ -70,6 +71,14 @@ watch(() => route.query.register, (newVal) => {
     }, 600)
   }
 }, { immediate: true })
+
+onMounted(() => {
+  setFavicon()
+})
+
+onUnmounted(() => {
+  removeFavicon()
+})
 </script>
 
 <template>

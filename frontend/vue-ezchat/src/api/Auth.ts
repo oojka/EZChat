@@ -1,5 +1,10 @@
 import request from '../utils/request'
-import {type LoginUser, type RegisterInfo, type Result} from '@/type'
+import {type LoginUser, type RegisterInfo, type Result, type ValidateChatJoinReq, type ChatRoom} from '@/type'
+
+export type LoginApiReq = {
+  username: string
+  password: string
+}
 
 /**
  * 用户登录
@@ -8,10 +13,15 @@ import {type LoginUser, type RegisterInfo, type Result} from '@/type'
  * - 业务目的：获取登录态（uid/username/token），供后续 HTTP Header 与 WS 连接使用
  */
 export const loginApi = (
-  username: string,
-  password: string
+  data: LoginApiReq
 ): Promise<Result<LoginUser>> =>
-  request.post('/auth/login', { username, password })
+  request.post('/auth/login', data)
+
+export type GuestApiReq = {
+  chatCode: string
+  password: string
+  nickName: string
+}
 
 /**
  * 访客加入聊天
@@ -20,11 +30,9 @@ export const loginApi = (
  * - 业务目的：无需注册即可进入指定 chatCode（通常用于临时体验）
  */
 export const guestApi = (
-  chatCode: string,
-  password: string,
-  nickName: string,
+  data: GuestApiReq
 ): Promise<Result<LoginUser>> =>
-  request.post('/auth/guest', { chatCode, password, nickName })
+  request.post('/auth/guest', data)
 
 /**
  * 正式用户注册
@@ -36,4 +44,19 @@ export const registerApi = (
   { nickname, username, password, avatar }: RegisterInfo
 ): Promise<Result<LoginUser>> =>
   request.post('/auth/register', { nickname, username, password, avatar })
+
+/**
+ * 验证聊天室加入请求
+ *
+ * - 后端接口：POST `/auth/validate-join`
+ * - 业务目的：轻量级验证接口，仅验证房间是否存在、密码是否正确、是否允许加入
+ * - 注意：此接口必须放在 `/auth` 路径下，以跳过 token 检查
+ *
+ * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
+ * @returns 简化的 ChatRoom（仅包含 chatCode, chatName, avatar, memberCount）
+ */
+export const validateChatJoinApi = (
+  req: ValidateChatJoinReq
+): Promise<Result<ChatRoom>> =>
+  request.post('/auth/validate-join', req)
 

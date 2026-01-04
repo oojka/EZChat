@@ -1,6 +1,6 @@
 import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
-import type {LoginUser, LoginUserInfo, UserStatus} from '@/type'
+import type {LoginUser, LoginUserInfo, UserStatus, ValidateChatJoinReq, ChatRoom} from '@/type'
 import {getUserInfoApi} from '@/api/User.ts'
 import {loginApi} from '@/api/Auth.ts'
 import {ElMessage} from 'element-plus'
@@ -29,6 +29,13 @@ export const useUserStore = defineStore('user', () => {
   })
 
   const userStatusList = ref<UserStatus[]>([])
+
+  /**
+   * 验证聊天室加入请求数据（用于传递到 /join/${chatCode} 页面）
+   */
+  const validateChatJoinReq = ref<ValidateChatJoinReq | null>(null)
+  const validatedChatRoom = ref<ChatRoom | null>(null)
+
   /**
    * 重置 Store 内存状态（不清除 localStorage）
    *
@@ -44,6 +51,8 @@ export const useUserStore = defineStore('user', () => {
     loginUser.value = { uid: '', username: '', token: '' }
     loginUserInfo.value = undefined
     userStatusList.value = []
+    validateChatJoinReq.value = null
+    validatedChatRoom.value = null
   }
 
 
@@ -60,7 +69,7 @@ export const useUserStore = defineStore('user', () => {
    */
   const loginRequest = async (username: string, password: string) => {
     // 1) 调用后端登录接口
-    const result = await loginApi(username, password)
+    const result = await loginApi({ username, password })
     if (result && result.data) {
       // 1. 更新 State
       loginUser.value = result.data
@@ -72,10 +81,26 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
+   * 类型守卫：验证数据是否为 LoginUser 类型
+   */
+  const isLoginUser = (data: unknown): data is LoginUser => {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'uid' in data &&
+      'username' in data &&
+      'token' in data &&
+      typeof (data as Record<string, unknown>).uid === 'string' &&
+      typeof (data as Record<string, unknown>).username === 'string' &&
+      typeof (data as Record<string, unknown>).token === 'string'
+    )
+  }
+
+  /**
    * 从 localStorage 恢复登录用户（仅恢复 token/uid/username，不发请求）
    *
    * 业务目的：
-   * - refresh 时优先“同步恢复 token”，让后续 API/WS 尽快可用
+   * - refresh 时优先"同步恢复 token"，让后续 API/WS 尽快可用
    * - 用户详情（昵称/头像）可后台再拉取，不阻塞首屏
    *
    * @returns 是否恢复成功
@@ -84,8 +109,12 @@ export const useUserStore = defineStore('user', () => {
     const rowString: string | null = localStorage.getItem('loginUser')
     if (!rowString) return false
     try {
-      loginUser.value = JSON.parse(rowString)
-      return !!loginUser.value?.token
+      const parsed = JSON.parse(rowString)
+      if (isLoginUser(parsed)) {
+        loginUser.value = parsed
+        return !!loginUser.value?.token
+      }
+      return false
     } catch {
       return false
     }
@@ -154,10 +183,40 @@ export const useUserStore = defineStore('user', () => {
     return loginUser.value.token
   })
 
+  /**
+   * 设置验证聊天室加入信息
+   * <p>
+   * 业务目的：
+   * - 在验证成功后存储请求和响应数据
+   * - 供 /join/${chatCode} 页面使用，用于显示房间信息和执行实际加入
+   *
+   * @param req 验证请求对象
+   * @param chatRoom 验证成功的房间信息（简化的 ChatRoom）
+   */
+  const setValidatedChatInfo = (req: ValidateChatJoinReq, chatRoom: ChatRoom) => {
+    validateChatJoinReq.value = req
+    validatedChatRoom.value = chatRoom
+  }
+
+  /**
+   * 清除验证聊天室加入信息
+   * <p>
+   * 业务场景：
+   * - 用户离开加入流程时
+   * - 开始新的验证时
+   * - 成功加入后
+   */
+  const clearValidatedChatInfo = () => {
+    validateChatJoinReq.value = null
+    validatedChatRoom.value = null
+  }
+
   return {
     loginUser,
     loginUserInfo,
     userStatusList,
+    validateChatJoinReq,
+    validatedChatRoom,
     getToken,
     initLoginUserInfo,
     restoreLoginUserFromStorage,
@@ -165,5 +224,7 @@ export const useUserStore = defineStore('user', () => {
     loginRequest,
     logout,
     resetState,
+    setValidatedChatInfo,
+    clearValidatedChatInfo,
   }
 })

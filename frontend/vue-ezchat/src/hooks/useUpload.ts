@@ -4,8 +4,8 @@ import axios from 'axios'
 import {useUserStore} from '@/stores/userStore'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 
-// 定义上传结果接口
-interface UploadResult {
+// 定义上传结果类型
+type UploadResult = {
   url: string
   filename?: string
 }
@@ -56,7 +56,8 @@ export function useUpload(uploadApiUrl: string) {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
             uploadProgress.value = percent
-            // element-plus 的 onProgress 期望的是 UploadProgressEvent，这里将 axios 事件转成最小兼容结构
+            // Element Plus 的 onProgress 期望的是 UploadProgressEvent，这里将 axios 事件转成最小兼容结构
+            // 使用 as any 绕过类型检查（可接受的第三方库类型兼容性异常）
             onProgress?.({ percent } as any) // 通知 el-upload 更新进度条
           }
         }
