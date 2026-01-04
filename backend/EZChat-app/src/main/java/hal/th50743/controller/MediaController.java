@@ -7,7 +7,9 @@ import hal.th50743.service.FileService;
 import hal.th50743.service.OssMediaService;
 import io.minio.MinioOSSOperator;
 import io.minio.MinioOSSResult;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @RequestMapping("/media")
 @RequiredArgsConstructor
+@Validated
 public class MediaController {
 
     private static final int DEFAULT_THUMB_MAX_W = 400;
@@ -84,12 +87,10 @@ public class MediaController {
      * @return 统一响应：如果对象已存在，data 为 Image 对象；不存在返回 null
      */
     @GetMapping("/check")
-    public Result<Image> checkObjectExists(@RequestParam String rawHash) {
-        // 参数校验
-        if (rawHash == null || rawHash.length() != 64) {
-            return Result.error("Invalid hash format");
-        }
-
+    public Result<Image> checkObjectExists(
+            @RequestParam 
+            @Pattern(regexp = "^[a-fA-F0-9]{64}$", message = "Invalid hash format") 
+            String rawHash) {
         // 1. 先查询原始对象哈希
         FileEntity existingObject = fileService.findActiveObjectByRawHash(rawHash);
         

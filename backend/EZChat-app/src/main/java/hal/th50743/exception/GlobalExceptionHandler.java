@@ -1,6 +1,8 @@
 package hal.th50743.exception;
 
 import hal.th50743.pojo.Result;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -46,6 +48,36 @@ public class GlobalExceptionHandler {
             return Result.error(ErrorCode.BAD_REQUEST.getCode(), "Input value too long");
         }
         return Result.error(ErrorCode.DATABASE_ERROR);
+    }
+
+    /**
+     * 处理参数校验异常（@Validated、@Pattern 等注解触发的校验失败）
+     * <p>
+     * 业务目的：
+     * - 统一处理 Spring Validation 注解校验失败的情况
+     * - 将校验错误信息转换为统一的 Result 响应格式
+     * <p>
+     * 触发场景：
+     * - Controller 方法参数使用 @Pattern、@NotNull、@Size 等注解校验失败
+     * - Controller 类使用 @Validated 注解，方法参数校验失败
+     * <p>
+     * 示例：
+     * - rawHash 参数不符合正则表达式 `^[a-fA-F0-9]{64}$`
+     * - 必填参数为 null
+     * - 字符串长度不符合要求
+     *
+     * @param e 参数校验异常
+     * @return 统一响应结果（错误信息）
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public Result<?> handleConstraintViolationException(ConstraintViolationException e) {
+        log.error("Validation constraint violation:", e);
+        // 提取第一个校验错误消息（通常只有一个参数校验失败）
+        String message = e.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .findFirst()
+                .orElse("Validation failed");
+        return Result.error(ErrorCode.BAD_REQUEST.getCode(), message);
     }
 
     @ExceptionHandler(Exception.class)

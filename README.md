@@ -271,9 +271,71 @@ Frontend rendering rules:
 - `type=1`：只渲染图片列表（避免空文本气泡）/ render images only (no empty bubble)
 - `type=2`：文字 + 图片都渲染 / render both
 
+### 代码规范 / Code Conventions
+
+#### TypeScript 类型定义 / TypeScript Type Definitions
+
+- **类型别名优先 / Prefer `type` aliases**：所有类型定义使用 `type` 而非 `interface`（Vue 组件 Props/Emits 除外）  
+  All type definitions use `type` aliases instead of `interface` (except Vue component props/emits)
+- **集中管理 / Centralized**：所有全局类型定义位于 `frontend/vue-ezchat/src/type/index.ts`  
+  All global types are defined in `frontend/vue-ezchat/src/type/index.ts`
+- **类型命名 / Naming**：
+  - API 请求类型：`{FunctionName}Req`（如 `LoginApiReq`, `GuestApiReq`）  
+    API request types: `{FunctionName}Req` (e.g., `LoginApiReq`, `GuestApiReq`)
+  - 响应类型：`Result<T>`（泛型包装器）  
+    Response types: `Result<T>` (generic wrapper)
+
+#### 类型安全协议 / Type Safety Protocol
+
+- **Zero `any` Policy**：严格禁止使用 `any` 类型，使用 `unknown` 配合类型守卫或泛型代替  
+  Explicit `any` is strictly prohibited; use `unknown` with type guards or generics instead
+- **No Lazy Assertions**：避免使用 `as Type` 类型断言，优先使用类型守卫（Type Guards）或控制流类型收窄  
+  Avoid `as Type` assertions; prefer type guards or control flow narrowing
+- **运行时验证 / Runtime Validation**：API 响应数据使用类型守卫进行运行时验证  
+  API response data should be validated at runtime using type guards
+- **可接受的异常 / Acceptable Exceptions**：
+  - DOM API 类型断言（如 `document.getElementById(...) as HTMLInputElement`）  
+    DOM API type assertions (e.g., `document.getElementById(...) as HTMLInputElement`)
+  - 实验性浏览器 API（如 View Transition API）  
+    Experimental browser APIs (e.g., View Transition API)
+  - 第三方库类型不匹配（需要添加注释说明原因）  
+    Third-party library type mismatches (must be documented with comments)
+
+#### API 函数模式 / API Function Patterns
+
+- **参数对象模式 / Parameter Object Pattern**：所有 API 函数接受单个参数对象，而非多个原始参数  
+  All API functions accept a single parameter object instead of multiple primitive parameters
+- **类型定义 / Type Definitions**：
+  - 请求类型：`{FunctionName}Req`（如 `LoginApiReq: { username: string, password: string }`）  
+    Request types: `{FunctionName}Req` (e.g., `LoginApiReq: { username: string, password: string }`)
+  - 响应类型：`Promise<Result<T>>`  
+    Response types: `Promise<Result<T>>`
+- **示例 / Example**：
+
+```typescript
+export type LoginApiReq = {
+  username: string
+  password: string
+}
+
+export const loginApi = (data: LoginApiReq): Promise<Result<LoginUser>> =>
+  request.post('/auth/login', data)
+```
+
+#### 后端类型安全 / Backend Type Safety
+
+- **泛型 Result 类 / Generic Result Class**：后端 `Result<T>` 类完全泛型化，所有 Controller 方法使用正确的泛型类型  
+  Backend `Result<T>` class is fully genericized; all controller methods use proper generic types
+- **错误响应 / Error Responses**：错误响应使用 `Result<?>` 通配符类型  
+  Error responses use `Result<?>` wildcard type
+- **类型一致性 / Type Consistency**：前后端 `Result<T>` 结构保持一致  
+  Frontend and backend `Result<T>` structures are consistent
+
+---
+
 ### 刷新初始化与加载策略 / Refresh initialization & loading strategy
 
-refresh 场景下，前端采用“分阶段加载”以减少首屏阻塞：  
+refresh 场景下，前端采用"分阶段加载"以减少首屏阻塞：  
 On refresh, frontend uses a staged initialization to reduce first-paint blocking:
 
 - **阶段 1（阻塞）/ Stage 1 (blocking)**：先拉取 chatList + userStatusList，确保 AsideList 可用  
@@ -965,14 +1027,14 @@ If object does not exist, `data` is `null`:
 
 ### 统一响应与异常处理 / Unified response & exception handling
 
-后端所有 REST 接口统一返回 `hal.th50743.pojo.Result`：  
-All REST APIs return `hal.th50743.pojo.Result`:
+后端所有 REST 接口统一返回 `hal.th50743.pojo.Result<T>`（完全泛型化）：  
+All REST APIs return `hal.th50743.pojo.Result<T>` (fully genericized):
 
 - **字段 / Fields**
   - `status`: `1`=success, `0`=failure
   - `code`: 业务码 / business error code（成功固定为 `200`）
   - `message`: 说明信息 / message
-  - `data`: 业务数据 / payload
+  - `data`: 业务数据 / payload（类型为泛型 `T`）
 
 最小示例 / Minimal examples:
 

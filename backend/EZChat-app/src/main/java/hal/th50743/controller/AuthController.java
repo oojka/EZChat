@@ -44,7 +44,10 @@ public class AuthController {
             return Result.success(res);
         }
         // 登录失败，返回错误信息
-        return Result.error(ErrorCode.INVALID_CREDENTIALS);
+        // 注意：Result.error() 返回 Result<?>，需要类型转换（错误情况下 data 为 null，类型参数无实际意义）
+        @SuppressWarnings("unchecked")
+        Result<LoginVO> errorResult = (Result<LoginVO>) Result.error(ErrorCode.INVALID_CREDENTIALS);
+        return errorResult;
     }
 
     /**
@@ -87,7 +90,10 @@ public class AuthController {
             // 记录访客加入失败的日志
             log.info("guest join chat:'{}' failed", guestReq.getChatCode());
             // 返回失败响应
-            return Result.error(ErrorCode.SYSTEM_ERROR, "guest join chat failed");
+            // 注意：Result.error() 返回 Result<?>，需要类型转换（错误情况下 data 为 null，类型参数无实际意义）
+            @SuppressWarnings("unchecked")
+            Result<LoginVO> errorResult = (Result<LoginVO>) Result.error(ErrorCode.SYSTEM_ERROR, "guest join chat failed");
+            return errorResult;
         }
         // 加入成功，返回成功响应
         return Result.success(res);
