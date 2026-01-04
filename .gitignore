@@ -4,6 +4,7 @@ dist/
 dist-ssr/
 coverage/
 .vite/
+.idea/
 *.log
 npm-debug.log*
 pnpm-debug.log*
