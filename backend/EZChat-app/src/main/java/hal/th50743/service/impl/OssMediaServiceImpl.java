@@ -189,7 +189,7 @@ public class OssMediaServiceImpl implements OssMediaService {
      * <p>
      * 业务目的：
      * - 前端预览原图时，只携带 objectName 向后端请求最新 URL
-     * - 避免“预签名过期导致图片打不开”的问题，同时降低消息列表接口返回体积
+     * - 避免"预签名过期导致图片打不开"的问题，同时降低消息列表接口返回体积
      *
      * @param objectName MinIO 对象名（建议为原图 objectName）
      * @return 可访问 URL（public 为永久链接，private 为预签名链接）
@@ -206,6 +206,64 @@ public class OssMediaServiceImpl implements OssMediaService {
         }
         // 统一走 getImageUrls：内部会处理 public/private 分流
         return minioOSSOperator.getImageUrls(objectName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES, TimeUnit.MINUTES).getUrl();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Image getImageUrlWithObjectId(String objectName) {
+        // 1. 查询 objects 表获取 objectId
+        FileEntity fileEntity = fileService.findByObjectName(objectName);
+        
+        // 2. 获取最新的 URL（刷新预签名）
+        String url = getImageUrl(objectName);
+        MinioOSSResult urls = minioOSSOperator.getImageUrls(
+                objectName, 
+                DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
+                TimeUnit.MINUTES
+        );
+        
+        // 3. 构建 Image 对象（包含 objectId）
+        return new Image(objectName, url, urls.getThumbUrl(), 
+                fileEntity != null ? fileEntity.getId() : null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Image checkObjectExists(String rawHash) {
+        // 1. 先查询原始对象哈希
+        FileEntity existingObject = fileService.findActiveObjectByRawHash(rawHash);
+        
+        if (existingObject != null) {
+            // 对象已存在，重新生成 URL（避免预签名过期）
+            String url = getImageUrl(existingObject.getObjectName());
+            MinioOSSResult urls = minioOSSOperator.getImageUrls(
+                    existingObject.getObjectName(), 
+                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
+                    TimeUnit.MINUTES
+            );
+            
+            return new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
+        }
+
+        // 2. 如果原始哈希不存在，再尝试规范化哈希（兼容性：如果前端规范化与后端一致）
+        existingObject = fileService.findActiveObjectByNormalizedHash(rawHash);
+        if (existingObject != null) {
+            String url = getImageUrl(existingObject.getObjectName());
+            MinioOSSResult urls = minioOSSOperator.getImageUrls(
+                    existingObject.getObjectName(), 
+                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
+                    TimeUnit.MINUTES
+            );
+            
+            return new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
+        }
+
+        // 3. 对象不存在，返回 null（前端继续上传）
+        return null;
     }
 
     /**

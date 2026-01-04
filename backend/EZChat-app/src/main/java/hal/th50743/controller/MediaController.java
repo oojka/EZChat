@@ -1,12 +1,8 @@
 package hal.th50743.controller;
 
-import hal.th50743.pojo.FileEntity;
 import hal.th50743.pojo.Image;
 import hal.th50743.pojo.Result;
-import hal.th50743.service.FileService;
 import hal.th50743.service.OssMediaService;
-import io.minio.MinioOSSOperator;
-import io.minio.MinioOSSResult;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -14,8 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 媒体相关 API 控制器
@@ -31,13 +25,7 @@ import java.util.concurrent.TimeUnit;
 @Validated
 public class MediaController {
 
-    private static final int DEFAULT_THUMB_MAX_W = 400;
-    private static final int DEFAULT_THUMB_MAX_H = 400;
-    private static final int DEFAULT_IMAGE_URL_EXPIRY_MINUTES = 30;
-
     private final OssMediaService ossMediaService;
-    private final FileService fileService;
-    private final MinioOSSOperator minioOSSOperator;
 
     /**
      * 获取图片访问 URL（按需刷新预签名链接）
@@ -51,21 +39,7 @@ public class MediaController {
      */
     @GetMapping("/url")
     public Result<Image> getImageUrl(@RequestParam String objectName) {
-        // 1. 查询 objects 表获取 objectId
-        FileEntity fileEntity = fileService.findByObjectName(objectName);
-        
-        // 2. 获取最新的 URL（刷新预签名）
-        String url = ossMediaService.getImageUrl(objectName);
-        MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                objectName, 
-                DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
-                TimeUnit.MINUTES
-        );
-        
-        // 3. 构建 Image 对象（包含 objectId）
-        Image image = new Image(objectName, url, urls.getThumbUrl(), 
-                fileEntity != null ? fileEntity.getId() : null);
-        
+        Image image = ossMediaService.getImageUrlWithObjectId(objectName);
         return Result.success(image);
     }
 
@@ -91,39 +65,8 @@ public class MediaController {
             @RequestParam 
             @Pattern(regexp = "^[a-fA-F0-9]{64}$", message = "Invalid hash format") 
             String rawHash) {
-        // 1. 先查询原始对象哈希
-        FileEntity existingObject = fileService.findActiveObjectByRawHash(rawHash);
-        
-        if (existingObject != null) {
-            // 对象已存在，重新生成 URL（避免预签名过期）
-            String url = ossMediaService.getImageUrl(existingObject.getObjectName());
-            // 获取缩略图 URL
-            MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                    existingObject.getObjectName(), 
-                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
-                    TimeUnit.MINUTES
-            );
-            
-            Image image = new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
-            return Result.success(image);
-        }
-
-        // 2. 如果原始哈希不存在，再尝试规范化哈希（兼容性：如果前端规范化与后端一致）
-        existingObject = fileService.findActiveObjectByNormalizedHash(rawHash);
-        if (existingObject != null) {
-            String url = ossMediaService.getImageUrl(existingObject.getObjectName());
-            MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                    existingObject.getObjectName(), 
-                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
-                    TimeUnit.MINUTES
-            );
-            
-            Image image = new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
-            return Result.success(image);
-        }
-
-        // 3. 对象不存在，返回 null（前端继续上传）
-        return Result.success(null);
+        Image image = ossMediaService.checkObjectExists(rawHash);
+        return Result.success(image);
     }
 }
 
