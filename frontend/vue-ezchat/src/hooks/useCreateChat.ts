@@ -1,4 +1,5 @@
 import { computed, reactive, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import type {Image} from '@/type'
 import {ElMessage, type FormInstance, type FormRules, type UploadProps, type FormItemRule, type UploadFile} from 'element-plus'
 import { useI18n } from 'vue-i18n'
@@ -8,14 +9,13 @@ import { calculateObjectHash } from '@/utils/objectHash'
 import { checkObjectExistsApi } from '@/api/Media'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { createChatApi, getChatRoomApi } from '@/api/Chat'
-import { useAppStore } from '@/stores/appStore'
 import { useRoomStore } from '@/stores/roomStore'
 import { useRouter } from 'vue-router'
 import { useImageStore } from '@/stores/imageStore'
 
 export const useCreateChat = () => {
-  const appStore = useAppStore()
   const roomStore = useRoomStore()
+  const { createChatDialogVisible } = storeToRefs(roomStore)
   const router = useRouter()
   const { t } = useI18n()
   const imageStore = useImageStore()
@@ -293,13 +293,13 @@ export const useCreateChat = () => {
       }
     }
     // 关闭弹窗
-    appStore.createRoomVisible = false
+    roomStore.createChatDialogVisible = false
   }
 
   // 监听弹窗打开/关闭，实现自动重置表单
   // - 打开时（true）：立即清空表单，确保每次打开都是干净状态
   // - 关闭时（false）：延迟一点等关闭动画完成后再重置（避免动画期间闪烁）
-  watch(() => appStore.createRoomVisible, (newVal) => {
+  watch(() => roomStore.createChatDialogVisible, (newVal) => {
     if (newVal) {
       // 打开时立即清空表单
       resetCreateForm()

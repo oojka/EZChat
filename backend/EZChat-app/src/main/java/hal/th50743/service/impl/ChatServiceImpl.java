@@ -5,19 +5,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
+import hal.th50743.mapper.ChatInviteMapper;
 import hal.th50743.mapper.ChatMapper;
 import hal.th50743.mapper.ChatMemberMapper;
-import hal.th50743.mapper.ChatInviteMapper;
 import hal.th50743.mapper.MessageMapper;
 import hal.th50743.pojo.*;
 import hal.th50743.pojo.FileEntity;
 import hal.th50743.service.ChatService;
 import hal.th50743.service.FileService;
 import hal.th50743.service.UserService;
-import hal.th50743.utils.ImageUtils;
-import hal.th50743.utils.InviteCodeUtils;
-import hal.th50743.utils.PasswordUtils;
-import hal.th50743.utils.UidGenerator;
+import hal.th50743.utils.*;
 import hal.th50743.ws.WebSocketServer;
 import io.minio.MinioOSSOperator;
 import jakarta.websocket.Session;
@@ -49,7 +46,8 @@ public class ChatServiceImpl implements ChatService {
     private final MinioOSSOperator minioOSSOperator;
     private final UserService userService;
     private final FileService fileService;
-    
+    private final JwtUtils jwtUtils;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ============================================================
@@ -58,14 +56,6 @@ public class ChatServiceImpl implements ChatService {
 
     /**
      * 核心复用方法：组装单个 ChatVO 的公共数据
-     * <p>
-     * 涵盖：头像 URL 转换、最后消息填充、未读数挂载、在线成员统计及脱敏。
-     *
-     * @param c           聊天室视图对象
-     * @param onlineUsers 在线用户 Session 映射
-     * @param lastMsg     最后一条消息
-     * @param unreadCount 未读消息数
-     * @param members     聊天室成员列表
      */
     private void assembleChatVO(ChatVO c,
                                 Map<Integer, Session> onlineUsers,
@@ -80,7 +70,6 @@ public class ChatServiceImpl implements ChatService {
 
         // B. 最后消息处理
         if (lastMsg != null) {
-            // 根据 objectIds 构建 Image 对象列表
             String objectIdsJson = lastMsg.getObjectIds();
             if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
                 try {
@@ -126,11 +115,11 @@ public class ChatServiceImpl implements ChatService {
                 vo.setNickname(m.getNickname());
                 vo.setOnline(isOnline);
                 vo.setLastSeenAt(m.getLastSeenAt());
-                
+
                 if (m.getAvatarObjectName() != null) {
                     vo.setAvatar(ImageUtils.buildImage(m.getAvatarObjectName(), minioOSSOperator));
                 }
-                
+
                 memberVOList.add(vo);
             }
 
@@ -141,10 +130,6 @@ public class ChatServiceImpl implements ChatService {
 
     /**
      * 将 ChatMember 列表转换为 ChatMemberVO 列表（包含头像 URL）
-     *
-     * 业务目的：
-     * - 统一成员列表的输出格式（右侧成员栏/聊天室详情复用）
-     * - 避免 Controller 层做对象拼装，保持 Controller → Service → Mapper 的职责清晰
      */
     private List<ChatMemberVO> toChatMemberVOList(List<ChatMember> members, Map<Integer, Session> onlineUsers) {
         if (members == null || members.isEmpty()) return Collections.emptyList();
@@ -168,37 +153,25 @@ public class ChatServiceImpl implements ChatService {
     // 2. 业务初始化逻辑 (App Initialization)
     // ============================================================
 
-    /**
-     * 获取用户的聊天列表及成员在线状态
-     *
-     * @param userId 用户ID
-     * @return AppInitVO 包含聊天列表和用户状态列表
-     */
     @Override
     public AppInitVO getChatVOListAndMemberStatusList(Integer userId) {
-        // 获取用户加入的所有房间列表
         List<ChatVO> chatVOList = chatMapper.getChatVOListByUserId(userId);
         if (chatVOList == null || chatVOList.isEmpty()) return null;
 
-        // 预拉取全局数据：在线用户快照、全量成员记录、未读数 Map、最后消息 Map
         Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
         List<ChatMember> allMembers = chatMemberMapper.getChatMemberListByUserId(userId);
 
-        // 按 ChatCode 对成员进行分组，优化 O(1) 查找性能
         Map<String, List<ChatMember>> chatMemberMap = allMembers.stream()
                 .collect(Collectors.groupingBy(ChatMember::getChatCode));
 
-        // 聚合未读消息数
         Map<String, Integer> unreadCountMap = messageMapper.getUnreadCountMapByUserId(userId).stream()
                 .collect(Collectors.toMap(
                         row -> (String) row.get("chatCode"),
                         row -> ((Number) row.get("unreadCount")).intValue(),
                         (v1, v2) -> v1));
 
-        // 聚合各房间最后一条消息
         Map<String, MessageVO> lastMessageMap = messageMapper.getLastMessageListByUserId(userId);
 
-        // 处理全局唯一用户状态列表 (用于前端头像在线状态点展示)
         Map<String, UserStatus> uniqueUserStatusMap = new HashMap<>();
         for (ChatMember m : allMembers) {
             m.setChatId(null);
@@ -206,7 +179,6 @@ public class ChatServiceImpl implements ChatService {
                     m.getUid(), onlineUsers.containsKey(m.getUserId()), m.getLastSeenAt()));
         }
 
-        // 遍历并调用组装逻辑
         for (ChatVO c : chatVOList) {
             assembleChatVO(c,
                     onlineUsers,
@@ -218,31 +190,17 @@ public class ChatServiceImpl implements ChatService {
         return new AppInitVO(chatVOList, new ArrayList<>(uniqueUserStatusMap.values()));
     }
 
-    /**
-     * 获取用户的聊天列表及成员在线状态（轻量版）
-     *
-     * 业务目的：
-     * - refresh 初始化只优先渲染 chatList（AsideList）
-     * - 不返回每个房间的 chatMembers，减少数据量与头像预取压力
-     *
-     * @param userId 用户ID
-     * @return AppInitVO（chatList + userStatusList）
-     */
     @Override
     public AppInitVO getChatVOListAndMemberStatusListLite(Integer userId) {
-        // 1) chatList 基础字段（不含成员列表）
         List<ChatVO> chatVOList = chatMapper.getChatVOListByUserId(userId);
         if (chatVOList == null || chatVOList.isEmpty()) {
             return new AppInitVO(Collections.emptyList(), Collections.emptyList());
         }
 
-        // 2) 轻量成员列表：用于聚合在线人数与 userStatusList（不含 nickname/avatar）
         Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
         List<ChatMemberLite> liteMembers = chatMemberMapper.getChatMemberLiteListByUserId(userId);
 
-        // 2.1) per-room 在线人数统计（chatCode -> onlineCount）
         Map<String, Integer> onlineCountMap = new HashMap<>();
-        // 2.2) 全局唯一用户状态表（uid 去重）
         Map<String, UserStatus> uniqueUserStatusMap = new HashMap<>();
 
         for (ChatMemberLite m : liteMembers) {
@@ -254,7 +212,6 @@ public class ChatServiceImpl implements ChatService {
             );
         }
 
-        // 3) 遍历 chatList：补齐头像、最后消息、未读数与在线人数（但不填 chatMembers）
         Map<String, Integer> unreadCountMap = messageMapper.getUnreadCountMapByUserId(userId).stream()
                 .collect(Collectors.toMap(
                         row -> (String) row.get("chatCode"),
@@ -263,16 +220,13 @@ public class ChatServiceImpl implements ChatService {
         Map<String, MessageVO> lastMessageMap = messageMapper.getLastMessageListByUserId(userId);
 
         for (ChatVO c : chatVOList) {
-            // 头像处理
             if (c.getAvatarObjectName() != null) {
                 c.setAvatar(ImageUtils.buildImage(c.getAvatarObjectName(), minioOSSOperator));
                 c.setAvatarObjectName(null);
             }
 
-            // 最后消息处理
             MessageVO lastMsg = lastMessageMap.get(c.getChatCode());
             if (lastMsg != null) {
-                // 根据 objectIds 构建 Image 对象列表
                 String objectIdsJson = lastMsg.getObjectIds();
                 if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
                     try {
@@ -301,9 +255,7 @@ public class ChatServiceImpl implements ChatService {
                 c.setLastActiveAt(c.getCreateTime());
             }
 
-            // 未读数
             c.setUnreadCount(unreadCountMap.getOrDefault(c.getChatCode(), 0));
-            // 在线人数（初始化阶段只提供计数，不提供 chatMembers）
             c.setOnLineMemberCount(onlineCountMap.getOrDefault(c.getChatCode(), 0));
             c.setChatMembers(null);
         }
@@ -315,43 +267,20 @@ public class ChatServiceImpl implements ChatService {
     // 3. 房间详情与权限逻辑 (Chat Detail & Security)
     // ============================================================
 
-    /**
-     * 获取聊天室详情
-     *
-     * @param userId   用户ID
-     * @param chatCode 聊天室代码
-     * @return ChatVO 聊天室详情视图对象
-     */
     @Override
     public ChatVO getChat(Integer userId, String chatCode) {
-        // 1. 获取 ID 并执行权限校验
         Integer chatId = getChatId(userId, chatCode);
-
-        // 2. 获取房间基础信息
         ChatVO chatVO = chatMapper.getChatVOByChatId(chatId);
         if (chatVO != null) {
-            // 获取该房间所需的实时状态数据
             Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
             List<ChatMember> members = chatMemberMapper.getChatMemberListByChatId(chatId);
             MessageVO lastMsg = messageMapper.getLastMessageByChatId(chatId);
             Integer unreadCount = messageMapper.getUnreadCountMapByUserIdAndChatId(userId, chatId);
-
-            // 调用核心组装逻辑
             assembleChatVO(chatVO, onlineUsers, lastMsg, unreadCount, members);
         }
         return chatVO;
     }
 
-    /**
-     * 获取聊天室成员列表（按 chatCode 懒加载）
-     *
-     * 业务目的：
-     * - 右侧成员栏按需拉取成员列表，避免 refresh 初始化阶段全量加载所有群成员
-     *
-     * @param userId   当前用户内部 ID
-     * @param chatCode 聊天室对外 ID
-     * @return 成员列表（VO）
-     */
     @Override
     public List<ChatMemberVO> getChatMemberVOList(Integer userId, String chatCode) {
         Integer chatId = getChatId(userId, chatCode);
@@ -360,24 +289,13 @@ public class ChatServiceImpl implements ChatService {
         return toChatMemberVOList(members, onlineUsers);
     }
 
-    /**
-     * 根据 ChatCode 获取 ChatId，并校验用户权限
-     *
-     * @param userId   用户ID
-     * @param chatCode 聊天室代码
-     * @return ChatId
-     * @throws RuntimeException 如果聊天室不存在或用户无权访问
-     */
     @Override
     public Integer getChatId(Integer userId, String chatCode) {
-        // 查找 ChatID
         Integer chatId = chatMapper.getChatIdByChatCode(chatCode);
         if (chatId == null) {
             log.warn("[非法请求] 用户 {} 尝试访问不存在的 chatCode: {}", userId, chatCode);
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
         }
-
-        // 校验成员关系 (防止越权访问)
         if (!chatMapper.isValidChatId(userId, chatId)) {
             log.warn("[权限拒绝] 用户 {} 尝试访问未加入的聊天室: {}", userId, chatCode);
             throw new BusinessException(ErrorCode.NOT_A_MEMBER);
@@ -385,93 +303,46 @@ public class ChatServiceImpl implements ChatService {
         return chatId;
     }
 
-    /**
-     * 获取聊天室加入校验信息（不做成员权限校验）
-     *
-     * @param chatCode 聊天室对外 ID
-     * @return ChatJoinInfo
-     */
     @Override
-    public ChatJoinInfo getJoinInfo(String chatCode) {
-        return chatMapper.getJoinInfoByChatCode(chatCode);
+    public ChatJoinInfo getJoinInfo(Integer chatId) {
+        return chatMapper.getJoinInfoByChatId(chatId);
     }
 
-    /**
-     * 验证聊天室加入请求
-     * <p>
-     * 业务目的：
-     * - 轻量级验证接口，仅验证房间是否存在、密码是否正确、是否允许加入
-     * - 不执行实际的加入操作（不创建用户、不添加成员）
-     * - 用于前端在用户提交加入表单前进行预验证
-     * <p>
-     * 支持两种验证模式：
-     * <ul>
-     *   <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
-     *   <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
-     * </ul>
-     * <p>
-     * 验证逻辑：
-     * <ol>
-     *   <li>判断验证模式（inviteCode 或 chatCode）</li>
-     *   <li>模式1：检查房间是否存在（42001）</li>
-     *   <li>模式1：检查是否允许加入（joinEnabled == 1，否则返回 40300）</li>
-     *   <li>模式1：检查密码登录是否启用（password_hash 是否为 null，为 null 则返回 40300）</li>
-     *   <li>模式1：验证密码是否正确（42004）</li>
-     *   <li>返回简化的 ChatVO（仅包含 chatCode, chatName, avatar, memberCount）</li>
-     * </ol>
-     *
-     * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
-     * @return 简化的 ChatVO（仅包含 chatCode, chatName, avatar, memberCount，其他字段为 null）
-     * @throws BusinessException 如果验证失败（房间不存在、禁止加入、密码错误等）
-     */
     @Override
     public ChatVO validateChatJoin(ValidateChatJoinReq req) {
-        // 判断验证模式
         if (req.getInviteCode() != null && !req.getInviteCode().isBlank()) {
-            // 模式2：邀请码验证（当前未实现）
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Invite code validation not implemented yet");
+            // TODO 模式2：邀请码验证（当前未实现）
+            return null;
         } else if (req.getChatCode() != null && !req.getChatCode().isBlank()) {
-            // 模式1：chatCode + password 验证
-            // 检查 password 是否提供（如果提供了 chatCode，password 必填）
-            if (req.getPassword() == null || req.getPassword().isBlank()) {
+            if (req.getPassword() == null || req.getPassword().isEmpty()) {
                 throw new BusinessException(ErrorCode.PASSWORD_REQUIRED, "Password is required when chatCode is provided");
             }
 
-            // 获取房间加入信息
-            ChatJoinInfo info = chatMapper.getJoinInfoByChatCode(req.getChatCode());
+            Integer chatId = chatMapper.getChatIdByChatCode(req.getChatCode());
+            ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
             if (info == null || info.getChatId() == null) {
                 throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
             }
-
-            // 检查是否允许加入（joinEnabled == 1 才允许）
             if (info.getJoinEnabled() == null || info.getJoinEnabled() == 0) {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat room");
             }
-
-            // 检查密码登录是否启用（password_hash 为 null 表示禁止通过 roomID 密码方式加入）
             if (info.getChatPasswordHash() == null || info.getChatPasswordHash().isBlank()) {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "Password login is not enabled for this chat room");
             }
-
-            // 验证密码是否正确
             if (!PasswordUtils.matches(req.getPassword(), info.getChatPasswordHash())) {
                 throw new BusinessException(ErrorCode.PASSWORD_INCORRECT);
             }
 
-            // 获取简化的 ChatVO
             ChatVO chatVO = chatMapper.getChatVOByChatId(info.getChatId());
             if (chatVO == null) {
                 throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
             }
 
-            // 构建简化的 ChatVO（只保留必要字段，其他设为 null）
-            // 头像转换：从 avatarObjectName 转换为 Image 对象
             if (chatVO.getAvatarObjectName() != null) {
                 chatVO.setAvatar(ImageUtils.buildImage(chatVO.getAvatarObjectName(), minioOSSOperator));
             }
             chatVO.setAvatarObjectName(null);
 
-            // 设置其他字段为 null
             chatVO.setOwnerUid(null);
             chatVO.setJoinEnabled(null);
             chatVO.setLastActiveAt(null);
@@ -484,7 +355,6 @@ public class ChatServiceImpl implements ChatService {
 
             return chatVO;
         } else {
-            // 既没有提供 chatCode 也没有提供 inviteCode
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Either chatCode+password or inviteCode must be provided");
         }
     }
@@ -493,64 +363,50 @@ public class ChatServiceImpl implements ChatService {
     // 4. 其他逻辑
     // ============================================================
 
-    /**
-     * 获取用户的聊天成员ID列表
-     *
-     * @param userId 用户ID
-     * @return 成员ID列表
-     */
     @Override
     public List<Integer> getChatMembers(Integer userId) {
         return chatMemberMapper.getChatMembersById(userId);
     }
 
-    /**
-     * 加入聊天室
-     *
-     * @param joinChatReq 加入请求
-     * @return Chat 聊天室对象
-     */
     @Override
     public Chat join(JoinChatReq joinChatReq) {
-        // 业务校验：chatCode 必填
-        if (joinChatReq == null || joinChatReq.getChatCode() == null || joinChatReq.getChatCode().isBlank()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "chatCode is required");
-        }
-        if (joinChatReq.getUid() == null || joinChatReq.getUid().isBlank()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "uid is required");
+        if (joinChatReq == null) throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
+
+        // 判断是否使用了邀请码（暂不支持，需走 joinForFormalUser）
+        if (joinChatReq.getInviteCode() != null && !joinChatReq.getInviteCode().isEmpty()) {
+            if ((joinChatReq.getChatCode() == null || joinChatReq.getChatCode().isEmpty())) {
+                // 这是一个邀请码加入请求，当前接口兼容旧逻辑，建议前端调用 joinForFormalUser
+                return null;
+            }
         }
 
-        ChatJoinInfo info = chatMapper.getJoinInfoByChatCode(joinChatReq.getChatCode());
-        if (info == null || info.getChatId() == null) {
-            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
+        // 校验必填参数
+        if ((joinChatReq.getChatCode() == null || joinChatReq.getChatCode().isEmpty()) ||
+                (joinChatReq.getPassword() == null || joinChatReq.getPassword().isEmpty())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Either chatCode+password or inviteCode must be provided");
         }
 
-        // 业务规则：join_enabled=0 时，密码/邀请都不可加入（统一拒绝）
+        Integer userId = CurrentHolder.getCurrentId();
+        Integer chatId = chatMapper.getChatIdByChatCode(joinChatReq.getChatCode());
+        if (chatId == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+
+        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
+
         if (info.getJoinEnabled() != null && info.getJoinEnabled() == 0) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat");
         }
-
-        // 业务规则：chat_password_hash != null 则必须校验密码；为 null 则免密加入
-        if (info.getChatPasswordHash() != null && !info.getChatPasswordHash().isBlank()) {
-            if (joinChatReq.getPassword() == null || joinChatReq.getPassword().isBlank()) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "Password is required");
-            }
-            if (!PasswordUtils.matches(joinChatReq.getPassword(), info.getChatPasswordHash())) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "Incorrect password");
-            }
+        if (info.getChatPasswordHash() == null || info.getChatPasswordHash().isEmpty()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Password login is not enabled for this chat room");
         }
-
-        Integer userId = userService.getIdByUid(joinChatReq.getUid());
-        if (userId == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        if (!PasswordUtils.matches(joinChatReq.getPassword(), info.getChatPasswordHash())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Incorrect password");
         }
 
         LocalDateTime now = LocalDateTime.now();
         chatMemberMapper.insertIgnore(info.getChatId(), userId, now);
 
-        // 返回最小 Chat 对象用于上层逻辑（当前工程对 join 返回不做强依赖）
-        // 注意：Lombok @AllArgsConstructor 不包含 transient 字段，所以构造函数参数不包含 avatarObjectName
-        // 参数顺序：id, chatCode, chatName, ownerId, objectId, joinEnabled, createTime, updateTime
         Chat chat = new Chat();
         chat.setId(info.getChatId());
         chat.setChatCode(info.getChatCode());
@@ -560,13 +416,6 @@ public class ChatServiceImpl implements ChatService {
         return chat;
     }
 
-    /**
-     * 创建聊天室
-     *
-     * @param userId 当前用户内部 ID
-     * @param chatReq 创建参数
-     * @return CreateChatVO（chatCode + inviteCode）
-     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public CreateChatVO createChat(Integer userId, ChatReq chatReq) {
@@ -576,10 +425,7 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "chatName is required");
         }
 
-        // 1) joinEnabled：默认允许加入（1）
         int joinEnabled = chatReq.getJoinEnable() == null ? 1 : chatReq.getJoinEnable();
-
-        // 2) 密码：可选。若提供则写入 BCrypt hash；不提供则 NULL（表示免密）
         String passwordHash = null;
         String password = chatReq.getPassword();
         String confirm = chatReq.getPasswordConfirm();
@@ -590,14 +436,11 @@ public class ChatServiceImpl implements ChatService {
             passwordHash = PasswordUtils.encode(password);
         }
 
-        // 3) 头像对象 ID：优先使用前端传来的 objectId（性能优化，无需查表）
         Integer objectId = null;
         if (chatReq.getAvatar() != null) {
-            // 优先使用 objectId（如果前端已提供）
             if (chatReq.getAvatar().getObjectId() != null) {
                 objectId = chatReq.getAvatar().getObjectId();
             } else if (chatReq.getAvatar().getObjectName() != null) {
-                // 降级方案：如果前端未提供 objectId，根据 objectName 查询（向后兼容）
                 FileEntity existingObject = fileService.findByObjectName(chatReq.getAvatar().getObjectName());
                 if (existingObject != null) {
                     objectId = existingObject.getId();
@@ -607,7 +450,6 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // 4) chatCode：8 位数字，冲突重试（复用 UID 生成思路）
         String chatCode = null;
         ChatCreate chatCreate = new ChatCreate();
         chatCreate.setChatName(chatReq.getChatName());
@@ -632,27 +474,22 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Create chat failed (no chatId)");
         }
 
-        // 5) 创建者自动入群
         LocalDateTime now = LocalDateTime.now();
         chatMemberMapper.insertIgnore(chatId, userId, now);
 
-        // 6) 生成短邀请码（默认 7 天 TTL）：入库保存 hash，返回明文给前端展示
         int expiryMinutes = chatReq.getJoinLinkExpiryMinutes() == null ? 10080 : chatReq.getJoinLinkExpiryMinutes();
         LocalDateTime expiresAt = now.plusMinutes(Math.max(1, expiryMinutes));
-
-        // 读取 maxUses：默认为 0（无限使用）
         int maxUses = chatReq.getMaxUses() == null ? 0 : chatReq.getMaxUses();
-        // 业务校验：目前只支持 0（无限）或 1（一次性）
+
         if (maxUses != 0 && maxUses != 1) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "maxUses must be 0 or 1");
         }
 
-        // 生成邀请码并入库
         String inviteCode = InviteCodeUtils.generateInviteCode(18);
         String codeHash = InviteCodeUtils.sha256Hex(inviteCode);
         ChatInvite invite = new ChatInvite(
                 null,
-                chatCode,
+                chatId,
                 codeHash,
                 expiresAt,
                 maxUses,
@@ -665,5 +502,164 @@ public class ChatServiceImpl implements ChatService {
         chatInviteMapper.insert(invite);
 
         return new CreateChatVO(chatCode, inviteCode);
+    }
+
+    /**
+     * 正式用户加入聊天室
+     * 业务流程：
+     * 1. 验证请求（参数检查、互斥性）
+     * 2. 分策略处理（邀请码模式 / 密码模式），获取 ChatJoinInfo
+     * 3. 全局检查（是否允许加入）
+     * 4. 执行加入（Insert Ignore）
+     * 5. 构建并返回登录信息
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public LoginVO joinForFormalUser(Integer userId, JoinChatReq req) {
+        // 1. 参数校验
+        validateJoinRequest(req);
+
+        ChatJoinInfo chatInfo;
+
+        // 2. 分策略处理 (邀请码模式优先，或者密码模式)
+        if (req.getInviteCode() != null) {
+            chatInfo = handleInviteJoin(req.getInviteCode());
+        } else {
+            chatInfo = handlePasswordJoin(req.getChatCode(), req.getPassword());
+        }
+
+        // 3. 全局检查：是否允许加入
+        if (Integer.valueOf(0).equals(chatInfo.getJoinEnabled())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该聊天室已禁止加入");
+        }
+
+        // 4. 执行加入 (利用数据库唯一索引忽略重复)
+        chatMemberMapper.insertIgnore(chatInfo.getChatId(), userId, LocalDateTime.now());
+
+        log.info("正式用户加入聊天室成功: userId={}, chatId={}", userId, chatInfo.getChatId());
+
+        // 5. 构造返回值
+        return buildLoginVO(userId);
+    }
+
+    // ============================================================
+    // 5. 私有辅助方法 (Private Helper Methods)
+    // ============================================================
+
+    /**
+     * 校验加入请求的基本参数合法性
+     */
+    private void validateJoinRequest(JoinChatReq req) {
+        if (req == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "请求体不能为空");
+        }
+        boolean hasPwdArgs = req.getChatCode() != null && req.getPassword() != null;
+        boolean hasInviteArgs = req.getInviteCode() != null;
+
+        if (hasPwdArgs && hasInviteArgs) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "不能同时使用密码和邀请码");
+        }
+        if (!hasPwdArgs && !hasInviteArgs) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "参数缺失：需提供(ChatCode+密码)或(邀请码)");
+        }
+    }
+
+    /**
+     * 处理密码模式加入
+     */
+    private ChatJoinInfo handlePasswordJoin(String chatCode, String password) {
+        // 建议 Mapper 增加 getJoinInfoByChatCode
+        Integer chatId = chatMapper.getChatIdByChatCode(chatCode);
+        if (chatId == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+
+        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
+        if (info == null || info.getChatId() == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
+        }
+
+        // 验证密码
+        String storedHash = info.getChatPasswordHash();
+        if (storedHash == null || storedHash.isBlank()) {
+            // 业务规则：如果房间未设置密码哈希，则禁止通过密码模式加入（仅允许邀请）
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该房间未开启密码登录");
+        }
+
+        if (password == null || password.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "密码不能为空");
+        }
+
+        if (!PasswordUtils.matches(password, storedHash)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "密码错误");
+        }
+
+        return info;
+    }
+
+    /**
+     * 处理邀请码模式加入
+     * 业务规则：
+     * 1. maxUses == 0 -> 无限使用，仅累加计数
+     * 2. maxUses == 1 -> 一次性使用，使用成功后立即物理删除（阅后即焚）
+     */
+    private ChatJoinInfo handleInviteJoin(String inviteCode) {
+        String hash = InviteCodeUtils.sha256Hex(inviteCode);
+        ChatInvite invite = chatInviteMapper.findByCodeHash(hash);
+
+        // 1. 基础校验
+        if (invite == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "无效的邀请码");
+        }
+        if (Integer.valueOf(1).equals(invite.getRevoked())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "邀请码已被撤销");
+        }
+        if (invite.getExpiresAt() != null && invite.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "邀请码已过期");
+        }
+
+        // 2. 剩余次数校验
+        // 规则：如果 maxUses > 0 (即为 1)，且 usedCount 已经 >= maxUses，则耗尽
+        if (invite.getMaxUses() > 0 && invite.getUsedCount() >= invite.getMaxUses()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "邀请码次数已耗尽");
+        }
+
+        // 3. 预先获取房间信息 (防止邀请码有效但房间没了)
+        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(invite.getChatId());
+        if (info == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
+        }
+
+        // 4. 消费邀请码 (CAS 原子更新，防止并发超用)
+        // SQL 逻辑: UPDATE ... SET used_count = used_count + 1 WHERE hash = ? AND (max_uses = 0 OR used_count < max_uses)
+        int rows = chatInviteMapper.consume(invite.getChatId(), hash);
+        if (rows <= 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "邀请码失效或并发冲突");
+        }
+
+        // 5. 阅后即焚逻辑
+        // 如果限制了次数（maxUses > 0，即为 1），且消费成功，则立即物理删除
+        if (invite.getMaxUses() > 0) {
+            chatInviteMapper.deleteByCodeHash(hash);
+            log.info("一次性邀请码已使用并删除: codeHash={}, chatId={}", hash, invite.getChatId());
+        }
+
+        return info;
+    }
+
+    /**
+     * 构建登录返回信息 (LoginVO)
+     */
+    private LoginVO buildLoginVO(Integer userId) {
+        User user = userService.getUserById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 如果是正式用户 user.getUsername() 应该有值，否则回退到 nickname
+        String username = (user.getUsername() != null) ? user.getUsername() : user.getNickname();
+
+        // 使用工具类构建 LoginVO
+        return LoginVOBuilder.build(user.getUid(), username, jwtUtils);
     }
 }

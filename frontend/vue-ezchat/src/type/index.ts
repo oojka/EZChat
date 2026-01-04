@@ -6,13 +6,13 @@ export type Result<T> = {
 }
 
 export type Image = {
-  objectName: string
-  objectUrl: string
-  objectThumbUrl: string
+  objectName? : string
+  objectUrl : string
+  objectThumbUrl : string
   objectId?: number // 对象 ID，用于直接关联 objects 表（可选，向后兼容）
   // 前端持久化字段
-  blobUrl : string    // 原图 Blob URL
-  blobThumbUrl : string // 缩略图 Blob URL
+  blobUrl? : string    // 原图 Blob URL
+  blobThumbUrl? : string // 缩略图 Blob URL
 }
 
 export type LoginInfo = {
@@ -144,4 +144,53 @@ export type WebSocketResult = {
   isSystemMessage: 0 | 1
   type: string
   data: string
+}
+
+export type GuestJoinReq = {
+  chatCode: string
+  password: string
+  nickName: string
+  avatar: Image
+} | {
+  inviteCode: string
+  nickName: string
+  avatar: Image
+}
+
+export type JoinChatReq = {
+  chatCode: string
+  password: string
+} | {
+  inviteCode: string
+}
+
+/** 对话框表单数据结构 (用于快速加入) */
+export type DialogFormData = {
+  chatCode: string
+  password: string
+  inviteCode: string
+}
+
+/** 房间基础信息结构 */
+export type RoomInfo = {
+  chatCode: string
+  chatName: string
+  memberCount: number
+  avatar: {
+    objectThumbUrl: string
+    objectUrl: string
+  }
+}
+
+export type JoinChatFormData = {
+  /** 加入模式：'password' (密码/房间号) 或 'invite' (邀请链接) */
+  joinMode: 'password' | 'invite'
+  /** 聊天室代码 (8位数字) */
+  chatCode: string
+  /** 房间密码 */
+  password: string
+  /** 完整邀请链接 URL */
+  inviteUrl: string
+  /** 解析出的邀请码 */
+  inviteCode: string
 }

@@ -106,4 +106,20 @@ public interface UserMapper {
      * @return 用户实体（包含 avatarObjectName 临时字段）
      */
     User findByIdWithAvatar(Integer id);
+
+    /**
+     * 根据用户ID获取用户名
+     *
+     * @param userId 用户ID
+     * @return 用户名（正式用户）或 null（访客用户）
+     */
+    String getUsernameByUserId(Integer userId);
+
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param userId 用户ID
+     * @return 用户对象
+     */
+    User getUserById(Integer userId);
 }

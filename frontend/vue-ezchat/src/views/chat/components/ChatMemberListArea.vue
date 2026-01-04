@@ -38,9 +38,11 @@ defineExpose({
       </div>
     </div>
 
-    <TransitionGroup name="member-list" tag="div" class="member-list-area" ref="memberListAreaRef">
-      <ChatMemberListItem v-for="member in sortedChatMemberList" :key="member.uid" :member="member" :is-me="member.uid === loginUserInfo?.uid" />
-    </TransitionGroup>
+    <div class="member-list-area" ref="memberListAreaRef">
+      <TransitionGroup name="member-list" tag="div">
+        <ChatMemberListItem v-for="member in sortedChatMemberList" :key="member.uid" :member="member" :is-me="member.uid === loginUserInfo?.uid" />
+      </TransitionGroup>
+    </div>
   </div>
 </template>
 

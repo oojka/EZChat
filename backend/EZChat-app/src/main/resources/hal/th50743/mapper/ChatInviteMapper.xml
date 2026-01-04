@@ -6,22 +6,33 @@
 
     <insert id="insert" parameterType="hal.th50743.pojo.ChatInvite" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chat_invites
-        (chat_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time)
+        (chat_id, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time)
         VALUES
-        (#{chatCode}, #{codeHash}, #{expiresAt}, #{maxUses}, #{usedCount}, #{revoked}, #{createdBy}, NOW(), NOW())
+        (#{chatId}, #{codeHash}, #{expiresAt}, #{maxUses}, #{usedCount}, #{revoked}, #{createdBy}, NOW(), NOW())
     </insert>
 
     <update id="consume">
         UPDATE chat_invites
         SET used_count = used_count + 1,
             update_time = NOW()
-        WHERE chat_code = #{chatCode}
+        WHERE chat_id = #{chatId}
           AND code_hash = #{codeHash}
           AND revoked = 0
           AND expires_at > NOW()
           <!-- XML 中需要转义 '<'，否则会触发 SAXParseException（把 SQL 当成标签解析） -->
           AND (max_uses = 0 OR used_count &lt; max_uses)
     </update>
+
+    <select id="findByCodeHash" resultType="hal.th50743.pojo.ChatInvite">
+        SELECT id, chat_id, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
+        FROM chat_invites
+        WHERE code_hash = #{codeHash}
+    </select>
+
+    <delete id="deleteByCodeHash">
+        DELETE FROM chat_invites
+        WHERE code_hash = #{codeHash}
+    </delete>
 
 </mapper>
 

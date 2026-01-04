@@ -1,5 +1,5 @@
 import request from '../utils/request'
-import type {ChatMember, ChatRoom, CreateChatVO, Image, Result} from '@/type'
+import type {ChatMember, ChatRoom, CreateChatVO, Image, JoinChatReq, LoginUser, Result} from '@/type'
 
 
 /**
@@ -36,3 +36,13 @@ export const createChatApi = (payload: {
   passwordConfirm?: string
 }): Promise<Result<CreateChatVO>> =>
   request.post('/chat', payload)
+
+/**
+ * 正式用户加入聊天室
+ *
+ * - 后端接口：POST `/chat/join`
+ * - 业务目的：已登录的正式用户加入指定聊天室，支持密码模式和邀请码模式
+ * - 返回：包含新的 JWT token 的 LoginUser
+ */
+export const joinChatApi = (req: JoinChatReq): Promise<Result<LoginUser>> =>
+  request.post('/chat/join', req)

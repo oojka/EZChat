@@ -1,15 +1,19 @@
-import {computed, ref} from 'vue'
-import {type RegisterInfo, type Result} from '@/type'
-import {ElMessage} from 'element-plus'
-import {registerApi} from '@/api/Auth.ts'
-import {useI18n} from 'vue-i18n'
-import {getPasswordReg, USERNAME_REG} from '@/utils/validators.ts'
+import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { registerApi } from '@/api/Auth.ts'
+import { useI18n } from 'vue-i18n'
+import { type PasswordOptions, getPasswordReg, USERNAME_REG } from '@/utils/validators.ts'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
 import { calculateObjectHash } from '@/utils/objectHash'
+
 import { checkObjectExistsApi } from '@/api/Media'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { useImageStore } from '@/stores/imageStore'
+
+import type { RegisterInfo, Result, Image} from '@/type'
+
+const passwordOption: PasswordOptions = { min: 8, max: 20, level: 'basic' }
 
 export function useRegister() {
   const { t } = useI18n()
@@ -88,9 +92,11 @@ export function useRegister() {
     }
   }
 
-  const handleAvatarSuccess = (response: Result) => {
-    registerForm.value.avatar = response.data
-    if (registerFormRef.value) registerFormRef.value.validateField('avatar')
+  const handleAvatarSuccess = (response: Result<Image | null>) => {
+    if (response.data) {
+      registerForm.value.avatar = response.data
+      if (registerFormRef.value) registerFormRef.value.validateField('avatar')
+    }
   }
 
   const resetRegisterForm = () => {

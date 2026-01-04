@@ -23,6 +23,34 @@
 export const USERNAME_REG = /^[a-zA-Z][a-zA-Z0-9._-]{1,19}$/
 
 /**
+ * 用户UID规则：
+ * 1. 必须为10位数字
+ * 2. 必须为数字
+ * 3. 长度限制为 10 位 {10}$
+ */
+const REGEX_USER_UID = /^[0-9]{10}$/
+
+/**
+ * 通用邀请链接正则
+ * 匹配规则：
+ * 1. 支持 http 或 https
+ * 2. 匹配任意合法域名 (Hostname)
+ * 3. 路径必须以 /invite/ 结尾，随后跟着 16-24 位字符
+ */
+// 开发环境
+// const REGEX_INVITE_URL = /^https?:\/\/[\w\.-]+(?::\d+)?\/invite\/([0-9A-Za-z]{16,24})$/;
+// 正式环境
+const REGEX_INVITE_URL = /^https:\/\/ez-chat\.oojka\.com\/invite\/([0-9A-Za-z]{16,24})$/
+
+/**
+ * 房间ID规则：
+ * 1. 必须为8位数字
+ * 2. 必须为数字
+ * 3. 长度限制为 8 位 {8}$
+ */
+const REGEX_CHAT_CODE = /^[0-9]{8}$/
+
+/**
  * 基础密码规则 (半角可见字符)：
  * 匹配 ASCII 33-126 范围内的所有字符，禁止全角和空格
  */
@@ -43,9 +71,9 @@ const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\\x2f\\x
  * =========================================
  */
 
-export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
+type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
-type PasswordOptions = {
+export type PasswordOptions = {
   min?: number
   max?: number
   level?: PasswordSecurityLevel
@@ -58,7 +86,9 @@ type PasswordOptions = {
  *
  * @param options 校验配置 (min, max, level)
  */
-export const getPasswordReg = (options: PasswordOptions = {}): RegExp => {
+
+
+export const getPasswordReg = (options: PasswordOptions): RegExp => {
   const { min = 8, max = 20, level = 'basic' } = options
 
   // 构建长度限制部分
@@ -102,5 +132,35 @@ export const isValidUsername = (val: unknown): boolean => {
  */
 export const isValidPassword = (val: unknown, options?: PasswordOptions): boolean => {
   if (typeof val !== 'string') return false
-  return getPasswordReg(options).test(val)
+  return getPasswordReg(options || { min: 8, max: 20, level: 'basic' }).test(val)
+}
+
+/**
+ * 校验用户UID
+ *
+ * @param val 输入值
+ */
+export const isValidUserUid = (val: unknown): boolean => {
+  if (typeof val !== 'string') return false
+  return REGEX_USER_UID.test(val)
+}
+
+/**
+ * 校验房间ID
+ *
+ * @param val 输入值
+ */
+export const isValidChatCode = (val: unknown): boolean => {
+  if (typeof val !== 'string') return false
+  return REGEX_CHAT_CODE.test(val)
+}
+
+/**
+ * 校验邀请链接
+ *
+ * @param val 输入值
+ */
+export const isValidInviteUrl = (val: unknown): boolean => {
+  if (typeof val !== 'string') return false
+  return REGEX_INVITE_URL.test(val)
 }

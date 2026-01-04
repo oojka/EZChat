@@ -32,6 +32,9 @@ export const useRoomStore = defineStore('room', () => {
   // 列表尚未加载完成时的“待合并房间信息”（例如 message 接口返回的 chatRoom）
   const pendingRoomInfoMap = new Map<string, ChatRoom>()
 
+  const createChatDialogVisible = ref(false)
+  const joinChatDialogVisible = ref(false)
+
   /**
    * 当前房间成员列表加载状态（按 chatCode）
    *
@@ -269,6 +272,8 @@ export const useRoomStore = defineStore('room', () => {
     currentRoomCode,
     currentRoom,
     isRoomListLoading,
+    createChatDialogVisible,
+    joinChatDialogVisible,
     getRoomByCode, // 导出此方法
     initRoomList,
     updateRoomInfo,

@@ -9,6 +9,7 @@
  1. 核心资产表 `objects` 仅包含 30 条真实 MinIO 种子数据。
  2. 用户头像、群封面、消息图片 **全部复用** 这 30 条数据的 ID (Ref Only)。
  3. 只有 Step 7 会生成少量 status=0 的垃圾数据用于测试 GC。
+ 4. 已更新 `chat_invites` 表结构，适应新的邀请码逻辑。
 */
 
 SET NAMES utf8mb4;
@@ -101,7 +102,7 @@ CREATE TABLE `chat_members` (
 DROP TABLE IF EXISTS `chat_invites`;
 CREATE TABLE `chat_invites` (
                                 `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                                `chat_code`   CHAR(8) NOT NULL,
+                                `chat_id`     INT UNSIGNED NOT NULL COMMENT '关联chats表主键',
                                 `code_hash`   CHAR(64) NOT NULL,
                                 `expires_at`  DATETIME NOT NULL,
                                 `max_uses`    INT UNSIGNED DEFAULT 0 NOT NULL,
@@ -111,7 +112,7 @@ CREATE TABLE `chat_invites` (
                                 `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
                                 `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
                                 CONSTRAINT `uq_invite_code` UNIQUE (`code_hash`),
-                                INDEX `idx_chat_code` (`chat_code`),
+                                INDEX `idx_chat_id` (`chat_id`),
                                 INDEX `idx_expire` (`expires_at`)
 ) COMMENT='邀请码/短链接表' CHARSET=utf8mb4;
 

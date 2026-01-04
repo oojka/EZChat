@@ -160,6 +160,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   const createRoomVisible = ref(false)
+  const joinDialogVisible = ref(false)
 
   /**
    * 设置 favicon
@@ -291,6 +292,7 @@ export const useAppStore = defineStore('app', () => {
     toggleTheme,
     changeLanguage,
     createRoomVisible,
+    joinDialogVisible,
     initializeApp,
     setFavicon,
     removeFavicon,

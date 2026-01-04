@@ -11,14 +11,14 @@ import {
 } from '@element-plus/icons-vue'
 import { useCreateChat } from '@/hooks/useCreateChat.ts'
 import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/stores/appStore.ts'
+import { useRoomStore } from '@/stores/roomStore.ts'
 import PasswordConfig from '@/components/PasswordConfig.vue'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import { useI18n } from 'vue-i18n'
 import { useImageStore } from '@/stores/imageStore'
 
-const appStore = useAppStore()
-const { createRoomVisible } = storeToRefs(appStore)
+const roomStore = useRoomStore()
+const { createChatDialogVisible } = storeToRefs(roomStore)
 
 const { t } = useI18n()
 const imageStore = useImageStore()
@@ -64,8 +64,9 @@ const progressPercentage = computed(() => {
 </script>
 
 <template>
-  <el-dialog :model-value="createRoomVisible" @update:model-value="handleClose" width="580px" class="ez-modern-dialog create-dialog-step" align-center
-    destroy-on-close :show-close="false" :close-on-click-modal="false">
+  <el-dialog :model-value="createChatDialogVisible" @update:model-value="handleClose" width="580px"
+    class="ez-modern-dialog create-dialog-step" align-center destroy-on-close :show-close="false"
+    :close-on-click-modal="false">
     <template #header>
       <div class="create-header">
         <button v-if="createStep !== 4" class="close-btn" type="button" @pointerdown.stop.prevent @click="handleClose">
@@ -75,7 +76,8 @@ const progressPercentage = computed(() => {
         </button>
         <div class="progress-section">
           <el-progress :percentage="progressPercentage" :show-text="false" :stroke-width="4"
-            :status="createStep === 4 ? (createResult.success ? 'success' : 'exception') : ''" class="custom-progress" />
+            :status="createStep === 4 ? (createResult.success ? 'success' : 'exception') : ''"
+            class="custom-progress" />
           <div class="step-label">
             {{ createStep === 4 ? 'COMPLETED' : `Step ${createStep} / 3` }}
           </div>
@@ -417,7 +419,8 @@ html.dark :deep(.ez-modern-dialog) {
 .placeholder-square-lg {
   width: 150px;
   height: 150px;
-  border-radius: calc(150px * var(--avatar-border-radius-ratio)); /* 45px (30%) */
+  border-radius: calc(150px * var(--avatar-border-radius-ratio));
+  /* 45px (30%) */
   overflow: hidden;
   position: relative;
   cursor: pointer;

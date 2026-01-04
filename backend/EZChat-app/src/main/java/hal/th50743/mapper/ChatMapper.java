@@ -49,12 +49,13 @@ public interface ChatMapper {
     ChatVO getChatVOByChatId(Integer chatId);
 
     /**
-     * 获取“加入校验”所需的最小信息
+     * 获取“加入校验”所需的最小信息（根据聊天室 ID）
      *
-     * @param chatCode 聊天室对外 ID
+     * @param chatId 聊天内部 ID
      * @return ChatJoinInfo（包含 joinEnabled / chatPasswordHash / chatId）
      */
-    ChatJoinInfo getJoinInfoByChatCode(String chatCode);
+    ChatJoinInfo getJoinInfoByChatId(Integer chatId);
+
 
     /**
      * 新增聊天室

@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ChatJoinInfo {
     private Integer chatId;
+    private String chatName;
     private String chatCode;
     private Integer joinEnabled;
     private String chatPasswordHash;

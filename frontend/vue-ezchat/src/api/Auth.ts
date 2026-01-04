@@ -1,5 +1,5 @@
 import request from '../utils/request'
-import {type LoginUser, type RegisterInfo, type Result, type ValidateChatJoinReq, type ChatRoom} from '@/type'
+import {type LoginUser, type RegisterInfo, type Result, type ValidateChatJoinReq, type ChatRoom, type GuestJoinReq} from '@/type'
 
 export type LoginApiReq = {
   username: string
@@ -59,4 +59,16 @@ export const validateChatJoinApi = (
   req: ValidateChatJoinReq
 ): Promise<Result<ChatRoom>> =>
   request.post('/auth/validate-join', req)
+
+/**
+ * 加入聊天室（访客或邀请码模式）
+ *
+ * - 后端接口：POST `/auth/join`
+ * - 业务目的：正式加入聊天室，获取登录态（uid/username/token）
+ * - TODO: 后端 API 暂未实现
+ */
+export const guestJoinApi = (
+  data: GuestJoinReq
+): Promise<Result<LoginUser>> =>
+  request.post('/auth/join', data)
 

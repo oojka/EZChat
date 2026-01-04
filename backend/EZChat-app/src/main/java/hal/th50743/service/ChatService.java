@@ -8,6 +8,7 @@ import hal.th50743.pojo.ChatReq;
 import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.JoinChatReq;
+import hal.th50743.pojo.LoginVO;
 import hal.th50743.pojo.ValidateChatJoinReq;
 
 import java.util.List;
@@ -92,10 +93,10 @@ public interface ChatService {
      * - 访客加入/邀请码加入需要先校验 join_enabled / chat_password_hash
      * - 该方法不要求请求方已经是成员（否则无法加入）
      *
-     * @param chatCode 聊天室对外 ID
+     * @param chatId 聊天对内 ID
      * @return ChatJoinInfo（不存在则返回 null）
      */
-    ChatJoinInfo getJoinInfo(String chatCode);
+    ChatJoinInfo getJoinInfo(Integer chatId);
 
     /**
      * 创建聊天室
@@ -137,5 +138,29 @@ public interface ChatService {
      * @throws BusinessException 如果验证失败（房间不存在、禁止加入、密码错误等）
      */
     ChatVO validateChatJoin(ValidateChatJoinReq req);
+
+    /**
+     * 正式用户加入聊天室
+     * <p>
+     * 业务目的：
+     * - 已登录的正式用户加入指定聊天室
+     * - 支持密码模式和邀请码模式
+     * - 返回新的 JWT token（LoginVO）
+     * <p>
+     * 业务流程：
+     * 1. 验证请求参数和模式互斥性
+     * 2. 根据模式处理加入逻辑：
+     *    - 密码模式：验证密码并加入
+     *    - 邀请码模式：验证邀请码并处理使用次数
+     * 3. 将用户加入聊天室
+     * 4. 生成新的 JWT token
+     * 5. 返回 LoginVO
+     *
+     * @param userId 当前用户ID（从Token获取）
+     * @param req 加入请求（包含 chatCode + password 或 inviteCode）
+     * @return 登录视图对象（包含新的 Token）
+     * @throws BusinessException 如果加入失败（房间不存在、密码错误、邀请码无效等）
+     */
+    LoginVO joinForFormalUser(Integer userId, JoinChatReq req);
 
 }

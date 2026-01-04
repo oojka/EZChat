@@ -5,20 +5,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 加入聊天室请求
+ * 访客加入聊天室请求
  * <p>
  * 支持两种验证模式：
- * 1. 密码模式：chatCode + password
- * 2. 邀请码模式：inviteCode
+ * 1. 密码模式：chatCode + password + nickName + avatar
+ * 2. 邀请码模式：inviteCode + nickName + avatar
  * <p>
  * 注意：两种模式互斥，前端通过不同的字段组合来区分
- * uid 字段由后端从Token中获取，不需要前端传递
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class JoinChatReq {
-
+public class GuestJoinReq {
+    
     /**
      * 模式1：密码验证 - 聊天室代码（8位数字）
      * 与 password 字段强绑定，不能与 inviteCode 同时存在
@@ -38,10 +37,14 @@ public class JoinChatReq {
     private String inviteCode;
     
     /**
-     * 用户对外ID（已废弃，由后端从Token中获取）
-     * @deprecated 使用 CurrentHolder.getCurrentUid() 替代
+     * 访客昵称（必填）
+     * 用于创建用户记录和显示
      */
-    @Deprecated
-    private String uid;
-
+    private String nickName;
+    
+    /**
+     * 访客头像（必填）
+     * 包含图片对象信息，可能关联现有对象或上传新图片
+     */
+    private Image avatar;
 }

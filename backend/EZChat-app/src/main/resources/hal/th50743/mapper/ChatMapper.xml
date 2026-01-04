@@ -46,13 +46,14 @@
         WHERE c.id = #{chatId}
     </select>
 
-    <select id="getJoinInfoByChatCode" resultType="hal.th50743.pojo.ChatJoinInfo">
-        SELECT id            AS chatId,
-               chat_code     AS chatCode,
-               join_enabled  AS joinEnabled,
-               chat_password_hash AS chatPasswordHash
+    <select id="getJoinInfoByChatId" resultType="hal.th50743.pojo.ChatJoinInfo">
+        SELECT id chatId,
+               chat_code,
+               chat_name,
+               join_enabled,
+               chat_password_hash
         FROM chats
-        WHERE chat_code = #{chatCode}
+        WHERE id = #{chatId}
     </select>
 
     <insert id="insertChat" parameterType="hal.th50743.pojo.ChatCreate" useGeneratedKeys="true" keyProperty="id">

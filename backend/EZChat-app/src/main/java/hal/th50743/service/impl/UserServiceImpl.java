@@ -180,4 +180,33 @@ public class UserServiceImpl implements UserService {
         // 同步更新用户表的最后活跃时间
         userMapper.updateLastSeenAt(userId, now);
     }
+
+    /**
+     * 根据用户ID获取用户名
+     *
+     * @param userId 用户ID
+     * @return 用户名（正式用户）或 null（访客用户）
+     */
+    @Override
+    public String getUsernameByUserId(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
+        // 查询 formal_users 表获取用户名
+        return userMapper.getUsernameByUserId(userId);
+    }
+
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param userId 用户ID
+     * @return 用户对象
+     */
+    @Override
+    public User getUserById(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userMapper.getUserById(userId);
+    }
 }
