@@ -26,7 +26,6 @@ const handleLogout = () => {
     type: 'danger',
     onConfirm: () => {
       userStore.logout()
-      router.replace('/')
     }
   })
 }

@@ -1,5 +1,5 @@
 import request from '../utils/request'
-import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginInfo} from '@/type'
+import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginForm} from '@/type'
 
 /**
  * 用户登录
@@ -8,7 +8,7 @@ import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, Gue
  * - 业务目的：获取登录态（uid/username/token），供后续 HTTP Header 与 WS 连接使用
  */
 export const loginApi = (
-  data: LoginInfo
+  data: LoginForm
 ): Promise<Result<LoginUser>> =>
   request.post('/auth/login', data)
 

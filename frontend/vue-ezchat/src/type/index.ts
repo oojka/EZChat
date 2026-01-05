@@ -15,14 +15,14 @@ export type Image = {
   blobThumbUrl? : string // 缩略图 Blob URL
 }
 
-export type LoginInfo = {
+export type LoginForm = {
   username: string
   password: string
 }
 
 /**
  * 登录用户信息（对应后端 LoginVO）
- * 
+ * 包括登录用户和访客用户
  * - 用于存储登录态（uid/username/token）
  * - 供 HTTP header 和 WebSocket 连接使用
  */

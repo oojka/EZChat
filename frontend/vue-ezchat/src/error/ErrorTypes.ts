@@ -16,6 +16,9 @@ export enum ErrorType {
   /** 网络 / 接口 / 异步错误 */
   NETWORK = 'NETWORK',
 
+  /** 存储错误 */
+  STORAGE = 'STORAGE',
+
   /** 表单 / 参数校验错误 */
   VALIDATION = 'VALIDATION',
 

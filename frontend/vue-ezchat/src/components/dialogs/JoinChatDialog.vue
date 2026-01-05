@@ -25,25 +25,13 @@
     isRoomIdPasswordMode,
     isInviteUrlMode,
     joinMode,
+    joinStep,
+    joinResult,
+    closeJoinDialog,
     handleJoin,
     handleResultConfirm,
   } = useJoinChat()
 
-    /** 对话框步骤状态 (1: 表单, 2: 结果) */
-    const joinStep = ref<1 | 2>(1)
-  
-  /** 加入结果状态 */
-  const joinResult = ref<{ success: boolean; message: string }>({
-    success: false,
-    message: ''
-  })
-
-  const closeJoinDialog = () => {
-    roomStore.joinChatDialogVisible = false
-    // 重置步骤和结果
-    joinStep.value = 1
-    joinResult.value = { success: false, message: '' }
-  }
   
 
   </script>

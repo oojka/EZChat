@@ -25,10 +25,9 @@ import { useUserStore } from '@/stores/userStore'
 import { useImageStore } from '@/stores/imageStore'
 import { useAppStore } from '@/stores/appStore'
 import { useRoomStore } from '@/stores/roomStore'
-import useLogin from '@/hooks/useLogin'
 
 // Types
-import type { JoinChatCredentialsForm, GuestJoinReq, JoinChatReq, ValidateChatJoinReq, Image, RoomInfo } from '@/type'
+import type { LoginForm, JoinChatCredentialsForm, GuestJoinReq, JoinChatReq, ValidateChatJoinReq, Image, RoomInfo } from '@/type'
 
 // #region === Constants (常量定义) ===
 const passwordOption: PasswordOptions = { min: 8, max: 20, level: 'basic' }
@@ -45,7 +44,6 @@ export const useJoinChat = () => {
   const imageStore = useImageStore()
   const appStore = useAppStore()
   const roomStore = useRoomStore()
-  const { executeLogin } = useLogin()
   // #endregion
 
   // #region 2. State Definitions (状态定义)
@@ -99,7 +97,7 @@ export const useJoinChat = () => {
 
   // #region 3. Computed Properties & Rules (计算属性与规则)
 
-  const isRoomIdPasswordMode = computed(() =>{
+  const isRoomIdPasswordMode = computed(() => {
     return joinChatCredentialsForm.value.joinMode === 'roomId/password'
   })
   const isInviteUrlMode = computed(() => {
@@ -124,22 +122,28 @@ export const useJoinChat = () => {
     if (isRoomIdPasswordMode.value) {
       // ID + 密码模式
       rules.chatCode = [
-        { required: true, message: t('validation.username_required'), trigger: 'blur' },
-        { pattern: REGEX_CHAT_CODE, message: t('validation.username_format'), trigger: 'blur' }
+        // 请输入房间号。
+        { required: true, message: t('validation.chat_code_required') || 'Room ID is required', trigger: 'blur' },
+        // 不合法的房间号格式。
+        { pattern: REGEX_CHAT_CODE, message: t('validation.chat_code_format') || 'Invalid Room ID format', trigger: 'blur' }
       ]
       rules.password = [
-        { required: true, message: t('validation.password_required'), trigger: 'blur' },
+        // 请输入密码。
+        { required: true, message: t('validation.password_required') || 'Password is required', trigger: 'blur' },
         {
           pattern: getPasswordReg({ min: 8, max: 20, level: 'basic' }),
-          message: t('validation.password_format'),
+          // 请输入 8-20 位半角英数字及特殊符号。
+          message: t('validation.password_format') || 'Invalid password format',
           trigger: 'blur'
         }
       ]
     } else {
       // 邀请链接模式
       rules.inviteUrl = [
-        { required: true, message: t('validation.invite_url_required'), trigger: 'blur' },
-        { pattern: REGEX_INVITE_URL, message: t('validation.invite_url_format'), trigger: 'blur' }
+        // 请输入邀请链接。
+        { required: true, message: t('validation.invite_url_required') || 'Invite URL is required', trigger: 'blur' },
+        // 不合法的邀请链接格式。
+        { pattern: REGEX_INVITE_URL, message: t('validation.invite_url_format') || 'Invalid Invite URL format', trigger: 'blur' }
       ]
     }
 
@@ -192,10 +196,10 @@ export const useJoinChat = () => {
         throw createAppError(
           ErrorType.VALIDATION,
           'Room ID is required',
-          { 
+          {
             severity: ErrorSeverity.ERROR,
             component: 'useJoinChat',
-            action: 'buildValidatePayload' 
+            action: 'buildValidatePayload'
           }
         )
       }
@@ -203,21 +207,21 @@ export const useJoinChat = () => {
         throw createAppError(
           ErrorType.VALIDATION,
           'Invalid Room ID format',
-          { 
+          {
             severity: ErrorSeverity.ERROR,
             component: 'useJoinChat',
-            action: 'buildValidatePayload' 
+            action: 'buildValidatePayload'
           }
         )
-      } 
+      }
       if (!password) {
         throw createAppError(
           ErrorType.VALIDATION,
           'Password is required',
-          { 
+          {
             severity: ErrorSeverity.ERROR,
             component: 'useJoinChat',
-            action: 'buildValidatePayload' 
+            action: 'buildValidatePayload'
           }
         )
       }
@@ -232,14 +236,14 @@ export const useJoinChat = () => {
         throw createAppError(
           ErrorType.VALIDATION,
           'Invalid Invite URL format',
-          { 
+          {
             severity: ErrorSeverity.ERROR,
             component: 'useJoinChat',
-            action: 'buildValidatePayload' 
+            action: 'buildValidatePayload'
           }
         )
       }
-        return { inviteCode: match[1] }
+      return { inviteCode: match[1] }
     }
   }
 
@@ -315,10 +319,10 @@ export const useJoinChat = () => {
         throw createAppError(
           ErrorType.ROUTER,
           t('chat.router_error') || 'Router error',
-          { 
+          {
             severity: ErrorSeverity.WARNING,
             component: 'useJoinChat',
-            action: 'handleValidate' 
+            action: 'handleValidate'
           }
         )
       }
@@ -355,109 +359,123 @@ export const useJoinChat = () => {
   const handleGuestJoin = async (): Promise<boolean> => {
     isLoading.value = true
     try {
-      const currentChatCode = route.params.chatCode
+      // 0. 类型安全获取路由参数
+      const currentChatCode = Array.isArray(route.params.chatCode)
+        ? route.params.chatCode[0]
+        : route.params.chatCode;
 
-      // 验证房间号，抛出异常终止加入流程
+      // 1. 验证房间号
       if (!isValidChatCode(currentChatCode)) {
-        throw createAppError(
-          ErrorType.VALIDATION,
-          'Invalid Room ID format',
-          { 
-            severity: ErrorSeverity.ERROR,
-            component: 'useJoinChat',
-            action: 'handleGuestJoin' 
-          }
-        )
-        return false;
-      } else if (currentChatCode !== userStore.validatedChatRoom?.chatCode) {
-        throw createAppError(
-          ErrorType.VALIDATION,
-          'Room code mismatch',
-          { 
-            severity: ErrorSeverity.ERROR,
-            component: 'useJoinChat',
-            action: 'handleGuestJoin' 
-          }
-        )
-        return false;
+        throw createAppError(ErrorType.VALIDATION, 'Invalid Room ID format', {
+          severity: ErrorSeverity.WARNING, // 校验失败通常用 WARNING 即可
+          component: 'useJoinChat',
+          action: 'handleGuestJoin'
+        })
       }
 
-      // 验证昵称，抛出异常终止加入流程
+      // 验证一致性：确保 URL 的房间号与之前 validate 接口返回的一致
+      if (currentChatCode !== userStore.validatedChatRoom?.chatCode) {
+        throw createAppError(ErrorType.VALIDATION, 'Room code mismatch', {
+          severity: ErrorSeverity.WARNING,
+          component: 'useJoinChat',
+          action: 'handleGuestJoin'
+        })
+      }
+
+      // 2. 验证昵称
       if (!isValidNickname(guestNickname.value)) {
-        throw createAppError(
-          ErrorType.VALIDATION,
-          'Invalid Nickname format',
-          { 
-            severity: ErrorSeverity.ERROR,
-            component: 'useJoinChat',
-            action: 'handleGuestJoin' 
-          }
-        )
-        return false;
+        throw createAppError(ErrorType.VALIDATION, 'Invalid Nickname format', {
+          severity: ErrorSeverity.WARNING,
+          component: 'useJoinChat',
+          action: 'handleGuestJoin'
+        })
       }
 
-      // 头像处理：如果是默认头像且未上传，先上传
+      // 3. 头像处理：如果是默认头像且未上传，先上传
       if (!guestAvatar.value.objectUrl && !guestAvatar.value.objectThumbUrl) {
-        guestAvatar.value = await imageStore.uploadDefaultAvatarIfNeeded(guestAvatar.value, 'user')
+        try {
+          guestAvatar.value = await imageStore.uploadDefaultAvatarIfNeeded(guestAvatar.value, 'user')
+        } catch (e) {
+          // 头像上传失败不应完全阻塞加入，可以用默认占位图，或者抛出特定错误
+          console.warn('Avatar upload failed, using local placeholder', e)
+        }
       }
 
-      // 从 Store 获取之前的验证凭证 (password 或 inviteCode)
+      // 4. 获取并验证凭证
       const validatedReq = userStore.validateChatJoinReq
-      // 验证凭证已过期，抛出异常终止加入流程
       if (!validatedReq) {
-        throw createAppError(
-          ErrorType.VALIDATION,
-          'Validation info expired, please restart',
-          { 
-            severity: ErrorSeverity.ERROR,
-            component: 'useJoinChat',
-            action: 'handleGuestJoin' 
-          }
-        )
-        return false;
+        throw createAppError(ErrorType.VALIDATION, 'Validation info expired, please restart', {
+          severity: ErrorSeverity.ERROR,
+          component: 'useJoinChat',
+          action: 'handleGuestJoin'
+        })
       }
-      // 构建请求 (根据之前的验证类型)
+
+      // 5. 构建请求 (使用类型断言或守卫简化逻辑)
       let req: GuestJoinReq | null = null;
-      if (validatedReq.chatCode && validatedReq.password) {
+      if ('password' in validatedReq) { // 利用 TS 的 'in' 关键字区分联合类型
         req = {
           nickName: guestNickname.value,
           avatar: guestAvatar.value,
-          chatCode: validatedReq.chatCode,
-          password: validatedReq.password,
+          chatCode: validatedReq.chatCode || '',
+          password: validatedReq.password || '',
         }
-      } else if (validatedReq.inviteCode) {
+      } else if ('inviteCode' in validatedReq) {
         req = {
           nickName: guestNickname.value,
           avatar: guestAvatar.value,
           inviteCode: validatedReq.inviteCode,
         }
       }
+
       if (!req) {
-        throw createAppError(
-          ErrorType.VALIDATION,
-          'Invalid validation info',
-          { 
-            severity: ErrorSeverity.ERROR,
-            component: 'useJoinChat',
-            action: 'handleGuestJoin' 
-          }
-        )
-        return false;
+        throw createAppError(ErrorType.VALIDATION, 'Invalid validation info', {
+          severity: ErrorSeverity.ERROR,
+          component: 'useJoinChat',
+          action: 'handleGuestJoin'
+        })
       }
 
-      /** 调用访客加入 API */
+      // 6. 调用 API
+      // 注意：这里不再需要内部 try-catch 包裹，让错误自然冒泡，或者在 catch 中区分处理
       const res = await guestJoinApi(req)
-      if (res.data && res.data.loginUser.token) {
+
+      if (res.data && res.data.token) {
+        // 关键：调用 setLoginGuest，内部会自动清理 loginUser (互斥逻辑)
         userStore.setLoginGuest(res.data)
-        await appStore.initializeApp(res.data.loginUser.token, 'guest')
-        await router.push(`/chat/${validatedReq.chatCode}`)
+
+        await appStore.initializeApp(res.data.token, 'guest')
+
+        // 确保跳转目标正确 (优先使用 validatedReq 中的 code)
+        const targetCode = 'chatCode' in validatedReq ? validatedReq.chatCode : currentChatCode
+        await router.push(`/chat/${targetCode}`)
+
         return true
-      } else {
-        throw createAppError(
-          ErrorType.NETWORK,
-          'Guest join failed',
-          { 
       }
+
+      return false
+
+    } catch (e: any) {
+      // 避免重复包装：如果已经是 AppError，直接抛出，保留原始错误信息
+      if (isAppError(e)) {
+        throw e
+      }
+      // 只有未知的系统级错误（如网络断开）才包装为 NETWORK ERROR
+      throw createAppError(
+        ErrorType.NETWORK,
+        e.message || 'Guest join failed',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'useJoinChat',
+          action: 'handleGuestJoin',
+          originalError: e
+        }
+      )
+    } finally {
+      // 【修复】无论成功失败，必须重置 loading 状态
+      isLoading.value = false
+    }
+  }
 
   /**
    * 场景B：登录用户加入逻辑
@@ -466,13 +484,32 @@ export const useJoinChat = () => {
    * 3. 调用 Auth Join API
    * 4. 跳转聊天室
    */
-  const handleLoginJoin = async (username: string, pass: string): Promise<boolean> => {
+  const handleLoginJoin = async (loginForm: LoginForm): Promise<boolean> => {
     isLoading.value = true
     try {
       // 1. 登录
-      const loginRes = await executeLogin(username, pass)
-      if (loginRes.status !== 1 || !loginRes.data) throw new Error(loginRes.message || 'Login failed')
-      await appStore.initializeApp(loginRes.data.token, 'login')
+      if (!loginForm) return false
+      let loginUser;
+      try {
+        loginUser = await userStore.loginRequest(loginForm.username, loginForm.password)
+      } catch (e) {
+        if (isAppError(e)) {
+          throw createAppError(
+            ErrorType.NETWORK,
+            'Login failed',
+            {
+              severity: ErrorSeverity.ERROR,
+              component: 'useJoinChat',
+              action: 'handleLoginJoin',
+              originalError: e
+            }
+          )
+        }
+        throw e
+      }
+
+      if (!loginUser) return false
+      await appStore.initializeApp(loginUser.token, 'login')
 
       // 2. 验证一致性
       const validatedRoom = userStore.validatedChatRoom
@@ -667,8 +704,6 @@ export const useJoinChat = () => {
     handleAvatarSuccess,
 
     // === Init Methods (初始化方法) ===
-    initStorage,
-    initRoomInfo,
     initDefaultAvatarUrl,
 
     // === Dialog State (对话框状态) ===

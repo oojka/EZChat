@@ -268,7 +268,6 @@ export const useAppStore = defineStore('app', () => {
     } finally {
       // refresh：chatList 加载完成后再撤掉遮蔽，并开始渲染 chatView 区域
       if (type === 'refresh') {
-        // 1) 保证最短展示时长（缓解骨架屏切换突兀）
         const elapsed = Date.now() - refreshLoadingStartAt
         const remain = Math.max(0, MIN_REFRESH_LOADING_MS - elapsed)
         setTimeout(() => {

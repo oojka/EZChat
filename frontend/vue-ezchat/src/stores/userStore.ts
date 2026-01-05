@@ -1,12 +1,18 @@
-import {computed, ref} from 'vue'
-import {defineStore} from 'pinia'
-import type {LoginUser, LoginUserInfo, UserStatus, ValidateChatJoinReq, ChatRoom} from '@/type'
-import {getUserInfoApi} from '@/api/User.ts'
-import {loginApi} from '@/api/Auth.ts'
-import {ElMessage} from 'element-plus'
-import {useWebsocketStore} from '@/stores/websocketStore.ts' // 引入 websocketStore
+import { computed, ref } from 'vue'
+import { defineStore } from 'pinia'
+import type { LoginUser, LoginUserInfo, UserStatus, ValidateChatJoinReq, ChatRoom } from '@/type'
+import { getUserInfoApi } from '@/api/User.ts'
+import { loginApi } from '@/api/Auth.ts'
+import { useWebsocketStore } from '@/stores/websocketStore.ts' // 引入 websocketStore
 import { useImageStore } from '@/stores/imageStore'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
+import { useRoomStore } from '@/stores/roomStore.ts'
+import { useMessageStore } from '@/stores/messageStore.ts'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import i18n from "@/i18n";
+
+const { t } = i18n.global
 
 /**
  * UserStore：管理登录态与当前用户信息
@@ -71,11 +77,11 @@ export const useUserStore = defineStore('user', () => {
   const loginRequest = async (username: string, password: string) => {
     // 1) 调用后端登录接口
     const result = await loginApi({ username, password })
-    
+
     if (result && result.data) {
       // 1. 更新内存 State
       loginUser.value = result.data
-      
+
       // 2. 持久化（增加健壮性）
       try {
         // 先删除之前的登录用户
@@ -113,9 +119,9 @@ export const useUserStore = defineStore('user', () => {
    */
   const isLoginUser = (data: unknown): data is LoginUser => {
     if (typeof data !== 'object' || data === null) return false;
-    
+
     const d = data as Record<string, any>;
-    
+
     return (
       typeof d.uid === 'string' &&
       typeof d.username === 'string' &&
@@ -154,8 +160,8 @@ export const useUserStore = defineStore('user', () => {
    * - 将“用户详情请求”从 refresh 主链路中解耦，避免黑屏转圈时间被拉长
    */
   const fetchLoginUserInfo = async () => {
-    if (!isLoginUser(loginUser.value) && !isLoginGuest(loginGuest.value)) return
-    const uid = isLoginUser(loginUser.value) ? loginUser.value.uid : loginGuest.value?.loginUser.uid;
+    if (!isLoginUser(loginUser.value) && !isLoginUser(loginGuest.value)) return
+    const uid = loginUser.value.uid || loginGuest.value?.uid;
     if (!uid) return
     const result = await getUserInfoApi(uid)
     if (result) {
@@ -166,7 +172,7 @@ export const useUserStore = defineStore('user', () => {
       if (prevAvatar && loginUserInfo.value?.avatar) {
         imageStore.revokeUnusedBlobs([prevAvatar], [loginUserInfo.value.avatar])
       }
-      if (loginUserInfo.value?.avatar) imageStore.ensureThumbBlobUrl(loginUserInfo.value.avatar).then(() => {})
+      if (loginUserInfo.value?.avatar) imageStore.ensureThumbBlobUrl(loginUserInfo.value.avatar).then(() => { })
     }
   }
 
@@ -175,11 +181,22 @@ export const useUserStore = defineStore('user', () => {
    */
   const initLoginUserInfo = async () => {
     try {
-      if (!restoreLoginUserFromStorage()) return
-      await fetchLoginUserInfo()
+      if (!restoreLoginUserFromStorage()) {
+        if (!restoreLoginGuestFromStorage()) {
+          await fetchLoginUserInfo()
+        }
+      }
     } catch (e) {
-      ElMessage.error('ログイン情報取得に失敗しました。')
-      logout()
+      isAppError(e)
+      throw createAppError(
+        ErrorType.NETWORK,
+        'Failed to fetch login user info',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'userStore',
+          action: 'initLoginUserInfo'
+        }
+      )
     }
   }
 
@@ -190,26 +207,30 @@ export const useUserStore = defineStore('user', () => {
   const logout = () => {
     // 1) 主动关闭 WebSocket：避免断线重连继续占用资源
     const websocketStore = useWebsocketStore()
+    const router = useRouter()
     websocketStore.close()
-
+    
     // 2) 清除持久化：让刷新后不会“误以为已登录”
     localStorage.removeItem('loginUser')
+    localStorage.removeItem('loginGuest')
 
     // 3) 重置 Store：清空所有与用户相关的数据，防止跨账号串数据
-    loginUser.value = {
-      uid: '',
-      username: '',
-      token: '',
-    }
-    loginUserInfo.value = undefined
-    userStatusList.value = []
+    useUserStore().resetState()
+    useRoomStore().resetState()
+    useMessageStore().resetState()
+    useImageStore().resetState()
+    useWebsocketStore().resetState()
+
+    // 4) 跳转首页
+    router.replace('/').catch(() => {})
+    ElMessage.success(t('auth.logout_success') || 'log out success')
   }
 
   /**
    * 获取当前 token（用于少数需要 computed 的场景）
    */
   const getToken = computed<string>(() => {
-    return loginUser.value.token
+    return loginUser.value.token || loginGuest.value?.token || ''
   })
 
   /**
@@ -242,41 +263,11 @@ export const useUserStore = defineStore('user', () => {
 
 
   // 访客逻辑
-  const loginGuest = ref<LoginGuest | null>({
-    loginUser: {
-      uid: '',
-      username: '',
-      token: '',
-    },
-    avatar: {
-      objectUrl: '',
-      objectThumbUrl: '',
-    },
+  const loginGuest = ref<LoginUser | null>({
+    uid: '',
+    username: '',
+    token: '',
   })
-
-  const isLoginGuest = (data: unknown): data is LoginGuest => {
-    if (typeof data !== 'object' || data === null) return false;
-  
-    // 将 data 强制转换为 Record 方便后续读取
-    const d = data as Record<string, any>;
-  
-    return (
-      'loginUser' in d &&
-      'avatar' in d &&
-      // 校验 loginUser 内部
-      d.loginUser !== null &&
-      typeof d.loginUser === 'object' &&
-      typeof d.loginUser.uid === 'string' &&
-      typeof d.loginUser.username === 'string' &&
-      typeof d.loginUser.token === 'string' &&
-      // 校验 avatar 内部
-      d.avatar !== null &&
-      typeof d.avatar === 'object' &&
-      typeof d.avatar.objectUrl === 'string' &&
-      typeof d.avatar.objectThumbUrl === 'string'
-    );
-  };
-
 
 
   const restoreLoginGuestFromStorage = (): boolean => {
@@ -284,11 +275,11 @@ export const useUserStore = defineStore('user', () => {
     if (!rowString) return false
     try {
       const parsed = JSON.parse(rowString)
-      if (isLoginGuest(parsed)) {
+      if (isLoginUser(parsed)) {
         loginGuest.value = parsed
         return true;
       }
-    } catch (e){
+    } catch (e) {
       isAppError(e)
       throw createAppError(
         ErrorType.STORAGE,
@@ -303,10 +294,10 @@ export const useUserStore = defineStore('user', () => {
     return false;
   }
 
-  const setLoginGuest = (guest: LoginGuest) => {
+  const setLoginGuest = (guest: LoginUser) => {
     // 1. 先更新内存状态，确保 UI 响应
     loginGuest.value = guest
-    
+
     // 2. 持久化操作进行异常捕获
     try {
       // 先删除之前的登录用户
