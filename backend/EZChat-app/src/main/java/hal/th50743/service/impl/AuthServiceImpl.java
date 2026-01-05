@@ -14,6 +14,7 @@ import hal.th50743.utils.JwtUtils;
 import hal.th50743.utils.LoginVOBuilder;
 import hal.th50743.utils.InviteCodeUtils;
 import hal.th50743.utils.PasswordUtils;
+import hal.th50743.utils.ImageUtils;
 import io.minio.MinioOSSOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -187,7 +188,7 @@ public class AuthServiceImpl implements AuthService {
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public LoginVO guest(GuestReq guestReq) {
+    public LoginVO guestRegister(GuestRegisterReq guestReq) {
         log.info("访客尝试加入聊天室: code={}", guestReq.getChatCode());
 
         if (guestReq.getNickname() == null || guestReq.getNickname().trim().isEmpty()) {
@@ -420,7 +421,8 @@ public class AuthServiceImpl implements AuthService {
 
         if (chat != null && chat.getChatCode() != null) {
             log.info("访客加入聊天室成功: uid={}, chatCode={}", userRes.getUid(), chat.getChatCode());
-            // 访客无 username，使用 nickname 作为标识构建 Token
+            
+            // 构建 LoginVO：访客无 username，使用 nickname 作为标识构建 Token
             return LoginVOBuilder.build(userRes.getUid(), userRes.getNickname(), jwtUtils);
         } else {
             log.error("访客加入聊天室失败");

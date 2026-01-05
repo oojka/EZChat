@@ -31,7 +31,7 @@ public interface AuthService {
      * @param guestReq 访客请求参数
      * @return 登录成功后的视图对象（包含 Token）
      */
-    LoginVO guest(GuestReq guestReq);
+    LoginVO guestRegister(GuestRegisterReq guestReq);
 
     /**
      * 邀请码免密加入（访客）
@@ -64,5 +64,7 @@ public interface AuthService {
      * @return 登录成功后的视图对象（包含 Token）
      */
     LoginVO guestJoin(GuestJoinReq req);
+
+
 
 }

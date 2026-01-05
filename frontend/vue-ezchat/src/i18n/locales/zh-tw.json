@@ -22,6 +22,32 @@
     "copied": "已複製",
     "copy_failed": "複製失敗"
   },
+  "dialog": {
+    "tip": "提示",
+    "info": "資訊",
+    "success": "成功",
+    "warning": "警告",
+    "error": "錯誤",
+    "confirm": "確認",
+    "alert": "提示",
+    "notice": "通知",
+    "reminder": "提醒",
+    "validation_error": "驗證錯誤",
+    "operation_success": "操作成功",
+    "operation_failed": "操作失敗",
+    "network_error": "網路錯誤",
+    "server_error": "伺服器錯誤",
+    "permission_denied": "權限被拒絕",
+    "session_expired": "工作階段已過期",
+    "data_saved": "資料已儲存",
+    "data_deleted": "資料已刪除",
+    "changes_saved": "變更已儲存",
+    "changes_discarded": "變更已捨棄",
+    "are_you_sure": "您確定嗎？",
+    "cannot_undo": "此操作無法復原",
+    "please_wait": "請稍候...",
+    "processing": "處理中..."
+  },
   "index": {
     "subtitle": "純粹溝通，即刻連接"
   },

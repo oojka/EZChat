@@ -75,26 +75,17 @@ public class AuthController {
         Image image = userService.uploadAvatar(file);
         return Result.success(image);
     }
+    
     /**
      * 访客加入聊天接口。
      *
-     * @param guestReq 包含访客昵称和聊天码的请求体。
+     * @param guestRegisterReq 包含访客昵称和聊天码的请求体。
      * @return 加入成功返回包含Token等信息的结果，失败则返回错误信息。
      */
     @PostMapping("/guest")
-    public Result<LoginVO> guestRegister(@RequestBody GuestReq guestReq){
+    public Result<LoginVO> guestRegister(@RequestBody GuestRegisterReq guestRegisterReq){
         // 调用认证服务处理访客加入逻辑
-        LoginVO res = authService.guest(guestReq);
-        // 如果返回结果为null，表示加入失败
-        if (res == null) {
-            // 记录访客加入失败的日志
-            log.info("guest join chat:'{}' failed", guestReq.getChatCode());
-            // 返回失败响应
-            // 注意：Result.error() 返回 Result<?>，需要类型转换（错误情况下 data 为 null，类型参数无实际意义）
-            @SuppressWarnings("unchecked")
-            Result<LoginVO> errorResult = (Result<LoginVO>) Result.error(ErrorCode.SYSTEM_ERROR, "guest join chat failed");
-            return errorResult;
-        }
+        LoginVO res = authService.guestRegister(guestRegisterReq);
         // 加入成功，返回成功响应
         return Result.success(res);
     }
@@ -157,7 +148,7 @@ public class AuthController {
      * 5. 生成 JWT token
      *
      * @param req 访客加入请求（包含头像）
-     * @return 统一响应结果（LoginVO）
+     * @return 统一响应结果（LoginGuestVO，包含登录信息和头像信息）
      */
     @PostMapping("/guest-join")
     public Result<LoginVO> guestJoin(@RequestBody GuestJoinReq req) {

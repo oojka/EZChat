@@ -1,10 +1,5 @@
 import request from '../utils/request'
-import {type LoginUser, type RegisterInfo, type Result, type ValidateChatJoinReq, type ChatRoom, type GuestJoinReq} from '@/type'
-
-export type LoginApiReq = {
-  username: string
-  password: string
-}
+import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginInfo} from '@/type'
 
 /**
  * 用户登录
@@ -13,7 +8,7 @@ export type LoginApiReq = {
  * - 业务目的：获取登录态（uid/username/token），供后续 HTTP Header 与 WS 连接使用
  */
 export const loginApi = (
-  data: LoginApiReq
+  data: LoginInfo
 ): Promise<Result<LoginUser>> =>
   request.post('/auth/login', data)
 

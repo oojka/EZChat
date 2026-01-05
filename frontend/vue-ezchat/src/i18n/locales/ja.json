@@ -22,6 +22,32 @@
     "copied": "コピーしました",
     "copy_failed": "コピーに失敗しました"
   },
+  "dialog": {
+    "tip": "ヒント",
+    "info": "情報",
+    "success": "成功",
+    "warning": "警告",
+    "error": "エラー",
+    "confirm": "確認",
+    "alert": "アラート",
+    "notice": "通知",
+    "reminder": "リマインダー",
+    "validation_error": "検証エラー",
+    "operation_success": "操作成功",
+    "operation_failed": "操作失敗",
+    "network_error": "ネットワークエラー",
+    "server_error": "サーバーエラー",
+    "permission_denied": "アクセス拒否",
+    "session_expired": "セッション期限切れ",
+    "data_saved": "データを保存しました",
+    "data_deleted": "データを削除しました",
+    "changes_saved": "変更を保存しました",
+    "changes_discarded": "変更を破棄しました",
+    "are_you_sure": "よろしいですか？",
+    "cannot_undo": "この操作は元に戻せません",
+    "please_wait": "お待ちください...",
+    "processing": "処理中..."
+  },
   "index": {
     "subtitle": "純粋な会話、軽やかなつながり"
   },

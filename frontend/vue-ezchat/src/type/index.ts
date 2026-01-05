@@ -164,13 +164,6 @@ export type JoinChatReq = {
   inviteCode: string
 }
 
-/** 对话框表单数据结构 (用于快速加入) */
-export type DialogFormData = {
-  chatCode: string
-  password: string
-  inviteCode: string
-}
-
 /** 房间基础信息结构 */
 export type RoomInfo = {
   chatCode: string
@@ -182,9 +175,9 @@ export type RoomInfo = {
   }
 }
 
-export type JoinChatFormData = {
+export type JoinChatCredentialsForm = {
   /** 加入模式：'password' (密码/房间号) 或 'invite' (邀请链接) */
-  joinMode: 'password' | 'invite'
+  joinMode: 'roomId/password' | 'inviteUrl'
   /** 聊天室代码 (8位数字) */
   chatCode: string
   /** 房间密码 */

@@ -6,6 +6,7 @@ import {loginApi} from '@/api/Auth.ts'
 import {ElMessage} from 'element-plus'
 import {useWebsocketStore} from '@/stores/websocketStore.ts' // 引入 websocketStore
 import { useImageStore } from '@/stores/imageStore'
+import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 
 /**
  * UserStore：管理登录态与当前用户信息
@@ -70,31 +71,57 @@ export const useUserStore = defineStore('user', () => {
   const loginRequest = async (username: string, password: string) => {
     // 1) 调用后端登录接口
     const result = await loginApi({ username, password })
+    
     if (result && result.data) {
-      // 1. 更新 State
+      // 1. 更新内存 State
       loginUser.value = result.data
-      // 2. 持久化
-      localStorage.setItem('loginUser', JSON.stringify(result.data))
+      
+      // 2. 持久化（增加健壮性）
+      try {
+        // 先删除之前的登录用户
+        localStorage.removeItem('loginGuest')
+        localStorage.removeItem('loginUser')
+        // 再保存新的登录用户
+        localStorage.setItem('loginUser', JSON.stringify(result.data))
+      } catch (e) {
+        isAppError(e)
+        throw createAppError(
+          ErrorType.STORAGE,
+          'Failed to save login user to storage',
+          {
+            severity: ErrorSeverity.WARNING,
+            component: 'userStore',
+            action: 'loginRequest'
+          }
+        )
+      }
       return result.data
     }
-    throw new Error('Login failed')
+    throw createAppError(
+      ErrorType.NETWORK,
+      'Login failed',
+      {
+        severity: ErrorSeverity.ERROR,
+        component: 'userStore',
+        action: 'loginRequest'
+      }
+    )
   }
 
   /**
    * 类型守卫：验证数据是否为 LoginUser 类型
    */
   const isLoginUser = (data: unknown): data is LoginUser => {
+    if (typeof data !== 'object' || data === null) return false;
+    
+    const d = data as Record<string, any>;
+    
     return (
-      typeof data === 'object' &&
-      data !== null &&
-      'uid' in data &&
-      'username' in data &&
-      'token' in data &&
-      typeof (data as Record<string, unknown>).uid === 'string' &&
-      typeof (data as Record<string, unknown>).username === 'string' &&
-      typeof (data as Record<string, unknown>).token === 'string'
-    )
-  }
+      typeof d.uid === 'string' &&
+      typeof d.username === 'string' &&
+      typeof d.token === 'string'
+    );
+  };
 
   /**
    * 从 localStorage 恢复登录用户（仅恢复 token/uid/username，不发请求）
@@ -127,8 +154,10 @@ export const useUserStore = defineStore('user', () => {
    * - 将“用户详情请求”从 refresh 主链路中解耦，避免黑屏转圈时间被拉长
    */
   const fetchLoginUserInfo = async () => {
-    if (!loginUser.value?.uid) return
-    const result = await getUserInfoApi(loginUser.value.uid)
+    if (!isLoginUser(loginUser.value) && !isLoginGuest(loginGuest.value)) return
+    const uid = isLoginUser(loginUser.value) ? loginUser.value.uid : loginGuest.value?.loginUser.uid;
+    if (!uid) return
+    const result = await getUserInfoApi(uid)
     if (result) {
       const imageStore = useImageStore()
       const prevAvatar = loginUserInfo.value?.avatar
@@ -193,7 +222,7 @@ export const useUserStore = defineStore('user', () => {
    * @param req 验证请求对象
    * @param chatRoom 验证成功的房间信息（简化的 ChatRoom）
    */
-  const setValidatedChatInfo = (req: ValidateChatJoinReq, chatRoom: ChatRoom) => {
+  const setValidatedJoinChatInfo = (req: ValidateChatJoinReq, chatRoom: ChatRoom) => {
     validateChatJoinReq.value = req
     validatedChatRoom.value = chatRoom
   }
@@ -206,9 +235,102 @@ export const useUserStore = defineStore('user', () => {
    * - 开始新的验证时
    * - 成功加入后
    */
-  const clearValidatedChatInfo = () => {
+  const clearValidatedJoinChatInfo = () => {
     validateChatJoinReq.value = null
     validatedChatRoom.value = null
+  }
+
+
+  // 访客逻辑
+  const loginGuest = ref<LoginGuest | null>({
+    loginUser: {
+      uid: '',
+      username: '',
+      token: '',
+    },
+    avatar: {
+      objectUrl: '',
+      objectThumbUrl: '',
+    },
+  })
+
+  const isLoginGuest = (data: unknown): data is LoginGuest => {
+    if (typeof data !== 'object' || data === null) return false;
+  
+    // 将 data 强制转换为 Record 方便后续读取
+    const d = data as Record<string, any>;
+  
+    return (
+      'loginUser' in d &&
+      'avatar' in d &&
+      // 校验 loginUser 内部
+      d.loginUser !== null &&
+      typeof d.loginUser === 'object' &&
+      typeof d.loginUser.uid === 'string' &&
+      typeof d.loginUser.username === 'string' &&
+      typeof d.loginUser.token === 'string' &&
+      // 校验 avatar 内部
+      d.avatar !== null &&
+      typeof d.avatar === 'object' &&
+      typeof d.avatar.objectUrl === 'string' &&
+      typeof d.avatar.objectThumbUrl === 'string'
+    );
+  };
+
+
+
+  const restoreLoginGuestFromStorage = (): boolean => {
+    const rowString: string | null = localStorage.getItem('loginGuest')
+    if (!rowString) return false
+    try {
+      const parsed = JSON.parse(rowString)
+      if (isLoginGuest(parsed)) {
+        loginGuest.value = parsed
+        return true;
+      }
+    } catch (e){
+      isAppError(e)
+      throw createAppError(
+        ErrorType.STORAGE,
+        'Failed to restore login guest from storage',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'userStore',
+          action: 'restoreLoginGuestFromStorage'
+        }
+      )
+    }
+    return false;
+  }
+
+  const setLoginGuest = (guest: LoginGuest) => {
+    // 1. 先更新内存状态，确保 UI 响应
+    loginGuest.value = guest
+    
+    // 2. 持久化操作进行异常捕获
+    try {
+      // 先删除之前的登录用户
+      localStorage.removeItem('loginUser')
+      localStorage.removeItem('loginGuest')
+      // 再保存新的登录用户
+      localStorage.setItem('loginGuest', JSON.stringify(guest))
+    } catch (e) {
+      // 使用你定义的错误工厂记录日志
+      isAppError(e)
+      throw createAppError(
+        ErrorType.STORAGE,
+        'Failed to save login guest to storage',
+        {
+          severity: ErrorSeverity.WARNING, // 写入失败通常设为警告，不一定阻塞运行
+          component: 'userStore',
+          action: 'setLoginGuest'
+        }
+      )
+    }
+  }
+
+  const clearLoginGuest = () => {
+    loginGuest.value = null;
   }
 
   return {
@@ -218,13 +340,17 @@ export const useUserStore = defineStore('user', () => {
     validateChatJoinReq,
     validatedChatRoom,
     getToken,
+    loginGuest,
+    setLoginGuest,
+    restoreLoginGuestFromStorage,
+    clearLoginGuest,
     initLoginUserInfo,
     restoreLoginUserFromStorage,
     fetchLoginUserInfo,
     loginRequest,
     logout,
     resetState,
-    setValidatedChatInfo,
-    clearValidatedChatInfo,
+    setValidatedJoinChatInfo,
+    clearValidatedJoinChatInfo,
   }
 })

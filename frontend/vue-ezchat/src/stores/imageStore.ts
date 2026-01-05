@@ -245,6 +245,8 @@ export const useImageStore = defineStore('image', () => {
    * @param type 头像类型：'user' 为用户头像，'room' 为房间头像
    * @returns Image 对象（如果已存在则返回原对象，否则上传默认头像后返回）
    */
+  
+  // TODO: 待后端实现滑动窗口token后，把默认头像上传接口全部替换为需要token验证的后端接口
   const uploadDefaultAvatarIfNeeded = async (currentAvatar?: Image, type: 'user' | 'room' = 'user'): Promise<Image> => {
     // 如果头像已存在，直接返回
     if (currentAvatar?.objectUrl || currentAvatar?.objectThumbUrl) {

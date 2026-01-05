@@ -212,7 +212,7 @@ export const useAppStore = defineStore('app', () => {
    * @param token 可选：登录成功后直接传入 token，减少一次读取
    * @param type 初始化触发来源（login/refresh）用于控制 Loading 表现
    */
-  const initializeApp = async (token?: string ,type: 'login' | 'refresh' = 'refresh') => {
+  const initializeApp = async (token?: string ,type: 'login' | 'refresh' | 'guest' = 'refresh') => {
     const userStore = useUserStore()
     const roomStore = useRoomStore()
     const websocketStore = useWebsocketStore()
@@ -221,7 +221,7 @@ export const useAppStore = defineStore('app', () => {
     let finalTokenForWs: string | undefined
 
     try {
-      // 登录 / refresh：全屏遮蔽应显示“初始化...”而不是 “Loading...”
+      // 登录 / refresh / 访客：全屏遮蔽应显示“初始化...”而不是 “Loading...”
       loadingText.value = i18n.global.t('common.initializing') as unknown as string
 
       // refresh：尽早标记“初始化中”，避免 messageStore/router 等并发逻辑提前触发拉取
@@ -234,12 +234,14 @@ export const useAppStore = defineStore('app', () => {
       websocketStore.resetState()
       roomStore.resetState()
       messageStore.resetState()
-      userStore.resetState()
-
+      if (type != 'guest') {
+        userStore.resetState()
+      }
       // 1) refresh 场景“关键链路”：仅同步恢复 token，让页面尽快可用
       // 用户详情/房间列表等慢请求放到后台，避免黑屏转圈时间被拉长
-      const hasToken = token || userStore.restoreLoginUserFromStorage()
-      const finalToken = token || userStore.loginUser.token
+      // 如果访客，则不恢复登录态
+      if(!(type === 'guest' && token)) userStore.restoreLoginGuestFromStorage() || userStore.restoreLoginUserFromStorage();
+      const finalToken = token || userStore.loginGuest?.token || userStore.loginUser.token;
       finalTokenForWs = finalToken
 
       if (!finalToken) {

@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class GuestReq {
+public class GuestRegisterReq {
 
     private String chatCode;
     private String password;

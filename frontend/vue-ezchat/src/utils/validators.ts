@@ -20,7 +20,14 @@
  * 2. 允许包含字母、数字、点(.)、下划线(_)、短横线(-) [a-zA-Z0-9._-]
  * 3. 长度限制为 2-20 位 {1,19}$
  */
-export const USERNAME_REG = /^[a-zA-Z][a-zA-Z0-9._-]{1,19}$/
+export const REGEX_USERNAME = /^[a-zA-Z][a-zA-Z0-9._-]{1,19}$/
+
+/** 昵称规则：2-20 个字符，允许中英文、数字、下划线、短横线、全角符号
+ * 
+ * 1. 长度限制为 2-20 位 {2,20}$
+ * 2. 允许：中文、英文、日文（平/片假名）、韩文、数字、_ - [\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]
+ */
+export const REGEX_NICKNAME =/^[A-Za-z0-9_\-\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]{2,20}$/
 
 /**
  * 用户UID规则：
@@ -28,7 +35,7 @@ export const USERNAME_REG = /^[a-zA-Z][a-zA-Z0-9._-]{1,19}$/
  * 2. 必须为数字
  * 3. 长度限制为 10 位 {10}$
  */
-const REGEX_USER_UID = /^[0-9]{10}$/
+export const REGEX_USER_UID = /^[0-9]{10}$/
 
 /**
  * 通用邀请链接正则
@@ -40,7 +47,7 @@ const REGEX_USER_UID = /^[0-9]{10}$/
 // 开发环境
 // const REGEX_INVITE_URL = /^https?:\/\/[\w\.-]+(?::\d+)?\/invite\/([0-9A-Za-z]{16,24})$/;
 // 正式环境
-const REGEX_INVITE_URL = /^https:\/\/ez-chat\.oojka\.com\/invite\/([0-9A-Za-z]{16,24})$/
+export const REGEX_INVITE_URL = /^https:\/\/ez-chat\.oojka\.com\/invite\/([0-9A-Za-z]{16,24})$/
 
 /**
  * 房间ID规则：
@@ -48,22 +55,22 @@ const REGEX_INVITE_URL = /^https:\/\/ez-chat\.oojka\.com\/invite\/([0-9A-Za-z]{1
  * 2. 必须为数字
  * 3. 长度限制为 8 位 {8}$
  */
-const REGEX_CHAT_CODE = /^[0-9]{8}$/
+export const REGEX_CHAT_CODE = /^[0-9]{8}$/
 
 /**
  * 基础密码规则 (半角可见字符)：
  * 匹配 ASCII 33-126 范围内的所有字符，禁止全角和空格
  */
-const PWD_BASE_CHAR = '[\\x21-\\x7e]'
+export const PWD_BASE_CHAR = '[\\x21-\\x7e]'
 
 /** 必须包含字母和数字的断言 */
-const LOOKAHEAD_ALPHANUMERIC = '(?=.*[a-zA-Z])(?=.*[0-9])'
+export const LOOKAHEAD_ALPHANUMERIC = '(?=.*[a-zA-Z])(?=.*[0-9])'
 
 /** 必须包含大写、小写、数字的断言 */
-const LOOKAHEAD_STRONG = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])'
+export const LOOKAHEAD_STRONG = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])'
 
 /** 必须包含大写、小写、数字、特殊符号的断言 */
-const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\\x2f\\x3a-\\x40\\x5b-\\x60\\x7b-\\x7e])'
+export const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\\x2f\\x3a-\\x40\\x5b-\\x60\\x7b-\\x7e])'
 
 /**
  * =========================================
@@ -71,7 +78,7 @@ const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\\x2f\\x
  * =========================================
  */
 
-type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
+export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
 export type PasswordOptions = {
   min?: number
@@ -121,7 +128,17 @@ export const getPasswordReg = (options: PasswordOptions): RegExp => {
  */
 export const isValidUsername = (val: unknown): boolean => {
   if (typeof val !== 'string') return false
-  return USERNAME_REG.test(val)
+  return REGEX_USERNAME.test(val)
+}
+
+/**
+ * 校验昵称
+ * 
+ * @param val 输入值
+ */
+export const isValidNickname = (val: unknown): boolean => {
+  if (typeof val !== 'string') return false
+  return REGEX_NICKNAME.test(val)
 }
 
 /**

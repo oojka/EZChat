@@ -51,8 +51,8 @@ const onUnflip = () => { emit('unflip'); setTimeout(() => resetJoinForm(), 800) 
           :rules="joinChatCredentialsFormRules">
           <div class="tab-section">
             <el-radio-group v-model="joinChatCredentialsForm.joinMode" class="modern-tabs-small" size="small">
-              <el-radio-button label="password">ID</el-radio-button>
-              <el-radio-button label="invite">URL</el-radio-button>
+              <el-radio-button label="roomId/password">ID</el-radio-button>
+              <el-radio-button label="inviteUrl">URL</el-radio-button>
             </el-radio-group>
           </div>
           <div class="input-section">

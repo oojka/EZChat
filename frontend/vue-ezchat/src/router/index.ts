@@ -11,6 +11,8 @@ import {useAppStore} from '@/stores/appStore'
 import {useWebsocketStore} from '@/stores/websocketStore'
 import i18n from '@/i18n'
 
+const { t } = i18n.global
+
 /**
  * 路由配置
  *
@@ -90,7 +92,6 @@ const router = createRouter({
  * - 如未来需要强制权限，请在此处校验 token，并对 `/chat/**` 做重定向
  */
 router.beforeEach((to, from, next) => {
-  const route = useRoute()
   const appStore = useAppStore()
   const websocketStore = useWebsocketStore()
 
@@ -124,8 +125,8 @@ router.beforeEach((to, from, next) => {
     const isEnterChat = to.path.startsWith('/chat') && !from.path.startsWith('/chat')
     // 注意：i18n.global.t() 返回类型为 string | VNode，但对于这些键，返回值为 string
     // 使用类型守卫进行运行时类型检查，避免类型断言
-    const initText = i18n.global.t('common.initializing')
-    const loadingText = i18n.global.t('common.loading')
+    const initText = t('common.initializing')
+    const loadingText = t('common.loading')
     appStore.loadingText = isEnterChat
       ? (typeof initText === 'string' ? initText : '')
       : (typeof loadingText === 'string' ? loadingText : '')

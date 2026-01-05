@@ -3,9 +3,8 @@ import { ElMessage } from "element-plus";
 import router from "@/router";
 import { type LoginUser } from "@/type";
 import i18n from "@/i18n";
-import { useAppStore } from "@/stores/appStore";
 import { useRoomStore } from "@/stores/roomStore";
-import { RouterLink } from "vue-router";
+import { showAlertDialog } from "@/components/dialogs/AlertDialog";
 
 const { t } = i18n.global;
 
@@ -74,6 +73,15 @@ request.interceptors.request.use(
         const lockoutTime = now + LOCKOUT_DURATION;
         localStorage.setItem('api_restriction_until', lockoutTime.toString());
         ElMessage.error(t('api.too_many_requests'));
+        showAlertDialog({
+          title: t('api.too_many_requests'),
+          message: t('api.too_many_requests'),
+          confirmText: t('common.confirm'),
+          type: 'error',
+          onConfirm: () => {
+            return Promise.reject(new Error('429_SIMULATED'));
+          }
+        });
         return Promise.reject(new Error('429_SIMULATED'));
       } else {
         requestCount++;

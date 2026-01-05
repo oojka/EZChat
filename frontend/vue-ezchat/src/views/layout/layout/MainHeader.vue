@@ -6,7 +6,7 @@ import {storeToRefs} from 'pinia'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
 import AppLogo from '@/components/AppLogo.vue'
 import {useRouter} from 'vue-router'
-import {showConfirmDialog} from '@/utils/confirmDialog.ts'
+import {showConfirmDialog} from '@/components/dialogs/confirmDialog.ts'
 import {useI18n} from 'vue-i18n'
 
 const { t, locale } = useI18n()

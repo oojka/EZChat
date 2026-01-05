@@ -22,6 +22,32 @@
     "copied": "복사됨",
     "copy_failed": "복사 실패"
   },
+  "dialog": {
+    "tip": "팁",
+    "info": "정보",
+    "success": "성공",
+    "warning": "경고",
+    "error": "오류",
+    "confirm": "확인",
+    "alert": "알림",
+    "notice": "공지",
+    "reminder": "리마인더",
+    "validation_error": "유효성 검사 오류",
+    "operation_success": "작업 성공",
+    "operation_failed": "작업 실패",
+    "network_error": "네트워크 오류",
+    "server_error": "서버 오류",
+    "permission_denied": "권한 거부됨",
+    "session_expired": "세션 만료",
+    "data_saved": "데이터 저장됨",
+    "data_deleted": "데이터 삭제됨",
+    "changes_saved": "변경사항 저장됨",
+    "changes_discarded": "변경사항 취소됨",
+    "are_you_sure": "확실합니까?",
+    "cannot_undo": "이 작업은 취소할 수 없습니다",
+    "please_wait": "잠시만 기다려 주세요...",
+    "processing": "처리 중..."
+  },
   "index": {
     "subtitle": "순수한 대화, 가벼운 연결"
   },

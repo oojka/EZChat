@@ -7,12 +7,12 @@ import {useRoomStore} from '@/stores/roomStore.ts'
 import {useAppStore} from '@/stores/appStore.ts'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
-import {showMessageNotification} from '@/utils/notification.ts'
+import {showMessageNotification} from '@/components/notification.ts'
 import i18n from '@/i18n' // 引入 i18n
 import { useImageStore } from '@/stores/imageStore'
 
 // 兼容性更好的 ID 生成器
-/**
+/** 
  * 生成临时消息 ID
  *
  * 业务目的：用于“本地先插入一条 sending 消息”，等服务端 ACK 后再更新状态。

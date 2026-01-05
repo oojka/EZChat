@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { registerApi } from '@/api/Auth.ts'
 import { useI18n } from 'vue-i18n'
-import { type PasswordOptions, getPasswordReg, USERNAME_REG } from '@/utils/validators.ts'
+import { type PasswordOptions, getPasswordReg, REGEX_USERNAME } from '@/utils/validators.ts'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
 import { calculateObjectHash } from '@/utils/objectHash'
@@ -35,7 +35,7 @@ export function useRegister() {
     ],
     username: [
       { required: true, message: t('validation.username_required'), trigger: 'blur' },
-      { pattern: USERNAME_REG, message: t('validation.username_format'), trigger: 'blur' }
+      { pattern: REGEX_USERNAME, message: t('validation.username_format'), trigger: 'blur' }
     ],
     password: [
       { required: true, message: t('validation.password_required'), trigger: 'blur' },
