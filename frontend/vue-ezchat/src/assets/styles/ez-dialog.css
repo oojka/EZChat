@@ -52,13 +52,23 @@ html.dark .ez-logout-dialog .el-button--danger { background: #450a0a !important;
 
 /* 消息通知内部样式 */
 .ez-notify-content { display: flex; align-items: flex-start; gap: 14px; cursor: pointer; }
+.ez-notify-avatar-wrapper { flex-shrink: 0; }
 .ez-notify-avatar { width: 44px; height: 44px; border-radius: var(--radius-base); object-fit: cover; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.ez-notify-avatar-fallback {
+  width: 44px; height: 44px; border-radius: var(--radius-base);
+  background: var(--bg-page);
+  border: 1px solid var(--el-border-color-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800; color: var(--text-500);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
 .ez-notify-info { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
 .ez-notify-sender { font-size: 14px; font-weight: 700; color: var(--text-900); }
 .ez-notify-preview { font-size: 13px; color: var(--text-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 欢迎通知内部样式 */
 .ez-welcome-content { display: flex; align-items: center; gap: 20px; padding: 4px 0; }
+.ez-welcome-avatar-wrapper { flex-shrink: 0; }
 .ez-welcome-avatar {
   width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: cover;
   border: 3px solid var(--bg-card);
@@ -66,7 +76,19 @@ html.dark .ez-logout-dialog .el-button--danger { background: #450a0a !important;
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
-.ez-notification.welcome:hover .ez-welcome-avatar { transform: scale(1.05) rotate(-5deg); }
+.ez-welcome-avatar-fallback {
+  width: 64px; height: 64px; border-radius: var(--radius-md);
+  background: var(--bg-page);
+  border: 3px solid var(--bg-card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 900; color: var(--text-500);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  transition: transform 0.3s ease;
+}
+.ez-notification.welcome:hover .ez-welcome-avatar,
+.ez-notification.welcome:hover .ez-welcome-avatar-fallback {
+  transform: scale(1.05) rotate(-5deg);
+}
 .ez-welcome-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .ez-welcome-nickname { font-size: 18px; font-weight: 900; color: var(--text-900); letter-spacing: -0.5px; }
 .ez-welcome-message { font-size: 13px; color: var(--text-500); line-height: 1.6; font-weight: 500; }

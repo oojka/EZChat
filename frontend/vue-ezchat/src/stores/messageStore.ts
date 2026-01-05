@@ -1,45 +1,109 @@
-import {defineStore, storeToRefs} from 'pinia'
-import type {ChatRoom, Image, Message} from '@/type'
-import {ref, watch} from 'vue'
-import {useRouter} from 'vue-router'
-import {getMessageListApi} from '@/api/Message.ts'
-import {useRoomStore} from '@/stores/roomStore.ts'
-import {useAppStore} from '@/stores/appStore.ts'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useWebsocketStore} from '@/stores/websocketStore.ts'
-import {showMessageNotification} from '@/components/notification.ts'
-import i18n from '@/i18n' // 引入 i18n
-import { useImageStore } from '@/stores/imageStore'
+// =========================================
+// 导入依赖
+// =========================================
+import {defineStore, storeToRefs} from 'pinia'           // Pinia 状态管理
+import type {ChatRoom, Image, Message} from '@/type'    // 类型定义
+import {ref, watch} from 'vue'                          // Vue 响应式 API
+import {useRouter} from 'vue-router'                    // 路由管理
+import {getMessageListApi} from '@/api/Message.ts'      // 消息相关 API
+import {useRoomStore} from '@/stores/roomStore.ts'      // 房间状态管理
+import {useAppStore} from '@/stores/appStore.ts'        // 应用全局状态
+import {useUserStore} from '@/stores/userStore.ts'      // 用户状态管理
+import {useWebsocketStore} from '@/stores/websocketStore.ts' // WebSocket 状态管理
+import {showMessageNotification} from '@/components/notification.ts' // 消息通知组件
+import i18n from '@/i18n'                               // 国际化
+import { useImageStore } from '@/stores/imageStore'     // 图片状态管理
 
-// 兼容性更好的 ID 生成器
-/** 
+// =========================================
+// 工具函数
+// =========================================
+
+/**
  * 生成临时消息 ID
  *
- * 业务目的：用于“本地先插入一条 sending 消息”，等服务端 ACK 后再更新状态。
+ * 业务目的：
+ * - 用于"本地先插入一条 sending 消息"的临时标识
+ * - 等待服务端 ACK 后，通过此 ID 找到对应消息并更新状态
+ *
+ * 技术实现：
+ * - 使用时间戳 + 随机数组合，确保唯一性
+ * - 使用 base36 编码，缩短 ID 长度
+ *
+ * @returns {string} 临时消息 ID
  */
 function generateTempId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2)
 }
 
+// =========================================
+// MessageStore 定义
+// =========================================
+
 /**
  * MessageStore：管理消息列表（当前房间）与消息发送/接收
  *
- * 业务职责：
- * - 拉取消息列表 + 分页加载历史
- * - 发送消息：先本地插入（sending），再走 WS 发给服务端，收到 ACK 变为 sent
- * - 接收消息：如果是当前房间则插入列表，否则更新房间预览并弹通知
- * - 图片 Blob URL 管理：减少跨域/鉴权图片的重复下载成本
+ * 核心业务职责：
+ * 1. 消息列表管理：拉取消息列表 + 分页加载历史
+ * 2. 消息发送流程：先本地插入（sending），再走 WS 发给服务端，收到 ACK 变为 sent
+ * 3. 消息接收处理：如果是当前房间则插入列表，否则更新房间预览并弹通知
+ * 4. 图片资源管理：Blob URL 缓存，减少跨域/鉴权图片的重复下载成本
+ * 5. 消息去重与状态管理：防止重复消息，管理发送状态（sending/sent/error）
+ *
+ * 设计原则：
+ * - 单一职责：只管理当前房间的消息相关状态
+ * - 响应式设计：所有状态都是响应式的，UI 自动更新
+ * - 错误处理：完善的错误处理和状态恢复机制
+ * - 性能优化：图片懒加载、消息去重、Blob URL 缓存
  */
 export const useMessageStore = defineStore('message', () => {
-  const router = useRouter()
-  const { t } = i18n.global // 获取翻译函数
-  const imageStore = useImageStore()
+  // =========================================
+  // 依赖注入
+  // =========================================
+  const router = useRouter()                    // 路由实例，用于监听路由变化
+  const { t } = i18n.global                    // 国际化翻译函数
+  const imageStore = useImageStore()           // 图片存储，用于管理图片 Blob URL
 
-  // --- 状态定义 ---
+  // =========================================
+  // 状态定义
+  // =========================================
+  
+  /**
+   * 当前房间的消息列表
+   * - 按时间倒序排列（最新的在最前面）
+   * - 包含发送中、已发送、错误等状态的消息
+   */
   const currentMessageList = ref<Message[]>([])
+  
+  /**
+   * 聊天视图加载状态
+   * - true: 显示聊天区域的加载骨架屏
+   * - false: 正常显示消息列表
+   * 用途：首次进入房间或切换房间时显示加载效果
+   */
   const chatViewIsLoading = ref<boolean>(false)
+  
+  /**
+   * 消息加载中状态（用于分页加载）
+   * - true: 正在加载更多历史消息
+   * - false: 加载完成或未在加载
+   * 用途：控制上拉加载更多的加载动画
+   */
   const loadingMessages = ref(false)
+  
+  /**
+   * 没有更多消息标志
+   * - true: 已加载所有历史消息，无需继续加载
+   * - false: 还有更多历史消息可以加载
+   * 用途：优化性能，避免不必要的分页请求
+   */
   const noMoreMessages = ref(false)
+  
+  /**
+   * 通用加载状态
+   * - true: 正在执行某个异步操作
+   * - false: 操作完成
+   * 用途：控制按钮禁用状态、加载动画等
+   */
   const isLoading = ref<boolean>(false)
 
   /**
@@ -260,14 +324,20 @@ export const useMessageStore = defineStore('message', () => {
   }
 
   watch(
-    () => [router.currentRoute.value.params.chatCode, useAppStore().isAppInitializing] as const,
-    async ([newCode, isAppInitializing]) => {
+    () => [router.currentRoute.value.params.chatCode, useAppStore().isAppInitializing, router.currentRoute.value.path] as const,
+    async ([newCode, isAppInitializing, currentPath]) => {
       const roomStore = useRoomStore()
       const appStore = useAppStore()
       const { currentRoomCode } = storeToRefs(roomStore)
       const { isAppLoading } = storeToRefs(appStore)
+      
       // 初始化期间不拉取消息：避免“先拉取 → 又被 reset 清空”或 token 未就绪导致数据异常
       if (isAppInitializing) return
+      
+      // 只监听 /chat 路由下的 chatCode 参数变化
+      // 避免在 /Join/:chatCode 等路由下触发消息加载
+      if (!currentPath.startsWith('/chat')) return
+      
       const code = (newCode as string) || ''
       if (code && code !== currentRoomCode.value) {
         revokeAllBlobs()

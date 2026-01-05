@@ -127,7 +127,8 @@ const progressPercentage = computed(() => {
                   </div>
                 </el-upload>
                 <div class="avatar-info-area">
-                  <p class="step-hint">{{ t('create_chat.avatar_hint') || t('auth.avatar_hint') }}</p>
+                  <!-- 点击上传聊天室头像 -->
+                  <p class="step-hint">{{ t('create_chat.avatar_upload_hint') || t('create_chat.avatar_hint') || t('auth.avatar_hint') }}</p>
                 </div>
                 <el-form-item prop="avatar" class="hidden-item" :show-message="false" />
               </div>

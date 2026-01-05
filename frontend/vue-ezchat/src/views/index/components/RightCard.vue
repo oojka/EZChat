@@ -343,7 +343,8 @@ const handleRegister = async () => {
                     </el-icon><span>{{ t('auth.select_image') }}</span></div>
                 </el-upload>
                 <div class="avatar-info-area">
-                  <p class="step-hint">{{ t('auth.avatar_hint') }}</p>
+                  <!-- 点击上传头像 -->
+                  <p class="step-hint">{{ t('auth.avatar_upload_hint') || t('auth.avatar_hint') }}</p>
                 </div>
                 <!-- 隐藏的表单项：用于表单验证 -->
                 <el-form-item prop="avatar" class="hidden-item" :show-message="false" />

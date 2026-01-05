@@ -31,12 +31,13 @@ const isSupportedLocale = (val: string): val is SupportedLocale => {
 export const useAppStore = defineStore('app', () => {
   // 全局 Loading 状态：用于控制页面骨架/遮罩
   const isAppLoading = ref(false)
+  // 是否显示 Loading 遮罩
   const showLoadingSpinner = ref(true)
   // 注意：默认值会在 initLanguage() 后再用 i18n 文案覆盖，避免多语言下出现“写死某一语言”的问题
   const loadingText = ref('Initializing...')
   // App 初始化中的保护标记：用于避免路由守卫过早关闭 Loading
   const isAppInitializing = ref(false)
-  // refresh 全屏 Loading 的“最短展示时长”（毫秒）：用于缓解骨架屏切换的突兀感
+  // refresh 全屏 Loading 的“最短展示时长”
   const MIN_REFRESH_LOADING_MS = 600
   // Loading 背景是否为全白（用于错误页等场景）
   const loadingBgWhite = ref(false)

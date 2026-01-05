@@ -11,9 +11,9 @@ import { useMessageStore } from '@/stores/messageStore.ts'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import i18n from "@/i18n";
+import { useAppStore } from './appStore'
 
 const { t } = i18n.global
-
 /**
  * UserStore：管理登录态与当前用户信息
  *
@@ -23,11 +23,12 @@ const { t } = i18n.global
  * - 维护 userStatusList：在线状态表（与 RoomStore 联动）
  */
 export const useUserStore = defineStore('user', () => {
+  const router = useRouter()
+  const appStore = useAppStore()
   // =========================
   // 1. State 定义
   // =========================
   const loginUserInfo = ref<LoginUserInfo>()
-
   // 初始化为空对象，避免 null 检查过于繁琐
   const loginUser = ref<LoginUser>({
     uid: '',
@@ -204,26 +205,60 @@ export const useUserStore = defineStore('user', () => {
    * ★★★ 新增：登出逻辑 ★★★
    * 用于：主动点击退出按钮 或 Token 过期被动退出
    */
-  const logout = () => {
-    // 1) 主动关闭 WebSocket：避免断线重连继续占用资源
-    const websocketStore = useWebsocketStore()
-    const router = useRouter()
-    websocketStore.close()
-    
-    // 2) 清除持久化：让刷新后不会“误以为已登录”
-    localStorage.removeItem('loginUser')
-    localStorage.removeItem('loginGuest')
+  const logout = async () => {
 
-    // 3) 重置 Store：清空所有与用户相关的数据，防止跨账号串数据
-    useUserStore().resetState()
-    useRoomStore().resetState()
-    useMessageStore().resetState()
-    useImageStore().resetState()
-    useWebsocketStore().resetState()
 
-    // 4) 跳转首页
-    router.replace('/').catch(() => {})
-    ElMessage.success(t('auth.logout_success') || 'log out success')
+    // 设置加载状态
+    appStore.isAppLoading = true
+    appStore.showLoadingSpinner = true
+    appStore.loadingText = t('common.safe_logout') || 'safe logout...'
+
+    try {
+      // 1) 主动关闭 WebSocket：避免断线重连继续占用资源
+      const websocketStore = useWebsocketStore()
+      websocketStore.close()
+
+      // 2) 清除持久化：让刷新后不会"误以为已登录"
+      localStorage.removeItem('loginUser')
+      localStorage.removeItem('loginGuest')
+
+      // 3) 重置 Store：清空所有与用户相关的数据，防止跨账号串数据
+      // 注意：先重置其他Store，最后重置userStore自身
+      useMessageStore().resetState()
+      useImageStore().resetState()
+      useRoomStore().resetState()
+      useWebsocketStore().resetState()
+      useUserStore().resetState()
+
+      // 5) 显示成功消息
+      ElMessage.success(t('auth.logout_success') || 'log out success')
+    } catch (e) {
+      // 如果路由跳转失败，至少显示成功消息
+      ElMessage.success(t('auth.logout_success') || 'log out success')
+
+      if (isAppError(e)) {
+        throw createAppError(
+          ErrorType.ROUTER,
+          'Failed to redirect to home page',
+          {
+            severity: ErrorSeverity.ERROR,
+            component: 'userStore',
+            action: 'logout',
+            originalError: e
+          }
+        )
+      }
+      console.error('登出过程中发生错误:', e)
+    } finally {
+      // 6) 关闭加载状态（延迟执行，让路由守卫先处理）
+      setTimeout(async () => {
+        // 4) 跳转首页（使用 replace 避免保留历史记录）
+        await router.replace('/')
+        appStore.isAppLoading = false
+        appStore.showLoadingSpinner = false
+        appStore.loadingText = ''
+      }, 500)
+    }
   }
 
   /**

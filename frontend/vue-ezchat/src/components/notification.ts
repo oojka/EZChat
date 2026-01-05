@@ -42,6 +42,32 @@ type NotificationSender = {
  */
 export const showMessageNotification = (message: Message, sender: NotificationSender, chatName: string) => {
   const previewText = getPreviewContent(message)
+  const thumbUrl = sender.avatar?.objectThumbUrl || ''
+  const originalUrl = sender.avatar?.objectUrl || ''
+  const initialUrl = thumbUrl || originalUrl || ''
+  const nickname = sender.nickname || ''
+  const firstChar = nickname.charAt(0)?.toUpperCase() || '?'
+  
+  // 头像加载失败处理：缩略图失败时尝试原图，原图失败则显示默认占位
+  const handleAvatarError = (event: Event) => {
+    const imgElement = event.target as HTMLImageElement
+    if (!imgElement) return
+    
+    const currentSrc = imgElement.src
+    
+    // 如果当前是缩略图且存在原图，切换到原图
+    if (currentSrc === thumbUrl && originalUrl && originalUrl !== thumbUrl) {
+      imgElement.src = originalUrl
+      return
+    }
+    
+    // 原图也失败或没有原图：替换为文字占位符
+    const container = imgElement.closest('.ez-notify-avatar-wrapper')
+    if (container) {
+      container.innerHTML = `<div class="ez-notify-avatar ez-notify-avatar-fallback">${firstChar}</div>`
+    }
+  }
+
   ElNotification({
     title: chatName || t('chat.new_message'),
     customClass: 'ez-notification info',
@@ -49,7 +75,17 @@ export const showMessageNotification = (message: Message, sender: NotificationSe
     position: 'top-right',
     duration: 4000,
     message: h('div', { class: 'ez-notify-content' }, [
-      h('img', { src: sender.avatar?.objectThumbUrl || '', class: 'ez-notify-avatar' }),
+      initialUrl
+        ? h('div', { class: 'ez-notify-avatar-wrapper' }, [
+            h('img', {
+              src: initialUrl,
+              class: 'ez-notify-avatar',
+              onError: handleAvatarError
+            })
+          ])
+        : h('div', { class: 'ez-notify-avatar-wrapper' }, [
+            h('div', { class: 'ez-notify-avatar ez-notify-avatar-fallback' }, firstChar)
+          ]),
       h('div', { class: 'ez-notify-info' }, [
         h('span', { class: 'ez-notify-sender' }, sender.nickname),
         h('span', { class: 'ez-notify-preview' }, previewText),
@@ -66,6 +102,32 @@ export const showMessageNotification = (message: Message, sender: NotificationSe
  * @param loginUserInfo 当前登录用户信息（昵称/头像）
  */
 export const showWelcomeNotification = (loginUserInfo: LoginUserInfo) => {
+  const thumbUrl = loginUserInfo.avatar?.objectThumbUrl || ''
+  const originalUrl = loginUserInfo.avatar?.objectUrl || ''
+  const initialUrl = thumbUrl || originalUrl || ''
+  const nickname = loginUserInfo.nickname || ''
+  const firstChar = nickname.charAt(0)?.toUpperCase() || '?'
+  
+  // 头像加载失败处理：缩略图失败时尝试原图，原图失败则显示默认占位
+  const handleAvatarError = (event: Event) => {
+    const imgElement = event.target as HTMLImageElement
+    if (!imgElement) return
+    
+    const currentSrc = imgElement.src
+    
+    // 如果当前是缩略图且存在原图，切换到原图
+    if (currentSrc === thumbUrl && originalUrl && originalUrl !== thumbUrl) {
+      imgElement.src = originalUrl
+      return
+    }
+    
+    // 原图也失败或没有原图：替换为文字占位符
+    const container = imgElement.closest('.ez-welcome-avatar-wrapper')
+    if (container) {
+      container.innerHTML = `<div class="ez-welcome-avatar ez-welcome-avatar-fallback">${firstChar}</div>`
+    }
+  }
+
   ElNotification({
     title: t('auth.welcome_back'),
     customClass: 'ez-notification welcome',
@@ -73,12 +135,19 @@ export const showWelcomeNotification = (loginUserInfo: LoginUserInfo) => {
     position: 'top-right',
     duration: 8000,
     message: h('div', { class: 'ez-welcome-content' }, [
-      h('img', {
-        src: loginUserInfo.avatar?.objectThumbUrl || loginUserInfo.avatar?.objectUrl || '',
-        class: 'ez-welcome-avatar'
-      }),
+      initialUrl
+        ? h('div', { class: 'ez-welcome-avatar-wrapper' }, [
+            h('img', {
+              src: initialUrl,
+              class: 'ez-welcome-avatar',
+              onError: handleAvatarError
+            })
+          ])
+        : h('div', { class: 'ez-welcome-avatar-wrapper' }, [
+            h('div', { class: 'ez-welcome-avatar ez-welcome-avatar-fallback' }, firstChar)
+          ]),
       h('div', { class: 'ez-welcome-info' }, [
-        h('span', { class: 'ez-welcome-nickname' }, `${loginUserInfo.nickname} ${t('common.san')}`),
+        h('span', { class: 'ez-welcome-nickname' }, `${nickname} ${t('common.san')}`),
         h('span', { class: 'ez-welcome-message' }, [t('chat.welcome_msg_1'), h('br'), t('chat.welcome_msg_2')]),
       ]),
     ]),
