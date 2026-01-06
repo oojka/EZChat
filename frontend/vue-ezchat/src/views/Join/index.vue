@@ -5,7 +5,11 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '@/stores/appStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
-import { useJoinChat } from '@/hooks/chat/join/useJoinChat.ts'
+import { useGuestJoin } from '@/hooks/chat/join/useGuestJoin.ts'
+import { useLoginJoin } from '@/hooks/chat/join/useLoginJoin.ts'
+import { computed } from 'vue'
+
+// ... (imports remain)
 import useLogin from '@/hooks/useLogin.ts'
 import AppLogo from '@/components/AppLogo.vue'
 import SmartAvatar from '@/components/SmartAvatar.vue'
@@ -29,16 +33,27 @@ const currentLangCode = {
   'zh-tw': 'TW',
 }
 
+// 1. 实例化模块
+const guestJoinModule = useGuestJoin()
+const loginJoinModule = useLoginJoin()
+
+// 3. 解构解构 Guest 模块状态与方法
 const {
   guestNickname,
   guestAvatar,
-  isLoading,
   handleGuestJoin,
-  handleLoginJoin,
   handleAvatarSuccess,
   defaultAvatarUrl,
   initDefaultAvatarUrl,
-} = useJoinChat()
+} = guestJoinModule
+
+const {
+    handleLoginAndJoin
+} = loginJoinModule
+
+// 合并 Loading 状态
+const isLoading = computed(() => guestJoinModule.isLoading.value || loginJoinModule.isLoading.value)
+
 
 // 登录表单状态（使用 useLogin hook）
 const { loginForm, resetLoginForm: resetLoginFormFromHook } = useLogin()
@@ -92,7 +107,7 @@ onUnmounted(() => {
 // 处理加入（根据模式调用不同的函数）
 const handleJoin = async () => {
   if (showLoginMode.value) {
-    await handleLoginJoin(loginForm)
+    await handleLoginAndJoin(loginForm)
   } else {
     await handleGuestJoin()
   }

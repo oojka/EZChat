@@ -1,0 +1,63 @@
+## [2026-01-07] JoinChatDialog 组件全球化完善
+
+### 目标
+完善 `JoinChatDialog.vue` 组件的国际化支持，补充缺失的翻译键值，移除后备中文文本，确保完全依赖国际化系统。
+
+### 修改内容
+
+#### 1. 国际化文件更新
+- **en.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
+- **zh.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
+- **ja.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
+- **zh-tw.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
+- **ko.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
+
+#### 2. 组件修改
+- **JoinChatDialog.vue**: 
+  - 第118行：移除 `|| '加入成功'` 和 `|| '加入失败'` 后备文本
+  - 第127行：移除 `|| '立即进入'` 和 `|| '重试'` 后备文本
+  - 现在完全依赖 `t('chat.join_success')`、`t('chat.join_failed')`、`t('create_chat.enter_now')` 和 `t('common.retry')` 国际化键值
+
+#### 3. 新增翻译键值
+- `chat.invite_url`: 邀请链接/Invite URL
+- `chat.invite_url_placeholder`: 请在此粘贴邀请链接/Paste the invite URL here
+
+### 技术细节
+- 使用 `vue-i18n` 的 `useI18n()` hook
+- 保持现有组件结构不变
+- 确保所有翻译键值都有对应的翻译文本
+- 遵循项目现有的国际化命名规范
+
+### 验证结果
+- 所有语言文件中的 `chat` 部分现在都有完整的键值集合
+- 组件中使用的所有国际化键值都在语言文件中存在
+- 无语法错误，组件功能正常
+## [2026-01-07 05:20] Remove Full-Screen Loading in Join Chat
+- **Goal**: Optimize user experience by removing the full-screen blocking loading overlay during chat room joining, replacing it with a local button loading state.
+- **Changes**: Modified `frontend/vue-ezchat/src/hooks/chat/join/useJoinChat.ts` (handleDialogJoinChat).
+
+## [2026-01-07 05:25] Handle Duplicate Join Navigation
+- **Goal**: Skip the result page and navigate directly to the chat room if the user is already joined.
+- **Changes**:
+  - `stores/roomStore.ts`: Updated `joinChat` to return `'SUCCESS' | 'ALREADY_JOINED' | false`.
+  - `hooks/chat/join/useJoinDialogController.ts`: Added `navigateToChat` to handle navigation.
+  - `hooks/chat/join/useJoinChat.ts`: Updated `handleDialogJoinChat` to handle `ALREADY_JOINED` by calling `navigateToChat` immediately.
+  - `hooks/chat/join/useJoinAction.ts`: Updated return value check for `joinChat`.
+Refactored Join Chat Module
+
+## [2026-01-07 06:25] Fix Join Screen Flicker on Dialog
+- **Goal**: Fix screen flickering issue in JoinChatDialog caused by global loading overlay, without affecting other components.
+- **Changes**:
+  - Modified `src/hooks/chat/join/useJoinInput.ts`: `validateAndGetPayload` now accepts `useGlobalLoading` optional param.
+  - Modified `src/components/dialogs/JoinChatDialog.vue`: pass `false` to `validateAndGetPayload` to disable global loading.
+
+## [2026-01-07 06:40] Fix Join Redirect for RoomId Mode
+- **Goal**: Fix redirection failure when joining a room via RoomID/Password if already joined.
+- **Changes**:
+  - Modified `src/components/dialogs/JoinChatDialog.vue` logic in `handleJoin` and `handleResultConfirm` to robustly extract `targetCode` from payload/form when store data might be missing.
+
+## [2026-01-07 06:45] Auto-scroll in AsideList
+- **Goal**: Auto-scroll to active chat room on route change.
+- **Changes**:
+  - Modified `src/views/layout/components/AsideList.vue` to watch `route.params.chatCode` and `isRoomListLoading`.
+  - Updated `scrollToCurrentRoom` to accept optional target code.

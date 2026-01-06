@@ -12,7 +12,7 @@ import type { JoinChatCredentialsForm, ValidateChatJoinReq } from '@/type'
  * useJoinForm
  * 职责：管理加入聊天室的凭证表单、验证规则及首步验证逻辑
  */
-export const useJoinForm = () => {
+export const useJoinInput = () => {
     const router = useRouter()
     const { t } = useI18n()
 
@@ -136,117 +136,81 @@ export const useJoinForm = () => {
     }
 
     /**
-     * 构建并验证 API 请求 Payload
-     * @throws Error 如果验证失败，直接抛出错误信息
+     * 验证表单并获取有效载荷
+     * 1. 本地校验 (Validators)
+     * 2. 远程校验 (API)
+     * 3. 返回有效载荷或 null
      */
-    const buildValidatePayload = (): ValidateChatJoinReq => {
-        try {
-            return parseAndValidateJoinInfo(joinChatCredentialsForm.value)
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'UNKNOWN_VALIDATION_ERROR'
+    const validateAndGetPayload = async (useGlobalLoading = true): Promise<ValidateChatJoinReq | null> => {
+        const action = async () => {
+            isValidating.value = true
+            userStore.clearValidatedJoinChatInfo() // 先清除旧数据
 
-            // 映射错误代码到对应的 i18n 翻译
-            let message: string
-            let errorType = ErrorType.VALIDATION
+            try {
+                // 1. 本地解析与校验
+                const req = parseAndValidateJoinInfo(joinChatCredentialsForm.value)
 
-            switch (errorMessage) {
-                case 'ROOM_ID_REQUIRED':
-                    message = 'Room ID is required'
-                    break
-                case 'INVALID_ROOM_ID_FORMAT':
-                    message = 'Invalid Room ID format'
-                    break
-                case 'PASSWORD_REQUIRED':
-                    message = 'Password is required'
-                    break
-                case 'INVITE_URL_REQUIRED':
-                    message = t('validation.invite_url_required') || 'Invite URL is required'
-                    break
-                case 'INVALID_INVITE_URL_FORMAT':
-                    message = 'Invalid Invite URL format'
-                    break
-                default:
-                    message = 'Validation failed'
-                    errorType = ErrorType.UNKNOWN
-            }
+                // 2. 调用 store 验证 API (这一步会把结果存入 userStore.validatedChatRoom)
+                await roomStore.validateRoomAccess(req)
 
-            throw createAppError(
-                errorType,
-                message,
-                {
-                    severity: ErrorSeverity.ERROR,
-                    component: 'useJoinForm',
-                    action: 'buildValidatePayload',
-                    originalError: error instanceof Error ? error : undefined
+                return req
+            } catch (e) {
+                const errorMessage = e instanceof Error ? e.message : 'UNKNOWN_VALIDATION_ERROR'
+
+                // 如果是已知业务错误（Validator 抛出的），可以在这里转译或直接抛出
+                // 但为了简化，这里统一让外部处理错误，或者在这里 catch 并返回 null
+
+                // 映射错误代码到对应的 i18n 翻译 (复用原有逻辑)
+                let message: string
+                let errorType = ErrorType.VALIDATION
+
+                switch (errorMessage) {
+                    case 'ROOM_ID_REQUIRED':
+                        message = 'Room ID is required'
+                        break
+                    case 'INVALID_ROOM_ID_FORMAT':
+                        message = 'Invalid Room ID format'
+                        break
+                    case 'PASSWORD_REQUIRED':
+                        message = 'Password is required'
+                        break
+                    case 'INVITE_URL_REQUIRED':
+                        message = t('validation.invite_url_required') || 'Invite URL is required'
+                        break
+                    case 'INVALID_INVITE_URL_FORMAT':
+                        message = 'Invalid Invite URL format'
+                        break
+                    default:
+                        // 如果是 API 错误 (AppError)，直接抛出让上层处理
+                        if (isAppError(e)) throw e
+
+                        message = 'Validation failed'
+                        errorType = ErrorType.UNKNOWN
                 }
-            )
+
+                throw createAppError(
+                    errorType,
+                    message,
+                    {
+                        severity: ErrorSeverity.WARNING, // 校验失败通常只是警告
+                        component: 'useJoinInput',
+                        action: 'validateAndGetPayload',
+                        originalError: e instanceof Error ? e : undefined
+                    }
+                )
+            } finally {
+                isValidating.value = false
+            }
         }
-    }
 
-    /**
-     * 第一步：验证房间信息
-     * 1. 校验表单
-     * 2. 调用 store 验证 API
-     * 3. 成功则跳转到 /Join/:id (或者仅验证)
-     * @param shouldRedirect 是否在验证成功后自动跳转 (默认 true)
-     */
-    const handleValidate = async (shouldRedirect = true): Promise<boolean> => {
-        return appStore.runWithLoading(
-            t('common.processing') || 'Processing...',
-            async () => {
-                isValidating.value = true
-                userStore.clearValidatedJoinChatInfo() // 先清除旧数据
-
-                try {
-                    // 获取校验后的请求参数
-                    const req = buildValidatePayload()
-
-                    // 调用 store 验证 API
-                    const roomData = await roomStore.validateRoomAccess(req)
-
-                    // 如果不需要跳转（仅此时验证通过），直接返回 true
-                    if (!shouldRedirect) return true
-
-                    if (router.currentRoute.value.path === '/chat') return true
-
-                    // 如果当前路径是首页，则跳转到加入页面
-                    if (router.currentRoute.value.path === '/') {
-                        router.push(`/Join/${roomData.chatCode}`)
-                        return true
-                    }
-
-                    // 路由错误，抛出异常终止加入流程
-                    throw createAppError(
-                        ErrorType.ROUTER,
-                        t('chat.router_error') || 'Router error',
-                        {
-                            severity: ErrorSeverity.WARNING,
-                            component: 'useJoinForm',
-                            action: 'handleValidate'
-                        }
-                    )
-                } catch (e) {
-                    // 如果是 AppError，则直接抛出
-                    if (isAppError(e)) {
-                        throw e
-                    }
-
-                    // 未知请求错误，抛出异常终止加入流程
-                    throw createAppError(
-                        ErrorType.NETWORK,
-                        t('error.unknown_error'),
-                        {
-                            severity: ErrorSeverity.ERROR,
-                            component: 'useJoinForm',
-                            action: 'handleValidate',
-                            originalError: e
-                        }
-                    )
-                } finally {
-                    isValidating.value = false
-                }
-            }
-        )
+        if (useGlobalLoading) {
+            return appStore.runWithLoading(
+                t('common.processing') || 'Processing...',
+                action
+            )
+        } else {
+            return action()
+        }
     }
 
     // #endregion
@@ -262,7 +226,6 @@ export const useJoinForm = () => {
         resetJoinForm,
         toggleJoinMode,
         changeJoinMode,
-        handleValidate,
-        buildValidatePayload
+        validateAndGetPayload
     }
 }

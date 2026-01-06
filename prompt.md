@@ -1,44 +1,28 @@
-# Execution Plan - Style JoinChatDialog.vue
+# Execution Plan - Fix Join Screen Flicker
 
 ## Goal
-Optimize `JoinChatDialog.vue` layout and design to match `CreateChatDialog.vue` and `main.css`, ensuring a unified system style.
+Solve the screen flickering issue when clicking "Join" in the `LeftCard` component. The user requested to avoid full-screen overlays and suggested using the View Transitions API.
 
-## Design Reference (`CreateChatDialog.vue` & `main.css`)
-1.  **Dialog Structure**:
-    *   Glassmorphism background (`var(--bg-glass)`, `backdrop-filter`).
-    *   Borderless header (`padding: 0 !important` override).
-    *   Custom close button (absolute position top-right).
-    *   Padding management (content padding vs header padding).
-2.  **Typography & Icons**:
-    *   Bold headers (`font-weight: 800`).
-    *   Mode toggle pills (`background: var(--bg-page)`, `border-radius: 14px`).
-3.  **Form Elements**:
-    *   Inputs: `var(--bg-page)`, shadow inset.
-    *   Buttons: Primary gradient (if applicable) or solid primary color, `height: 48px`, `border-radius: 14px` (action-btn-full).
+## Analysis
+*   **Cause**: The flicker is likely caused by `appStore.runWithLoading` triggering a global full-screen spinner overlay during the validation phase, followed by an abrupt page navigation.
+*   **Solution**:
+    1.  **Disable Global Loading**: Remove `appStore.runWithLoading` from `useJoinInput.ts`'s `validateAndGetPayload`. Rely on the existing `isValidating` ref to show local loading state (e.g., button spinner) instead of the global overlay.
+    2.  **Smooth Navigation**: In `LeftCard.vue`, wrap the `router.push` call with `document.startViewTransition` (if available) to provide a smooth visual transition between the home page and the join page.
 
-## Proposed Changes to `JoinChatDialog.vue`
+## Proposed Changes
 
-1.  **Dialog Container**:
-    *   Ensure `.ez-modern-dialog` class is used.
-    *   Update CSS to match `CreateChatDialog` overrides (reset header/body padding).
+1.  **Modify `frontend/vue-ezchat/src/hooks/chat/join/useJoinInput.ts`**:
+    *   In `validateAndGetPayload`, remove the `appStore.runWithLoading` wrapper.
+    *   Manually set `isValidating.value = true` before validation and `false` in `finally`.
+    *   This ensures the "Join" button shows a spinner (local feedback) without covering the entire screen.
 
-2.  **Header**:
-    *   Align "Join Chat" title style.
-    *   Align "Close Button" style (absolute position, distinct hover effect).
-
-3.  **Mode Switcher**:
-    *   Refine the "Passport/Invite" toggle pill to match `CreateChatDialog` or general system aesthetic (cleaner look).
-
-4.  **Form Layout**:
-    *   Ensure input field spacing and sizing (Large size).
-    *   Standardize "Join" button (full width, improved shadows).
-
-5.  **Result State**:
-    *   Use the same "Result Summary" structure as `CreateChatDialog.vue`:
-        *   Icon size/animation.
-        *   Title weight.
-        *   Action buttons style.
+2.  **Modify `frontend/vue-ezchat/src/views/index/components/LeftCard.vue`**:
+    *   Update `handleValidateAndRedirect`:
+        *   Check for `document.startViewTransition`.
+        *   If available, wrap `router.push` in it.
+        *   Fallback to normal `router.push` if not supported.
 
 ## Verification
-*   Visual consistency check (via code structural comparison).
-*   Ensure all existing functionality (`v-model`, events) remains intact.
+*   Click "Join" in `LeftCard`.
+*   Verify no full-screen loading spinner appears (only button spinner).
+*   Verify navigation to `/Join/:id` happens smoothly (with View Transition if supported).

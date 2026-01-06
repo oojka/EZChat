@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import {nextTick, ref, watch} from 'vue'
-import {Link, Plus} from '@element-plus/icons-vue'
+import { nextTick, ref, watch } from 'vue'
+import { Link, Plus } from '@element-plus/icons-vue'
 import ChatItem from '@/views/layout/components/ChatItem.vue'
 import CreateChatDialog from '@/components/dialogs/CreateChatDialog.vue'
 import JoinChatDialog from '@/components/dialogs/JoinChatDialog.vue'
-import {useRoomStore} from '@/stores/roomStore.ts'
-import {storeToRefs} from 'pinia'
-import {useRouter} from 'vue-router'
-import {useI18n} from 'vue-i18n'
+import { useRoomStore } from '@/stores/roomStore.ts'
+import { storeToRefs } from 'pinia'
+import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 /** 
  * 国际化
  */
@@ -52,6 +52,7 @@ const { roomList, currentRoomCode, isRoomListLoading, createChatDialogVisible, j
  * 用于页面导航
  */
 const router = useRouter()
+const route = useRoute()
 
 // =========================
 // 组件状态
@@ -88,26 +89,31 @@ const handleSelectChat = (chatCode: string) => {
  * 2. 等待 DOM 更新：确保目标元素已渲染
  * 3. 使用 CSS 选择器查找目标元素
  * 4. 平滑滚动到目标位置
+ * 
+ * @param targetCode 可选，指定要滚动的目标代码 (默认使用 currentRoomCode)
  */
-const scrollToCurrentRoom = async () => {
+const scrollToCurrentRoom = async (targetCode?: string) => {
   // 边界检查：如果列表正在加载，则不执行滚动
   if (isRoomListLoading.value) return
-  
+
+  const code = targetCode || currentRoomCode.value
+
+  // 检查是否有当前房间代码
+  if (!code) return
+
   // 等待 DOM 更新完成，确保聊天室项已渲染
   await nextTick()
-  
+
   // 检查滚动容器是否已渲染
   if (!listContentRef.value) return
-  
-  // 检查是否有当前房间代码
-  if (!currentRoomCode.value) return
-  
+
+
   // 查找目标房间元素
   // 使用 data-chat-code 属性选择器，确保准确找到目标元素
   const targetElement = listContentRef.value.querySelector(
-    `[data-chat-code="${currentRoomCode.value}"]`
+    `[data-chat-code="${code}"]`
   ) as HTMLElement | null
-  
+
   // 如果找到目标元素，滚动到该位置
   if (targetElement) {
     targetElement.scrollIntoView({
@@ -139,6 +145,36 @@ watch(
   }
 )
 
+/**
+ * 监听路由参数变化
+ * 
+ * 业务逻辑：
+ * 当路由 /chat/:chatCode 发生变化时，强制触发滚动
+ */
+watch(
+  () => route.params.chatCode,
+  (newCode) => {
+    if (props.type === 'chat' && newCode && typeof newCode === 'string') {
+      scrollToCurrentRoom(newCode)
+    }
+  }
+)
+
+/**
+ * 监听列表加载状态
+ * 
+ * 业务逻辑：
+ * 当列表加载完成时，如果当前有激活房间，尝试滚动
+ */
+watch(
+  () => isRoomListLoading.value,
+  (isLoading) => {
+    if (!isLoading && props.type === 'chat') {
+      scrollToCurrentRoom()
+    }
+  }
+)
+
 // =========================
 // 注意事项
 // =========================
@@ -156,7 +192,7 @@ watch(
 <template>
   <!-- 侧边栏列表容器 -->
   <div class="aside-list-container">
-    
+
     <!-- 聊天视图：显示聊天室列表 -->
     <div v-if="type === 'chat'" class="view-content">
       <!-- 头部区域：标题和操作按钮 -->
@@ -172,24 +208,19 @@ watch(
 
       <!-- 聊天列表内容区域 -->
       <div class="list-content" ref="listContentRef">
-        
+
         <!-- 加载状态：显示骨架屏 -->
         <!-- 设计考虑：优先展示 Skeleton，避免"先出现 1 条，再补齐"的闪烁现象 -->
         <div v-if="isRoomListLoading && (!roomList || roomList.length === 0)" class="chat-skeleton">
           <el-skeleton animated :rows="6" />
         </div>
-        
+
         <!-- 有聊天室数据：显示聊天室列表 -->
         <div v-else-if="roomList && roomList.length > 0" class="chat-items">
-          <ChatItem
-            v-for="chat in roomList"
-            :key="chat.chatCode"
-            :chat="chat"
-            :is-active="chat.chatCode === currentRoomCode"
-            @click="handleSelectChat(chat.chatCode)"
-          />
+          <ChatItem v-for="chat in roomList" :key="chat.chatCode" :chat="chat"
+            :is-active="chat.chatCode === currentRoomCode" @click="handleSelectChat(chat.chatCode)" />
         </div>
-        
+
         <!-- 无聊天室数据：显示空状态 -->
         <div v-else class="empty-state">
           <el-empty :description="t('aside.no_chats')" :image-size="80" />
@@ -229,12 +260,14 @@ watch(
 
 /* 主容器样式 */
 .aside-list-container {
-  height: 100%; 
-  display: flex; 
+  height: 100%;
+  display: flex;
   flex-direction: column;
-  background-color: var(--bg-aside); /* 使用主题变量 */
+  background-color: var(--bg-aside);
+  /* 使用主题变量 */
   border-right: 1px solid var(--el-border-color-light);
-  transition: background-color 0.3s ease; /* 平滑过渡效果 */
+  transition: background-color 0.3s ease;
+  /* 平滑过渡效果 */
 }
 
 /* 视图内容容器 */
@@ -245,54 +278,60 @@ watch(
 }
 
 /* 头部区域样式 */
-.aside-header { 
-  padding: 14px 20px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  border-bottom: 1px solid var(--el-border-color-light); 
+.aside-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--el-border-color-light);
 }
 
 /* 标题样式 */
-.aside-title { 
-  font-size: 16px; 
-  font-weight: 800; 
-  color: var(--text-900); 
-  margin: 0; 
+.aside-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-900);
+  margin: 0;
 }
 
 /* 操作按钮组样式 */
-.action-group { 
-  display: flex; 
-  gap: 8px; /* 按钮间距 */
+.action-group {
+  display: flex;
+  gap: 8px;
+  /* 按钮间距 */
 }
 
 /* 头部操作按钮样式 */
-.header-action-btn { 
-  width: 32px; 
-  height: 32px; 
-  padding: 0; 
-  background-color: var(--bg-glass); /* 毛玻璃效果背景 */
-  border: none; 
-  border-radius: 8px; 
-  color: var(--text-500); 
-  transition: all 0.2s; /* 平滑悬停效果 */
+.header-action-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--bg-glass);
+  /* 毛玻璃效果背景 */
+  border: none;
+  border-radius: 8px;
+  color: var(--text-500);
+  transition: all 0.2s;
+  /* 平滑悬停效果 */
 }
 
 /* 按钮悬停效果 */
-.header-action-btn:hover { 
-  background-color: var(--primary); 
-  color: #fff; 
+.header-action-btn:hover {
+  background-color: var(--primary);
+  color: #fff;
 }
 
 /* 列表内容区域样式 */
-.list-content { 
-  flex: 1; /* 占据剩余空间 */
-  overflow-y: auto; /* 垂直滚动 */
+.list-content {
+  flex: 1;
+  /* 占据剩余空间 */
+  overflow-y: auto;
+  /* 垂直滚动 */
 }
 
 /* 空状态样式 */
-.empty-state { 
-  padding-top: 60px; /* 顶部内边距，视觉居中 */
+.empty-state {
+  padding-top: 60px;
+  /* 顶部内边距，视觉居中 */
 }
 </style>

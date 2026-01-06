@@ -1,15 +1,49 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ChatLineRound, Connection, Right, Search, Ticket } from '@element-plus/icons-vue'
-import { useJoinChat } from '@/hooks/chat/join/useJoinChat.ts'
+import { useRouter } from 'vue-router'
+import { useJoinInput } from '@/hooks/chat/join/useJoinInput.ts'
+import { useUserStore } from '@/stores/userStore'
 import { useI18n } from 'vue-i18n'
 import PasswordInput from '@/components/PasswordInput.vue'
 import type { FormInstance } from 'element-plus'
 
 const { t } = useI18n()
+const router = useRouter()
+const userStore = useUserStore()
 const props = defineProps<{ active: boolean; flipped: boolean }>()
 const emit = defineEmits<{ (e: 'flip'): void; (e: 'unflip'): void }>()
-const { joinChatCredentialsForm, joinChatCredentialsFormRules, handleValidate, resetJoinForm, isValidating } = useJoinChat()
+
+// 1. 实例化模块
+const inputModule = useJoinInput()
+
+// 3. 解构所需状态和方法
+const {
+  joinChatCredentialsForm,
+  joinChatCredentialsFormRules,
+  resetJoinForm,
+  isValidating,
+  validateAndGetPayload
+} = inputModule
+
+/**
+ * 处理验证并跳转到加入页面
+ * 替代原有的 handleValidate
+ */
+const handleValidateAndRedirect = async () => {
+    const payload = await validateAndGetPayload()
+    if (payload) {
+        // 验证成功，userStore.validatedChatRoom 已更新
+        // 直接跳转到加入页面
+        // 注意：这里需要获取 validatedChatRoom 中的 chatCode
+        const chatCode = userStore.validatedChatRoom?.chatCode
+        if (chatCode) {
+            router.push(`/Join/${chatCode}`)
+        }
+    }
+}
+
+
 
 // 表单 ref，用于清除校验
 const joinFormRef = ref<FormInstance>()
@@ -82,21 +116,21 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
             <div v-if="joinChatCredentialsForm.joinMode === 'roomId/password'" class="input-group id-mode">
               <el-form-item class="mb-0" prop="chatCode">
                 <el-input v-model="joinChatCredentialsForm.chatCode" :placeholder="t('guest.input_id')" size="large"
-                  :prefix-icon="Search" @keyup.enter="handleValidate" />
+                  :prefix-icon="Search" @keyup.enter="handleValidateAndRedirect" />
               </el-form-item>
               <el-form-item class="mb-0" prop="password">
-                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('guest.input_pw')" @keyup.enter="handleValidate" />
+                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('guest.input_pw')" @keyup.enter="handleValidateAndRedirect" />
               </el-form-item>
             </div>
             <div v-else class="input-group link-mode">
               <el-form-item class="mb-0" prop="inviteUrl">
                 <el-input v-model="joinChatCredentialsForm.inviteUrl" :placeholder="t('guest.input_url')" size="large"
-                  :prefix-icon="Connection" type="textarea" :rows="4" resize="none" class="url-textarea" @keyup.enter="handleValidate" />
+                  :prefix-icon="Connection" type="textarea" :rows="4" resize="none" class="url-textarea" @keyup.enter="handleValidateAndRedirect" />
               </el-form-item>
             </div>
           </div>
           <div class="form-actions">
-            <el-button type="primary" @click="handleValidate" class="join-submit-btn" :loading="isValidating"
+            <el-button type="primary" @click="handleValidateAndRedirect" class="join-submit-btn" :loading="isValidating"
               :disabled="(!joinChatCredentialsForm.chatCode && !joinChatCredentialsForm.inviteUrl) || isValidating">{{
                 t('guest.join_submit') }}</el-button>
             <el-button @click="onUnflip" class="join-cancel-btn" :disabled="isValidating">{{ t('common.cancel')

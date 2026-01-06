@@ -276,6 +276,18 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   /**
+   * 处理加入成功后的导航逻辑
+   * @param chatCode 目标房间代码
+   */
+  const processJoinNavigation = async (chatCode?: string) => {
+    if (chatCode) {
+      await router.push(`/chat/${chatCode}`)
+    } else {
+      await router.push('/chat')
+    }
+  }
+
+  /**
    * 正式用户加入聊天室
    * 
    * 业务逻辑：
@@ -285,17 +297,21 @@ export const useRoomStore = defineStore('room', () => {
    * @param data 加入聊天室请求数据
    * @returns 是否加入成功
    */
-  const joinChat = async (data: JoinChatReq): Promise<boolean> => {
+  const joinChat = async (data: JoinChatReq): Promise<'SUCCESS' | 'ALREADY_JOINED' | false> => {
     try {
       const result = await joinChatApi(data)
       if (result && result.status === 1) {
         // 加入成功后显示提示信息
-        ElMessage.success('加入房间成功')
+        // ElMessage.success('加入房间成功') // 移交给上层决定是否显示
         // 如果当前页面是聊天页，则自动刷新房间列表
-        if (router.currentRoute.value.path === '/chat') {
+        if (router.currentRoute.value.path.startsWith('/chat')) {
+          // 只有在已登录且在聊天页时刷新才有意义，
+          // 但 joinChat 通常是在 Join 页调用的。
+          // 无论如何在跳转前刷新没坏处，或者跳转后刷新。
+          // 这里保留原逻辑
           await initRoomList()
         }
-        return true
+        return 'SUCCESS'
       }
       return false
     } catch (e) {
@@ -305,7 +321,7 @@ export const useRoomStore = defineStore('room', () => {
           message: t('api.you_have_already_in_this_room'),
           type: 'warning',
         })
-        return true
+        return 'ALREADY_JOINED'
       }
       if (isAppError(e)) {
         throw e
@@ -337,13 +353,13 @@ export const useRoomStore = defineStore('room', () => {
   const validateRoomAccess = async (req: ValidateChatJoinReq): Promise<ChatRoom> => {
     try {
       const result = await validateChatJoinApi(req)
-      
+
       if (result && result.data && result.data.chatCode) {
         // 验证成功，将信息存储到 userStore
         userStore.setValidatedJoinChatInfo(req, result.data)
         return result.data
       }
-      
+
       throw createAppError(
         ErrorType.NETWORK,
         'Room validation failed',
@@ -370,22 +386,23 @@ export const useRoomStore = defineStore('room', () => {
     }
   }
 
-    return {
-      roomList,
-      currentRoomCode,
-      currentRoom,
-      isRoomListLoading,
-      createChatDialogVisible,
-      joinChatDialogVisible,
-      getRoomByCode, // 导出此方法
-      initRoomList,
-      updateRoomInfo,
-      updateMemberStatus,
-      updateRoomPreview,
-      fetchRoomMembers,
-      isCurrentRoomMembersLoading,
-      joinChat, // 加入聊天室
-      validateRoomAccess, // 验证房间访问权限
-      resetState,
-    }
-  })
+  return {
+    roomList,
+    currentRoomCode,
+    currentRoom,
+    isRoomListLoading,
+    createChatDialogVisible,
+    joinChatDialogVisible,
+    getRoomByCode, // 导出此方法
+    initRoomList,
+    updateRoomInfo,
+    updateMemberStatus,
+    updateRoomPreview,
+    fetchRoomMembers,
+    isCurrentRoomMembersLoading,
+    joinChat, // 加入聊天室
+    processJoinNavigation, // 处理加入后跳转
+    validateRoomAccess, // 验证房间访问权限
+    resetState,
+  }
+})

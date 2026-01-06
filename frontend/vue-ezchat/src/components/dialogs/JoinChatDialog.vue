@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
   ArrowRight,
@@ -9,31 +10,144 @@ import {
   CircleCheckFilled,
   CircleCloseFilled,
 } from '@element-plus/icons-vue'
-import { useJoinChat } from '@/hooks/chat/join/useJoinChat.ts'
+import { useJoinInput } from '@/hooks/chat/join/useJoinInput.ts'
+import { useLoginJoin } from '@/hooks/chat/join/useLoginJoin.ts'
 import { useRoomStore } from '@/stores/roomStore'
+import { useUserStore } from '@/stores/userStore'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const router = useRouter()
 const roomStore = useRoomStore()
+const userStore = useUserStore()
 const { joinChatDialogVisible } = storeToRefs(roomStore)
 
-// 使用 Hook 提供的业务逻辑
+// 1. 实例化基础模块
+const inputModule = useJoinInput()
+const loginJoinModule = useLoginJoin()
+
+// 3. 解构所需状态和方法 (直接从各模块获取)
 const {
   joinChatCredentialsForm,
   joinChatCredentialsFormRules,
   joinChatCredentialsFormRef,
-  isLoading,
   isRoomIdPasswordMode,
   isInviteUrlMode,
-  joinStep,
-  joinResult,
-  closeJoinDialog,
-  handleJoin,
-  handleResultConfirm,
   changeJoinMode,
-} = useJoinChat()
+  resetJoinForm,
+  validateAndGetPayload,
+} = inputModule
 
+const {
+  isLoading,
+  executeJoin,
+} = loginJoinModule
 
+// #region UI State (原 useJoinDialogController 逻辑)
+
+/** 对话框步骤状态 (1: 表单, 2: 结果) */
+const joinStep = ref<1 | 2>(1)
+
+/** 加入结果状态 */
+const joinResult = ref<{ success: boolean; message: string }>({
+  success: false,
+  message: ''
+})
+
+// #endregion
+
+// #region UI Methods
+
+/** 关闭对话框并重置状态 */
+const closeJoinDialog = () => {
+  roomStore.joinChatDialogVisible = false
+  setTimeout(() => {
+    // 延迟重置，避免动画突变
+    joinStep.value = 1
+    joinResult.value = { success: false, message: '' }
+  }, 300)
+}
+
+/** 跳转到聊天室 */
+const navigateToChat = async (chatCode: string) => {
+  if (chatCode) {
+    await router.push(`/chat/${chatCode}`)
+  } else {
+    await router.push('/chat')
+  }
+  closeJoinDialog()
+}
+
+/**
+ * 处理加入动作
+ */
+const handleJoin = async () => {
+  try {
+    // 1. 验证并获取 Payload
+    const payload = await validateAndGetPayload(false)
+    if (!payload) return // 验证失败或取消
+
+    // 2. 执行加入
+    const result = await executeJoin(payload, false)
+
+    // 3. 处理结果
+    if (result === 'SUCCESS') {
+      joinResult.value = { success: true, message: t('chat.join_success') || 'Joined successfully' }
+      joinStep.value = 2
+    } else if (result === 'ALREADY_JOINED') {
+      // 已加入：直接跳转，不显示成功页
+      // 优先使用 validatedChatRoom，如果为空则尝试从 payload (roomId模式) 获取
+      let targetCode = userStore.validatedChatRoom?.chatCode
+
+      if (!targetCode && payload && 'chatCode' in payload) {
+        targetCode = (payload as any).chatCode
+      }
+
+      await navigateToChat(targetCode || '')
+    } else {
+      // FAILED
+      joinResult.value = { success: false, message: t('chat.join_failed') || 'Join failed' }
+      joinStep.value = 2
+    }
+
+  } catch (e: any) {
+    // 这里的 error 通常已经被 hook 内部捕获并显示 ElMessage，但为了保险
+    console.error(e)
+  }
+}
+
+/**
+ * 处理结果确认
+ * 成功：跳转到聊天室并关闭对话框
+ * 失败：返回步骤1重新填写
+ */
+const handleResultConfirm = async () => {
+  if (joinResult.value.success) {
+    // 成功：跳转到聊天室
+    // 优先使用 validatedChatRoom 中的 chatCode
+    let targetCode = userStore.validatedChatRoom?.chatCode
+
+    // 如果没有，且当前表单中有 chatCode (roomId 模式)，则使用表单值
+    if (!targetCode && joinChatCredentialsForm.value.chatCode) {
+      targetCode = joinChatCredentialsForm.value.chatCode
+    }
+
+    await navigateToChat(targetCode || '')
+  } else {
+    // 失败：返回步骤1
+    joinStep.value = 1
+  }
+}
+
+// 监听弹窗打开/关闭，实现自动重置表单
+watch(() => roomStore.joinChatDialogVisible, (newVal) => {
+  if (newVal) {
+    resetJoinForm()
+    joinStep.value = 1 // 重置步骤
+  }
+})
+
+// #endregion
 
 </script>
 

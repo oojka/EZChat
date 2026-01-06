@@ -1,0 +1,10 @@
+## [2026-01-06 20:30] Refactoring Join Chat Logic
+- **Goal**: Split monolithic `useJoinChat` hook, clean up architecture, and fix join screen flicker.
+- **Changes**:
+  - `src/hooks/chat/join/useJoinChat.ts`: Deleted.
+  - `src/hooks/chat/join/useGuestJoin.ts`: Created new hook for guest logic.
+  - `src/hooks/chat/join/useLoginJoin.ts`: Created new hook for login/auth logic.
+  - `src/stores/roomStore.ts`: Added `processJoinNavigation` and simplified `joinChat` return.
+  - `src/components/dialogs/JoinChatDialog.vue`: Updated to use new hooks and fixed double navigation.
+  - `src/views/Join/index.vue`: Updated to use new hooks.
+  - `src/views/index/components/LeftCard.vue`: Removed unused join logic.
