@@ -258,6 +258,8 @@
     "invite_code_format": "Invalid invite code format",
     "invite_code_hint": "16-24 alphanumeric characters",
     "invite_info": "Invite code can be obtained from invite link",
+    "invite_url": "Invite URL",
+    "invite_url_placeholder": "Paste the invite URL here",
     "join": "Join",
     "join_success": "Joined successfully",
     "join_failed": "Failed to join",

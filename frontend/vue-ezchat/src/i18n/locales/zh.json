@@ -258,6 +258,8 @@
     "invite_code_format": "邀请码格式不正确",
     "invite_code_hint": "16-24位字母数字组合",
     "invite_info": "邀请码可通过邀请链接获取",
+    "invite_url": "邀请链接",
+    "invite_url_placeholder": "请在此粘贴邀请链接",
     "join": "加入",
     "join_success": "加入成功",
     "join_failed": "加入失败",

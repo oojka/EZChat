@@ -235,6 +235,8 @@
     "invite_code_format": "招待コードの形式が正しくありません",
     "invite_code_hint": "16-24文字の英数字",
     "invite_info": "招待コードは招待リンクから取得できます",
+    "invite_url": "招待URL",
+    "invite_url_placeholder": "招待URLをここに貼り付けてください",
     "join": "参加",
     "join_success": "参加に成功しました",
     "join_failed": "参加に失敗しました",

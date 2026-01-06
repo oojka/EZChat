@@ -25,7 +25,6 @@ const {
   isLoading,
   isRoomIdPasswordMode,
   isInviteUrlMode,
-  joinMode,
   joinStep,
   joinResult,
   closeJoinDialog,
@@ -116,7 +115,7 @@ const {
             </el-icon>
 
             <h3 class="result-title">
-              {{ joinResult.success ? (t('chat.join_success') || '加入成功') : (t('chat.join_failed') || '加入失败') }}
+              {{ joinResult.success ? t('chat.join_success') : t('chat.join_failed') }}
             </h3>
 
             <p class="result-message">{{ joinResult.message }}</p>
@@ -125,7 +124,7 @@ const {
           <div class="dialog-actions">
             <el-button :type="joinResult.success ? 'primary' : 'default'" class="action-btn-full" size="large"
               @click="handleResultConfirm">
-              {{ joinResult.success ? (t('create_chat.enter_now') || '立即进入') : (t('common.retry') || '重试') }}
+              {{ joinResult.success ? t('create_chat.enter_now') : t('common.retry') }}
             </el-button>
           </div>
         </div>
@@ -169,11 +168,11 @@ html.dark :deep(.ez-modern-dialog) {
 .join-dialog-content {
   position: relative;
   /* header 与内容区域之间增加间距（padding-top），保持呼吸感 */
-  padding: 10px 32px 32px;
+  padding: 10px 32px 24px;
   display: flex;
   flex-direction: column;
-  min-height: 420px;
-  /* 与 CreateChatDialog 保持一致 */
+  min-height: 320px;
+  /* 压缩高度，使其更紧凑 */
 }
 
 /* --- Header Actions --- */

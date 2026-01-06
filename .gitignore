@@ -37,6 +37,7 @@ Thumbs.db
 
 # === Cursor / tooling ===
 # Keep these committed (project rules):
+prompt.md
 .prompt.md
 .cursor_dev_log
 .cursorignore

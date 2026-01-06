@@ -235,6 +235,8 @@
     "invite_code_format": "邀請碼格式不正確",
     "invite_code_hint": "16-24位字母數字組合",
     "invite_info": "邀請碼可透過邀請連結取得",
+    "invite_url": "邀請連結",
+    "invite_url_placeholder": "請在此貼上邀請連結",
     "join": "加入",
     "join_success": "加入成功",
     "join_failed": "加入失敗",
