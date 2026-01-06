@@ -27,7 +27,7 @@ export const REGEX_USERNAME = /^[a-zA-Z][a-zA-Z0-9._-]{1,19}$/
  * 1. 长度限制为 2-20 位 {2,20}$
  * 2. 允许：中文、英文、日文（平/片假名）、韩文、数字、_ - [\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]
  */
-export const REGEX_NICKNAME =/^[A-Za-z0-9_\-\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]{2,20}$/
+export const REGEX_NICKNAME = /^[A-Za-z0-9_\-\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]{2,20}$/
 
 /**
  * 用户UID规则：
@@ -279,3 +279,17 @@ export const parseAndValidateJoinInfo = (form: JoinChatCredentialsForm): Validat
     return { inviteCode: match[1] };
   }
 };
+
+/**
+ * 类型守卫：验证是否为邀请码加入请求
+ */
+export const isInviteJoinReq = (req: ValidateChatJoinReq): req is { inviteCode: string; chatCode?: never; password?: never } => {
+  return 'inviteCode' in req && typeof req.inviteCode === 'string';
+}
+
+/**
+ * 类型守卫：验证是否为密码加入请求
+ */
+export const isPasswordJoinReq = (req: ValidateChatJoinReq): req is { chatCode: string; password: string; inviteCode?: never } => {
+  return 'chatCode' in req && typeof req.chatCode === 'string' && 'password' in req && typeof req.password === 'string';
+}

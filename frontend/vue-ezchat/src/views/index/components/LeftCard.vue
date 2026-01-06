@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ChatLineRound, Connection, Right, Search, Ticket } from '@element-plus/icons-vue'
-import { useJoinChat } from '@/hooks/useJoinChat.ts'
+import { useJoinChat } from '@/hooks/chat/join/useJoinChat.ts'
 import { useI18n } from 'vue-i18n'
 import PasswordInput from '@/components/PasswordInput.vue'
 import type { FormInstance } from 'element-plus'
@@ -15,14 +15,14 @@ const { joinChatCredentialsForm, joinChatCredentialsFormRules, handleValidate, r
 const joinFormRef = ref<FormInstance>()
 
 // 翻面时重置表单和校验
-const onFlip = () => { 
+const onFlip = () => {
   resetJoinForm()
   joinFormRef.value?.clearValidate()
   emit('flip')
 }
 
 // 取消翻面时重置表单和校验
-const onUnflip = () => { 
+const onUnflip = () => {
   emit('unflip')
   setTimeout(() => {
     resetJoinForm()
