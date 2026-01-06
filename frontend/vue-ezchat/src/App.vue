@@ -65,15 +65,6 @@ watch(
 )
 
 
-/**
- * 错误边界重试处理
- */
-const handleErrorRetry = () => {
-  console.log('ErrorBoundary retry triggered');
-  // 这里可以添加全局的重试逻辑，比如重新加载关键数据
-  // 例如：重新初始化应用状态、刷新用户数据等
-};
-
 onUnmounted(() => {
   // 组件卸载时的清理逻辑
 })
@@ -81,9 +72,7 @@ onUnmounted(() => {
 
 <template>
   <div class="app-root">
-    <ErrorBoundary @retry="handleErrorRetry">
-      <RouterView />
-    </ErrorBoundary>
+    <RouterView />
 
     <!-- 全局统一 Loading 遮罩层 -->
     <div

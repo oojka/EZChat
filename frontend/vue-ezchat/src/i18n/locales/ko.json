@@ -109,13 +109,16 @@
     "chat_code_required": "방 코드를 입력해 주세요.",
     "chat_code_format": "방 코드는 8자리 숫자여야 합니다.",
     "invite_url_required": "초대 링크를 입력해 주세요.",
-    "invite_url_format": "잘못된 초대 링크 형식입니다."
+    "invite_url_format": "잘못된 초대 링크 형식입니다.",
+    "image_upload_limit": "이미지 업로드 제한에 도달했습니다."
   },
   "api": {
     "too_many_requests": "요청이 너무 빠릅니다. 잠시 기다려 주세요.",
     "unexpected_error": "예기치 않은 오류가 발생했습니다.",
     "already_exists": "「{info}」는 이미 사용 중입니다.",
     "data_already_exists": "이 데이터는 이미 존재합니다.",
+    "you_have_already_in_this_room": "이미 이 룸에 참여했습니다. 다시 참여하지 마세요.",
+    "is_already_exist": " 이미 존재합니다.",
     "not_member": "액세스 권한이 없습니다：이 채팅방의 멤버가 아닙니다.",
     "room_not_found": "룸이 존재하지 않거나 이미 해체되었습니다.",
     "input_too_long": "입력이 문자 수 제한을 초과했습니다.",
@@ -170,7 +173,9 @@
     "create_room": "룸 만들기",
     "join_room": "룸 참여하기",
     "no_chats": "채팅이 없습니다",
-    "just_now": "방금"
+    "just_now": "방금",
+    "friends_view": "친구",
+    "chat_view": "채팅"
   },
   "welcome": {
     "title": "EZ Chat에 오신 것을 환영합니다",
@@ -209,6 +214,7 @@
     "ws_closed": "오프라인",
     "ws_unknown": "알 수 없음",
     "ws_send_error": "전송에 실패했습니다. 다시 시도해 주세요.",
+    "ws_reconnecting": "WebSocket 연결이 끊어졌습니다. 재연결 중...",
     "join_chat": "채팅방 참여",
     "password_mode": "비밀번호 참여",
     "invite_mode": "초대 코드 참여",
@@ -264,8 +270,32 @@
     "enter_now": "바로 입장",
     "expiry_title": "초대 링크 설정",
     "expiry_info_desc": "초대 링크는 발행 시 유효 기간을 설정해야 합니다.\n초대 링크는 최대 5개까지 동시에 유효합니다.\n초대 링크는 룸 생성 후 룸 설정에서 다시 발행하고 관리할 수 있습니다.\n*일회성 링크를 활성화하면 링크는 첫 사용 후 무효화됩니다.",
-    "one_time_link": "일회성 링크",
+    "one_time_link": "일회性 링크",
     "custom_date": "사용자 지정 날짜",
     "day_n": "{n}일"
+  },
+  "join_page": {
+    "invitation_confirmed": "초대가 확인되었습니다",
+    "welcome_to_chatroom": "채팅방에 오신 것을 환영합니다",
+    "welcome_description": "친구들과 연결하고 경험을 공유하며 함께 즐겁게 채팅하세요",
+    "members": "멤버",
+    "room_id_prefix": "ID:",
+    "have_account": "이미 계정이 있으신가요?",
+    "login": "로그인",
+    "temporary_use": "임시로 사용하시나요?",
+    "guest_mode": "게스트 모드",
+    "guest_mode_title": "게스트 모드",
+    "guest_mode_description": "게스트로 참여, 오프라인 시 세션이 만료됩니다",
+    "click_to_upload_avatar": "클릭하여 아바타 업로드",
+    "enter_nickname": "닉네임을 입력해 주세요",
+    "join_chat": "지금 참여",
+    "welcome_back": "다시 오신 것을 환영합니다",
+    "login_and_join_description": "로그인 후 자동으로 이 룸에 참여합니다",
+    "username": "사용자 ID",
+    "password": "비밀번호",
+    "login_and_join": "로그인하고 참여",
+    "no_account": "계정이 없으신가요?",
+    "register": "「회원가입」",
+    "validation_expired": "초대 정보가 만료되었습니다. 다시 확인해 주세요"
   }
 }

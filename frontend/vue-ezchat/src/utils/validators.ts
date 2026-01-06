@@ -78,6 +78,9 @@ export const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\
  * =========================================
  */
 
+// 类型导入
+import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq } from '@/type'
+
 export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
 export type PasswordOptions = {
@@ -181,3 +184,98 @@ export const isValidInviteUrl = (val: unknown): boolean => {
   if (typeof val !== 'string') return false
   return REGEX_INVITE_URL.test(val)
 }
+
+/**
+ * =========================================
+ * 类型守卫函数 (Type Guards)
+ * =========================================
+ */
+
+/**
+ * 类型守卫：验证数据是否为 LoginUser 类型
+ *
+ * 业务逻辑：
+ * - 检查对象是否包含 uid、username、token 三个必需字段
+ * - 所有字段必须为字符串类型
+ *
+ * @param data 待验证的数据
+ * @returns 是否为 LoginUser 类型
+ */
+export const isLoginUser = (data: unknown): data is LoginUser => {
+  if (typeof data !== 'object' || data === null) return false;
+
+  const d = data as Record<string, any>;
+
+  return (
+    typeof d.uid === 'string' &&
+    typeof d.username === 'string' &&
+    typeof d.token === 'string'
+  );
+};
+
+/**
+ * 类型守卫：验证数据是否为 JwtPayload 类型
+ *
+ * @param data 待验证的数据
+ * @returns 是否为 JwtPayload 类型
+ */
+export const isJwtPayload = (data: unknown): data is JwtPayload => {
+  if (typeof data !== 'object' || data === null) return false
+
+  const d = data as Record<string, unknown>
+
+  return (
+    typeof d.uid === 'string' &&
+    typeof d.username === 'string' &&
+    typeof d.iat === 'number' &&
+    typeof d.exp === 'number'
+  )
+}
+
+/**
+ * =========================================
+ * 加入聊天室验证函数
+ * =========================================
+ */
+
+/**
+ * 解析并验证加入聊天室信息
+ * 
+ * 业务逻辑：
+ * - 根据 joinMode 验证不同的输入字段
+ * - 密码模式：验证 chatCode 和 password
+ * - 邀请链接模式：验证 inviteUrl 并提取 inviteCode
+ * 
+ * @param form 加入聊天室表单数据
+ * @returns 验证后的请求参数
+ * @throws Error 如果验证失败，抛出包含错误代码的标准 Error
+ */
+export const parseAndValidateJoinInfo = (form: JoinChatCredentialsForm): ValidateChatJoinReq => {
+  const { joinMode, chatCode, password, inviteUrl } = form;
+
+  if (joinMode === 'roomId/password') {
+    const code = chatCode?.trim();
+    if (!code) {
+      throw new Error('ROOM_ID_REQUIRED');
+    }
+    if (!REGEX_CHAT_CODE.test(code)) {
+      throw new Error('INVALID_ROOM_ID_FORMAT');
+    }
+    if (!password) {
+      throw new Error('PASSWORD_REQUIRED');
+    }
+    return { chatCode: code, password };
+  } else {
+    const url = inviteUrl?.trim();
+    if (!url) {
+      throw new Error('INVITE_URL_REQUIRED');
+    }
+
+    const match = url.match(REGEX_INVITE_URL);
+    // 确保捕获组(group 1)确实抓到了内容
+    if (!match || !match[1]) {
+      throw new Error('INVALID_INVITE_URL_FORMAT');
+    }
+    return { inviteCode: match[1] };
+  }
+};

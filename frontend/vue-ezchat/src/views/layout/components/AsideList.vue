@@ -5,26 +5,35 @@ import ChatItem from '@/views/layout/components/ChatItem.vue'
 import CreateChatDialog from '@/components/dialogs/CreateChatDialog.vue'
 import JoinChatDialog from '@/components/dialogs/JoinChatDialog.vue'
 import {useRoomStore} from '@/stores/roomStore.ts'
-import {useAppStore} from '@/stores/appStore.ts'
 import {storeToRefs} from 'pinia'
 import {useRouter} from 'vue-router'
 import {useI18n} from 'vue-i18n'
-import { useJoinChat } from '@/hooks/useJoinChat'
-
 /** 
  * 国际化
  */
 const { t } = useI18n()
 
 /**
- * 侧边栏聊天列表组件
+ * 侧边栏列表组件
  * 
  * 功能：
- * 1. 显示用户加入的聊天室列表
- * 2. 提供创建新聊天室和加入现有聊天室的入口
- * 3. 自动滚动到当前激活的聊天室
- * 4. 处理聊天室选择导航
+ * 1. 根据 type 显示不同的列表内容（聊天室列表或好友列表）
+ * 2. 提供创建新聊天室和加入现有聊天室的入口（仅聊天视图）
+ * 3. 自动滚动到当前激活的聊天室（仅聊天视图）
+ * 4. 处理聊天室选择导航（仅聊天视图）
  */
+
+// =========================
+// Props 定义
+// =========================
+
+type ViewType = 'friends' | 'chat'
+
+const props = withDefaults(defineProps<{
+  type?: ViewType
+}>(), {
+  type: 'chat'
+})
 
 // =========================
 // Store 依赖
@@ -43,16 +52,6 @@ const { roomList, currentRoomCode, isRoomListLoading, createChatDialogVisible, j
  * 用于页面导航
  */
 const router = useRouter()
-
-// =========================
-// Hook 依赖
-// =========================
-
-/**
- * 加入聊天室 Hook
- * 提供加入聊天室相关功能，包括对话框控制
- */
-const { joinDialogVisible } = useJoinChat()
 
 // =========================
 // 组件状态
@@ -126,10 +125,13 @@ const scrollToCurrentRoom = async () => {
  * 1. 当用户切换聊天室或创建新聊天室时，currentRoomCode 会变化
  * 2. 变化时自动滚动到对应的聊天室项
  * 3. 避免初始化时的无效滚动（newVal !== oldVal 检查）
+ * 4. 仅在聊天视图模式下执行滚动
  */
 watch(
   () => currentRoomCode.value,
   (newVal, oldVal) => {
+    // 仅在聊天视图模式下执行滚动
+    if (props.type !== 'chat') return
     // 只在值真正变化时滚动（避免初始化时的无效滚动）
     if (newVal && newVal !== oldVal) {
       scrollToCurrentRoom()
@@ -152,51 +154,70 @@ watch(
 </script>
 
 <template>
-  <!-- 侧边栏聊天列表容器 -->
+  <!-- 侧边栏列表容器 -->
   <div class="aside-list-container">
     
-    <!-- 头部区域：标题和操作按钮 -->
-    <div class="aside-header">
-      <h3 class="aside-title">{{ t('chat.chat_list') }}</h3>
-      <div class="action-group">
-        <!-- 加入聊天室按钮：显示加入对话框 -->
-        <el-button class="header-action-btn" :icon="Link" @click="joinChatDialogVisible = true" />
-        <!-- 创建聊天室按钮：显示创建对话框 -->
-        <el-button class="header-action-btn" :icon="Plus" @click="createChatDialogVisible = true" />
+    <!-- 聊天视图：显示聊天室列表 -->
+    <div v-if="type === 'chat'" class="view-content">
+      <!-- 头部区域：标题和操作按钮 -->
+      <div class="aside-header">
+        <h3 class="aside-title">{{ t('chat.chat_list') }}</h3>
+        <div class="action-group">
+          <!-- 加入聊天室按钮：显示加入对话框 -->
+          <el-button class="header-action-btn" :icon="Link" @click="joinChatDialogVisible = true" />
+          <!-- 创建聊天室按钮：显示创建对话框 -->
+          <el-button class="header-action-btn" :icon="Plus" @click="createChatDialogVisible = true" />
+        </div>
       </div>
+
+      <!-- 聊天列表内容区域 -->
+      <div class="list-content" ref="listContentRef">
+        
+        <!-- 加载状态：显示骨架屏 -->
+        <!-- 设计考虑：优先展示 Skeleton，避免"先出现 1 条，再补齐"的闪烁现象 -->
+        <div v-if="isRoomListLoading && (!roomList || roomList.length === 0)" class="chat-skeleton">
+          <el-skeleton animated :rows="6" />
+        </div>
+        
+        <!-- 有聊天室数据：显示聊天室列表 -->
+        <div v-else-if="roomList && roomList.length > 0" class="chat-items">
+          <ChatItem
+            v-for="chat in roomList"
+            :key="chat.chatCode"
+            :chat="chat"
+            :is-active="chat.chatCode === currentRoomCode"
+            @click="handleSelectChat(chat.chatCode)"
+          />
+        </div>
+        
+        <!-- 无聊天室数据：显示空状态 -->
+        <div v-else class="empty-state">
+          <el-empty :description="t('aside.no_chats')" :image-size="80" />
+        </div>
+      </div>
+
+      <!-- 对话框组件 -->
+      <!-- 创建聊天室对话框：通过 createChatDialogVisible 控制显示 -->
+      <CreateChatDialog v-if="createChatDialogVisible" />
+      <!-- 加入聊天室对话框：通过 joinChatDialogVisible 控制显示 -->
+      <JoinChatDialog v-if="joinChatDialogVisible" />
     </div>
 
-    <!-- 聊天列表内容区域 -->
-    <div class="list-content" ref="listContentRef">
-      
-      <!-- 加载状态：显示骨架屏 -->
-      <!-- 设计考虑：优先展示 Skeleton，避免"先出现 1 条，再补齐"的闪烁现象 -->
-      <div v-if="isRoomListLoading && (!roomList || roomList.length === 0)" class="chat-skeleton">
-        <el-skeleton animated :rows="6" />
+    <!-- 好友视图：显示好友列表（占位） -->
+    <div v-else-if="type === 'friends'" class="view-content">
+      <!-- 头部区域：标题 -->
+      <div class="aside-header">
+        <h3 class="aside-title">{{ t('aside.friends_view') }}</h3>
       </div>
-      
-      <!-- 有聊天室数据：显示聊天室列表 -->
-      <div v-if="roomList && roomList.length > 0" class="chat-items">
-        <ChatItem
-          v-for="chat in roomList"
-          :key="chat.chatCode"
-          :chat="chat"
-          :is-active="chat.chatCode === currentRoomCode"
-          @click="handleSelectChat(chat.chatCode)"
-        />
-      </div>
-      
-      <!-- 无聊天室数据：显示空状态 -->
-      <div v-else class="empty-state">
-        <el-empty :description="t('aside.no_chats')" :image-size="80" />
+
+      <!-- 好友列表内容区域 -->
+      <div class="list-content">
+        <!-- 占位：好友功能待实现 -->
+        <div class="empty-state">
+          <el-empty :description="t('aside.friends_coming_soon')" :image-size="80" />
+        </div>
       </div>
     </div>
-
-    <!-- 对话框组件 -->
-    <!-- 创建聊天室对话框：通过 createChatDialogVisible 控制显示 -->
-    <CreateChatDialog v-if="createChatDialogVisible" />
-    <!-- 加入聊天室对话框：通过 joinChatDialogVisible 控制显示 -->
-    <JoinChatDialog v-if="joinChatDialogVisible" />
   </div>
 </template>
 
@@ -214,6 +235,13 @@ watch(
   background-color: var(--bg-aside); /* 使用主题变量 */
   border-right: 1px solid var(--el-border-color-light);
   transition: background-color 0.3s ease; /* 平滑过渡效果 */
+}
+
+/* 视图内容容器 */
+.view-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 头部区域样式 */

@@ -26,14 +26,6 @@ export type AlertDialogOptions = {
 }
 
 /**
- * 智能翻译：如果是 i18n key 则翻译，否则原样返回
- */
-const translateIfKey = (text: string): string => {
-  const translated = t(text)
-  return translated !== text ? translated : text
-}
-
-/**
  * 根据类型获取默认标题
  */
 const getDefaultTitleByType = (type: AlertDialogType): string => {
@@ -48,7 +40,7 @@ const getDefaultTitleByType = (type: AlertDialogType): string => {
     case 'primary':
     case 'info':
     default:
-      return t('dialog.info') || 'Information'
+      return t('dialog.info') || 'Info'
   }
 }
 
@@ -61,24 +53,19 @@ const getDefaultTitleByType = (type: AlertDialogType): string => {
 export const showAlertDialog = ({
   title,
   message,
-  confirmText = t('common.confirm') || 'Confirm',
+  confirmText,
   type = 'info',
   onConfirm,
   isAwait = true,
 }: AlertDialogOptions): Promise<void> | void => {
-  const finalTitle = title
-    ? translateIfKey(title)
-    : getDefaultTitleByType(type)
+  const finalTitle = title ? title : getDefaultTitleByType(type)
+  const finalMessage = message
+  const finalConfirmText = confirmText ? confirmText : t('common.confirm') || 'Confirm'
 
-  const finalMessage = translateIfKey(message)
-  const finalConfirmText = translateIfKey(confirmText)
-
-  // 1️⃣ 按钮样式
+  // 1️⃣ 按钮样式：除了 error/danger 用红色，其他统一用系统蓝色
   let confirmButtonClass = 'ez-dialog-btn'
   if (type === 'danger' || type === 'error') {
     confirmButtonClass += ' el-button--danger'
-  } else if (type === 'success') {
-    confirmButtonClass += ' el-button--success'
   } else {
     confirmButtonClass += ' el-button--primary'
   }
@@ -94,7 +81,7 @@ export const showAlertDialog = ({
     confirmButtonText: finalConfirmText,
     type: messageBoxType,
     confirmButtonClass,
-    customClass: 'ez-logout-dialog',
+    customClass: 'ez-dialog',
     center: false,
     showClose: false,
     closeOnClickModal: false,

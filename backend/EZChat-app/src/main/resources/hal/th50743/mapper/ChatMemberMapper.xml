@@ -3,8 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.ChatMemberMapper">
-    <insert id="insertIgnore">
-        INSERT IGNORE INTO chat_members (chat_id, user_id, last_seen_at, create_time, update_time)
+    <insert id="add">
+        INSERT INTO chat_members
+        (chat_id, user_id, last_seen_at, create_time, update_time)
         VALUES (#{chatId}, #{userId}, #{now}, #{now}, #{now})
     </insert>
 

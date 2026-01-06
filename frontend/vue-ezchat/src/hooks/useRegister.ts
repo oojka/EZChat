@@ -110,9 +110,6 @@ export function useRegister() {
   const register = async (): Promise<boolean> => {
     if (!registerFormRef.value) return false
     try {
-      const valid = await registerFormRef.value.validate()
-      if (!valid) return false
-      
       // 如果用户未上传头像，上传默认头像
       if (!registerForm.value.avatar.objectUrl && !registerForm.value.avatar.objectThumbUrl) {
         registerForm.value.avatar = await imageStore.uploadDefaultAvatarIfNeeded(registerForm.value.avatar)

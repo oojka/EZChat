@@ -1,6 +1,9 @@
 import {ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import type {Message, UserStatus, WebSocketResult} from '@/type'
+import i18n from '@/i18n'
+
+const { t } = i18n.global
 
 // 定义 Connect 方法需要的参数类型
 type ConnectOptions = {
@@ -153,7 +156,7 @@ export function useWebsocket() {
       }
 
       // 3. 其他情况（网络波动等）触发重连
-      ElMessage.warning('Websocket接続が切れました。再接続中...')
+      ElMessage.warning(t('chat.ws_reconnecting'))
       console.warn('[WARN] [WS] WebSocket Closed', event)
       reconnect()
     }

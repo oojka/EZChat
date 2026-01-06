@@ -33,18 +33,6 @@ public interface AuthService {
      */
     LoginVO guestRegister(GuestRegisterReq guestReq);
 
-    /**
-     * 邀请码免密加入（访客）
-     *
-     * 业务规则：
-     * - 邀请码有效：免密加入（即使房间设置了密码）
-     * - join_enabled=0：邀请码也不可加入
-     * - 成功后返回 JWT（供前端进入 /chat 体系）
-     *
-     * @param req 邀请加入请求
-     * @return LoginVO（包含 token）
-     */
-    LoginVO inviteGuest(InviteGuestReq req);
 
     /**
      * 访客加入聊天室（支持头像）
@@ -63,7 +51,7 @@ public interface AuthService {
      * @param req 访客加入请求（包含头像）
      * @return 登录成功后的视图对象（包含 Token）
      */
-    LoginVO guestJoin(GuestJoinReq req);
+    LoginVO joinChat(GuestJoinReq req);
 
 
 

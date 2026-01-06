@@ -59,11 +59,13 @@ public interface ChatMapper {
 
     /**
      * 新增聊天室
-     *
+     * <p>
      * 注意：本工程不使用物理外键，owner_id 关联关系由业务逻辑保证。
      *
      * @param chat 创建聊天室写入对象
-     * @return 影响行数
      */
-    int insertChat(ChatCreate chat);
+    void insertChat(ChatCreate chat);
+
+
+    Integer getChatIdByInviteCodeHash(String codeHash);
 }

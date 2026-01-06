@@ -42,7 +42,7 @@ export const createChatApi = (payload: {
  *
  * - 后端接口：POST `/chat/join`
  * - 业务目的：已登录的正式用户加入指定聊天室，支持密码模式和邀请码模式
- * - 返回：包含新的 JWT token 的 LoginUser
+ * - 返回：空
  */
-export const joinChatApi = (req: JoinChatReq): Promise<Result<LoginUser>> =>
+export const joinChatApi = (req: JoinChatReq): Promise<Result<null>> =>
   request.post('/chat/join', req)

@@ -1,9 +1,10 @@
-import {defineStore} from 'pinia'
-import {nextTick, ref, watch} from 'vue'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useRoomStore} from '@/stores/roomStore.ts'
-import {useWebsocketStore} from '@/stores/websocketStore.ts'
-import {useMessageStore} from '@/stores/messageStore.ts'
+import { defineStore } from 'pinia'
+import { nextTick, ref, watch } from 'vue'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useRoomStore } from '@/stores/roomStore.ts'
+import { useWebsocketStore } from '@/stores/websocketStore.ts'
+import { useMessageStore } from '@/stores/messageStore.ts'
+import { showWelcomeNotification } from '@/components/notification.ts'
 import router from '@/router'
 import i18n from '@/i18n'
 
@@ -38,7 +39,7 @@ export const useAppStore = defineStore('app', () => {
   // App 初始化中的保护标记：用于避免路由守卫过早关闭 Loading
   const isAppInitializing = ref(false)
   // refresh 全屏 Loading 的“最短展示时长”
-  const MIN_REFRESH_LOADING_MS = 600
+  const MIN_REFRESH_LOADING_MS = 300
   // Loading 背景是否为全白（用于错误页等场景）
   const loadingBgWhite = ref(false)
 
@@ -174,7 +175,7 @@ export const useAppStore = defineStore('app', () => {
    */
   const setFavicon = (faviconPath: string = '/favicon_io/favicon.ico') => {
     const faviconLinks = document.querySelectorAll("link[rel*='icon']")
-    
+
     if (faviconLinks.length === 0) {
       // 如果不存在 favicon link，创建一个
       const link = document.createElement('link')
@@ -203,6 +204,29 @@ export const useAppStore = defineStore('app', () => {
   }
 
   /**
+   * 通用的加载状态管理函数
+   * 
+   * 业务目的：统一管理异步操作的加载状态，避免在各个组件/composable中重复实现
+   * 
+   * @param text 加载时显示的文本
+   * @param fn 要执行的异步函数
+   * @returns 异步函数的执行结果
+   */
+  const runWithLoading = async <T>(text: string, fn: () => Promise<T>): Promise<T> => {
+    isAppLoading.value = true
+    showLoadingSpinner.value = true
+    loadingText.value = text
+
+    try {
+      return await fn()
+    } finally {
+      isAppLoading.value = false
+      showLoadingSpinner.value = false
+      loadingText.value = ''
+    }
+  }
+
+  /**
    * 应用初始化（页面刷新/登录后进入聊天页）
    *
    * 业务流程：
@@ -213,7 +237,7 @@ export const useAppStore = defineStore('app', () => {
    * @param token 可选：登录成功后直接传入 token，减少一次读取
    * @param type 初始化触发来源（login/refresh）用于控制 Loading 表现
    */
-  const initializeApp = async (token?: string ,type: 'login' | 'refresh' | 'guest' = 'refresh') => {
+  const initializeApp = async (token?: string, type: 'login' | 'refresh' | 'guest' = 'refresh') => {
     const userStore = useUserStore()
     const roomStore = useRoomStore()
     const websocketStore = useWebsocketStore()
@@ -222,13 +246,12 @@ export const useAppStore = defineStore('app', () => {
     let finalTokenForWs: string | undefined
 
     try {
-      // 登录 / refresh / 访客：全屏遮蔽应显示“初始化...”而不是 “Loading...”
-      loadingText.value = i18n.global.t('common.initializing') as unknown as string
-
-      // refresh：尽早标记“初始化中”，避免 messageStore/router 等并发逻辑提前触发拉取
-      if (type === 'refresh') {
+      // 登录 / refresh / 访客：全屏遮蔽应显示"初始化..."而不是 "Loading..."
+      if (type === 'refresh' || type === 'login' || type === 'guest') {
+        loadingText.value = i18n.global.t('common.initializing') || 'Initializing...'
         isAppInitializing.value = true
         isAppLoading.value = true
+        showLoadingSpinner.value = true
       }
 
       // 0) App 初始化前先清空所有 Store 内存态，避免历史会话残留
@@ -241,8 +264,8 @@ export const useAppStore = defineStore('app', () => {
       // 1) refresh 场景“关键链路”：仅同步恢复 token，让页面尽快可用
       // 用户详情/房间列表等慢请求放到后台，避免黑屏转圈时间被拉长
       // 如果访客，则不恢复登录态
-      if(!(type === 'guest' && token)) userStore.restoreLoginGuestFromStorage() || userStore.restoreLoginUserFromStorage();
-      const finalToken = token || userStore.loginGuest?.token || userStore.loginUser.token;
+      if (!userStore.hasToken()) userStore.restoreLoginGuestFromStorage() || userStore.restoreLoginUserFromStorage();
+      const finalToken = token || userStore.getAccessToken()
       finalTokenForWs = finalToken
 
       if (!finalToken) {
@@ -250,39 +273,57 @@ export const useAppStore = defineStore('app', () => {
         if (router.currentRoute.value.path !== '/') await router.replace('/')
         return
       }
-
-      // 2) refresh 优先加载 chatList：先把 AsideList 的 roomList 拉齐，再撤掉全屏遮蔽
-      // 用户详情不影响 chatList，可后台加载
-      userStore.fetchLoginUserInfo().then(() => {})
       await roomStore.initRoomList()
-
-      // 3) WS 连接时机：等待初始化关键链路完成再连接（避免初始化阶段 WS 事件造成数据/状态抖动）
-      // - login：roomList 加载完成后即可连接
-      // - refresh：在 finally 里“撤掉遮蔽并解除初始化标记”后再连接
-      if (type === 'login') {
-        // 关键修复保留：不要依赖 status 判断（close 是异步的，可能导致“误判为 OPEN 而跳过重连”）
-        websocketStore.initWS(finalToken)
-      }
 
     } catch (error) {
       console.error('[ERROR] [AppStore] Initialization failed:', error)
     } finally {
-      // refresh：chatList 加载完成后再撤掉遮蔽，并开始渲染 chatView 区域
-      if (type === 'refresh') {
-        const elapsed = Date.now() - refreshLoadingStartAt
-        const remain = Math.max(0, MIN_REFRESH_LOADING_MS - elapsed)
-        setTimeout(() => {
+      const elapsed = Date.now() - refreshLoadingStartAt
+      const remain = Math.max(0, MIN_REFRESH_LOADING_MS - elapsed)
+      setTimeout(() => {
+        if (type === 'refresh') {
           isAppLoading.value = false
-          // 2) 遮蔽撤掉后再解除“初始化中”，允许 chatView/消息开始加载
+          showLoadingSpinner.value = false
+          loadingText.value = ''
+          // 2) 遮蔽撤掉后再解除"初始化中"，允许 chatView/消息开始加载
           isAppInitializing.value = false
-          // 3) 初始化完成后再连接 WS（不等待握手完成）
-          if (finalTokenForWs) {
-            websocketStore.initWS(finalTokenForWs)
+        } else if (type === 'login' || type === 'guest') {
+          // login 和 guest 场景也需要清除加载状态
+          isAppLoading.value = false
+          showLoadingSpinner.value = false
+          loadingText.value = ''
+          isAppInitializing.value = false
+        }
+
+        // 3) 初始化完成后再连接 WS（不等待握手完成）
+        if (finalTokenForWs) {
+          websocketStore.initWS(finalTokenForWs)
+        }
+        // 4) login 场景显示欢迎通知（使用 watch 监听用户信息加载）
+        if (type === 'login') {
+          // 如果已经加载完成，直接显示
+          if (userStore.loginUserInfo?.avatar.blobThumbUrl || userStore.loginUserInfo?.avatar.blobUrl) {
+            showWelcomeNotification(userStore.loginUserInfo)
+          } else {
+            // 否则监听用户信息变化，加载完成后自动显示
+            watch(
+              () => userStore.loginUserInfo,
+              (newInfo) => {
+                if (newInfo) {
+                  showWelcomeNotification(newInfo)
+                }
+              },
+              {
+                once: true,
+                deep: true,
+              } // 只触发一次，深度监听
+            )
           }
-        }, remain)
-      }
+        }
+      }, remain);
     }
   }
+
 
   return {
     isAppLoading,
@@ -298,5 +339,6 @@ export const useAppStore = defineStore('app', () => {
     initializeApp,
     setFavicon,
     removeFavicon,
+    runWithLoading,
   }
 })

@@ -1,11 +1,16 @@
-import {computed, ref} from 'vue'
-import {defineStore, storeToRefs} from 'pinia'
-import type {ChatRoom, Message, Image} from '@/type'
-import {initApi} from '@/api/AppInit.ts'
-import { getChatMembersApi } from '@/api/Chat'
-import {useUserStore} from '@/stores/userStore.ts'
+import { computed, ref } from 'vue'
+import { defineStore, storeToRefs } from 'pinia'
+import type { ChatRoom, Message, Image, JoinChatReq, ValidateChatJoinReq } from '@/type'
+import { initApi } from '@/api/AppInit.ts'
+import { getChatMembersApi, joinChatApi } from '@/api/Chat'
+import { validateChatJoinApi } from '@/api/Auth'
+import { useUserStore } from '@/stores/userStore.ts'
 import { useImageStore } from '@/stores/imageStore'
-
+import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes'
+import { useI18n } from 'vue-i18n'
+import { showAlertDialog } from '@/components/dialogs/AlertDialog'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 /**
  * RoomStore：管理聊天室列表与“当前所在房间”
  *
@@ -18,6 +23,9 @@ export const useRoomStore = defineStore('room', () => {
   // =========================================
   // 1. 基础依赖与状态 (State)
   // =========================================
+  const { t } = useI18n()
+  const router = useRouter()
+
   const userStore = useUserStore()
   const { loginUserInfo, userStatusList } = storeToRefs(userStore)
 
@@ -161,7 +169,7 @@ export const useRoomStore = defineStore('room', () => {
     if (!hasRoomListLoaded.value && _roomList.value.length === 0) {
       pendingRoomInfoMap.set(newRoomInfo.chatCode, newRoomInfo)
       // 头像仍可提前预取（不影响列表长度）
-      if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => {})
+      if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => { })
       return
     }
     // 业务目的：进入房间后拿到更完整的 ChatRoom 信息（例如成员列表），需要覆盖到列表里
@@ -176,7 +184,7 @@ export const useRoomStore = defineStore('room', () => {
     }
 
     // 房间信息更新后：按需预取房间头像与成员头像缩略图（避免刷新/切换时头像加载慢）
-    if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => {})
+    if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => { })
     const members = newRoomInfo.chatMembers || []
     // prefetchThumbs 内部已自动去重，无需手动去重
     imageStore.prefetchThumbs(members.map(m => m.avatar), 6)
@@ -255,7 +263,7 @@ export const useRoomStore = defineStore('room', () => {
    * 更新房间预览信息
    */
   const updateRoomPreview = (message: Message) => {
-    // 业务目的：列表页需要展示“最后一条消息 + 最后活跃时间 + 未读数”
+    // 业务目的：列表页需要展示"最后一条消息 + 最后活跃时间 + 未读数"
     const room = _roomList.value.find(r => r.chatCode === message.chatCode)
     if (room) {
       room.lastActiveAt = message.createTime
@@ -267,20 +275,117 @@ export const useRoomStore = defineStore('room', () => {
     }
   }
 
-  return {
-    roomList,
-    currentRoomCode,
-    currentRoom,
-    isRoomListLoading,
-    createChatDialogVisible,
-    joinChatDialogVisible,
-    getRoomByCode, // 导出此方法
-    initRoomList,
-    updateRoomInfo,
-    updateMemberStatus,
-    updateRoomPreview,
-    fetchRoomMembers,
-    isCurrentRoomMembersLoading,
-    resetState,
+  /**
+   * 正式用户加入聊天室
+   * 
+   * 业务逻辑：
+   * 1. 调用后端 API 加入聊天室
+   * 2. 加入成功后自动刷新房间列表
+   * 
+   * @param data 加入聊天室请求数据
+   * @returns 是否加入成功
+   */
+  const joinChat = async (data: JoinChatReq): Promise<boolean> => {
+    try {
+      const result = await joinChatApi(data)
+      if (result && result.status === 1) {
+        // 加入成功后显示提示信息
+        ElMessage.success('加入房间成功')
+        // 如果当前页面是聊天页，则自动刷新房间列表
+        if (router.currentRoute.value.path === '/chat') {
+          await initRoomList()
+        }
+        return true
+      }
+      return false
+    } catch (e) {
+      if (e instanceof Error && e.message === 'IS_ALREADY_JOINED') {
+        // 用户已经加入此房间，显示提示并返回 true（表示用户已在房间）
+        await showAlertDialog({
+          message: t('api.you_have_already_in_this_room'),
+          type: 'warning',
+        })
+        return true
+      }
+      if (isAppError(e)) {
+        throw e
+      }
+      throw createAppError(
+        ErrorType.UNKNOWN,
+        'Join chat failed',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'roomStore',
+          action: 'joinChat',
+          originalError: e
+        }
+      )
+    }
   }
-})
+
+  /**
+   * 验证房间访问权限
+   * 
+   * 业务逻辑：
+   * 1. 调用验证 API 检查房间信息
+   * 2. 将验证结果存储到 userStore
+   * 3. 返回验证成功的房间信息
+   * 
+   * @param req 验证请求对象
+   * @returns 验证成功的房间信息
+   */
+  const validateRoomAccess = async (req: ValidateChatJoinReq): Promise<ChatRoom> => {
+    try {
+      const result = await validateChatJoinApi(req)
+      
+      if (result && result.data && result.data.chatCode) {
+        // 验证成功，将信息存储到 userStore
+        userStore.setValidatedJoinChatInfo(req, result.data)
+        return result.data
+      }
+      
+      throw createAppError(
+        ErrorType.NETWORK,
+        'Room validation failed',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'roomStore',
+          action: 'validateRoomAccess'
+        }
+      )
+    } catch (e) {
+      if (isAppError(e)) {
+        throw e
+      }
+      throw createAppError(
+        ErrorType.NETWORK,
+        'Room validation failed',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'roomStore',
+          action: 'validateRoomAccess',
+          originalError: e
+        }
+      )
+    }
+  }
+
+    return {
+      roomList,
+      currentRoomCode,
+      currentRoom,
+      isRoomListLoading,
+      createChatDialogVisible,
+      joinChatDialogVisible,
+      getRoomByCode, // 导出此方法
+      initRoomList,
+      updateRoomInfo,
+      updateMemberStatus,
+      updateRoomPreview,
+      fetchRoomMembers,
+      isCurrentRoomMembersLoading,
+      joinChat, // 加入聊天室
+      validateRoomAccess, // 验证房间访问权限
+      resetState,
+    }
+  })

@@ -109,13 +109,16 @@
     "chat_code_required": "Room code is required.",
     "chat_code_format": "Room code must be 8 digits.",
     "invite_url_required": "Invite URL is required.",
-    "invite_url_format": "Invalid Invite URL format."
+    "invite_url_format": "Invalid Invite URL format.",
+    "image_upload_limit": "Image upload limit has been reached."
   },
   "api": {
     "too_many_requests": "Requests are coming in too fast. Please slow down a bit.",
     "unexpected_error": "An unexpected error occurred.",
     "already_exists": "'{info}' is already taken.",
     "data_already_exists": "This data already exists.",
+    "you_have_already_in_this_room": "You have already joined this room. Please do not join again.",
+    "is_already_exist": " already exists.",
     "not_member": "No access permission: You are not a member of this chat room.",
     "room_not_found": "Room does not exist or has been disbanded.",
     "input_too_long": "Input exceeds the character limit.",
@@ -192,7 +195,10 @@
     "create_room": "Create Room",
     "join_room": "Join Room",
     "no_chats": "No active chats",
-    "just_now": "Just now"
+    "just_now": "Just now",
+    "friends_view": "Friends",
+    "chat_view": "Chats",
+    "friends_coming_soon": "Friends feature coming soon"
   },
   "welcome": {
     "title": "Welcome to EZ Chat",
@@ -231,6 +237,7 @@
     "ws_closed": "Offline",
     "ws_unknown": "Unknown",
     "ws_send_error": "Failed to send. Please try again.",
+    "ws_reconnecting": "WebSocket connection lost. Reconnecting...",
     "join_chat": "Join Chat Room",
     "password_mode": "Password Join",
     "invite_mode": "Invite Code Join",
@@ -289,5 +296,29 @@
     "one_time_link": "One-time Link",
     "custom_date": "Custom Date",
     "day_n": "{n} Days"
+  },
+  "join_page": {
+    "invitation_confirmed": "Invitation Confirmed",
+    "welcome_to_chatroom": "Welcome to the Chatroom",
+    "welcome_description": "Connect with friends, share experiences, and enjoy chatting together",
+    "members": "Members",
+    "room_id_prefix": "ID:",
+    "have_account": "Already have an account?",
+    "login": "Login",
+    "temporary_use": "Just visiting?",
+    "guest_mode": "Guest Mode",
+    "guest_mode_title": "Guest Mode",
+    "guest_mode_description": "Join as a guest, session expires when offline",
+    "click_to_upload_avatar": "Click to upload avatar",
+    "enter_nickname": "Please enter nickname",
+    "join_chat": "Join Now",
+    "welcome_back": "Welcome Back",
+    "login_and_join_description": "After logging in, you will automatically join this room",
+    "username": "Username",
+    "password": "Password",
+    "login_and_join": "Login and Join",
+    "no_account": "No account yet?",
+    "register": "「Register」",
+    "validation_expired": "Invitation information has expired. Please verify again"
   }
 }

@@ -91,22 +91,6 @@ public class AuthController {
     }
 
     /**
-     * 邀请码免密加入（访客）
-     *
-     * 业务目的：
-     * - 创建短链接的邀请码后，任何人都可通过 inviteCode 免密加入房间（前提：join_enabled=1）
-     * - 成功后返回 JWT token（前端写入 localStorage 后可进入 /chat）
-     *
-     * @param req 邀请加入请求
-     * @return 统一响应结果（LoginVO）
-     */
-    @PostMapping("/invite")
-    public Result<LoginVO> inviteGuest(@RequestBody InviteGuestReq req) {
-        LoginVO res = authService.inviteGuest(req);
-        return Result.success(res);
-    }
-
-    /**
      * 验证聊天室加入请求
      * <p>
      * 业务目的：
@@ -125,7 +109,7 @@ public class AuthController {
      * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
      * @return 统一响应结果（简化的 ChatVO，仅包含 chatCode, chatName, avatar, memberCount）
      */
-    @PostMapping("/validate-join")
+    @PostMapping("/validate")
     public Result<ChatVO> validateChatJoin(@RequestBody ValidateChatJoinReq req) {
         ChatVO chatVO = chatService.validateChatJoin(req);
         return Result.success(chatVO);
@@ -150,9 +134,9 @@ public class AuthController {
      * @param req 访客加入请求（包含头像）
      * @return 统一响应结果（LoginGuestVO，包含登录信息和头像信息）
      */
-    @PostMapping("/guest-join")
-    public Result<LoginVO> guestJoin(@RequestBody GuestJoinReq req) {
-        LoginVO res = authService.guestJoin(req);
+    @PostMapping("/join")
+    public Result<LoginVO> joinChat(@RequestBody GuestJoinReq req) {
+        LoginVO res = authService.joinChat(req);
         return Result.success(res);
     }
 }

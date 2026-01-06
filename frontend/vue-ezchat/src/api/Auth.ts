@@ -1,5 +1,5 @@
 import request from '../utils/request'
-import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginForm} from '@/type'
+import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginForm, Image} from '@/type'
 
 /**
  * 用户登录
@@ -53,7 +53,7 @@ export const registerApi = (
 export const validateChatJoinApi = (
   req: ValidateChatJoinReq
 ): Promise<Result<ChatRoom>> =>
-  request.post('/auth/validate-join', req)
+  request.post('/auth/validate', req)
 
 /**
  * 加入聊天室（访客或邀请码模式）
@@ -66,4 +66,30 @@ export const guestJoinApi = (
   data: GuestJoinReq
 ): Promise<Result<LoginUser>> =>
   request.post('/auth/join', data)
+
+/**
+ * 上传头像
+ *
+ * - 后端接口：POST `/auth/register/upload`
+ * - 业务目的：上传用户头像（用于注册或更新头像）
+ * - 对应后端：AuthController.upload
+ *
+ * @param file 要上传的头像文件
+ * @param onUploadProgress 上传进度回调函数（可选）
+ * @returns 上传成功后的图片信息
+ */
+export const uploadAvatarApi = (
+  file: File,
+  onUploadProgress?: (progressEvent: { loaded: number; total?: number }) => void
+): Promise<Result<Image>> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  return request.post('/auth/register/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    onUploadProgress
+  })
+}
 

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {ChatLineRound, User} from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import AsideList from '@/views/layout/components/AsideList.vue'
 import UserItem from '@/components/UserItem.vue'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
 import {storeToRefs} from 'pinia'
+
+const { t } = useI18n()
 
 // 当前激活的视图类型：'friends' | 'chat'
 const activeView = ref<'friends' | 'chat'>('chat')
@@ -23,7 +26,7 @@ const { status } = storeToRefs(websocketStore)
 
 <template>
   <div class="main-aside-wrapper">
-    <!-- 1. 视图切换区 (深度适配暗黑模式) -->
+    <!-- 1. 视图切换区 -->
     <div class="switcher-container">
       <div class="segmented-control">
         <div
@@ -32,7 +35,7 @@ const { status } = storeToRefs(websocketStore)
           @click="switchView('friends')"
         >
           <el-icon><User /></el-icon>
-          <span>友達</span>
+          <span>{{ t('aside.friends_view') }}</span>
         </div>
         <div
           class="control-item"
@@ -40,7 +43,7 @@ const { status } = storeToRefs(websocketStore)
           @click="switchView('chat')"
         >
           <el-icon><ChatLineRound /></el-icon>
-          <span>チャット</span>
+          <span>{{ t('aside.chat_view') }}</span>
         </div>
         <!-- 滑动背景指示器 -->
         <div class="selection-indicator" :class="activeView"></div>
@@ -49,9 +52,7 @@ const { status } = storeToRefs(websocketStore)
 
     <!-- 2. 内容展示区 -->
     <div class="aside-body">
-      <Transition name="page-fade" mode="out-in">
-        <AsideList :key="activeView" :type="activeView" />
-      </Transition>
+      <AsideList :type="activeView" />
     </div>
 
     <!-- 3. 用户信息区域 -->

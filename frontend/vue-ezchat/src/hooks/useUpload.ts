@@ -1,21 +1,38 @@
-import {ref} from 'vue'
-import {ElMessage, type UploadRequestOptions} from 'element-plus'
-import axios from 'axios'
-import {useUserStore} from '@/stores/userStore'
+import { ref } from 'vue'
+import { ElMessage, type UploadRequestOptions } from 'element-plus'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
+import type { Image, Result } from '@/type'
+import { uploadMessageImageApi } from '@/api/Message'
+import { uploadAvatarApi } from '@/api/Auth'
 
-// 定义上传结果类型
-type UploadResult = {
-  url: string
-  filename?: string
-}
+/**
+ * 上传类型枚举
+ */
+export type UploadType = 'message' | 'avatar'
 
-export function useUpload(uploadApiUrl: string) {
+/**
+ * 上传 Hook
+ * 
+ * 业务逻辑：
+ * - 封装文件上传逻辑，统一使用 request 实例管理（可被限流拦截器拦截）
+ * - 支持消息图片上传和头像上传两种类型
+ * - 自动处理文件校验、上传进度、错误处理
+ * 
+ * @param type 上传类型：'message' 消息图片 | 'avatar' 头像
+ * @returns 上传相关的状态和方法
+ */
+export function useUpload(type: UploadType) {
   const isUploading = ref(false)
   const uploadProgress = ref(0)
 
   /**
    * 自定义上传方法，适配 el-upload 的 http-request
+   * 
+   * 业务逻辑：
+   * 1. 校验文件类型和大小
+   * 2. 根据上传类型调用对应的 API
+   * 3. 处理上传进度回调
+   * 4. 统一错误处理
    */
   const customUpload = async (options: UploadRequestOptions) => {
     const { file, onSuccess, onError, onProgress } = options
@@ -36,41 +53,40 @@ export function useUpload(uploadApiUrl: string) {
     isUploading.value = true
     uploadProgress.value = 0
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
-      // 获取 Token
-      const userStore = useUserStore()
-      const token = userStore.getToken
-
-      // 2. 发送请求
-      // 注意：这里直接使用 axios 而不是封装好的 api 实例，是为了更方便地控制 onUploadProgress
-      // 如果您的 api 封装支持 onUploadProgress，也可以替换
-      const response = await axios.post(uploadApiUrl, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        onUploadProgress: (progressEvent) => {
+      // 2. 根据类型调用对应的 API
+      let result: Result<Image>
+      
+      if (type === 'message') {
+        result = await uploadMessageImageApi(file, (progressEvent) => {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
             uploadProgress.value = percent
-            // Element Plus 的 onProgress 期望的是 UploadProgressEvent，这里将 axios 事件转成最小兼容结构
-            // 使用 as any 绕过类型检查（可接受的第三方库类型兼容性异常）
-            onProgress?.({ percent } as any) // 通知 el-upload 更新进度条
+            // Element Plus 的 onProgress 期望的是 UploadProgressEvent
+            onProgress?.({ percent } as any)
           }
-        }
-      })
-
-      // 3. 处理响应
-      // 假设后端返回格式为 { code: 200, data: { url: '...' } }
-      if (response.data && response.data.code === 200) {
-        const result: UploadResult = response.data.data
-        onSuccess(result) // 通知 el-upload 成功
-        return result
+        })
       } else {
-        throw new Error(response.data.message || 'Upload failed')
+        result = await uploadAvatarApi(file, (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            uploadProgress.value = percent
+            onProgress?.({ percent } as any)
+          }
+        })
+      }
+
+      // 3. 处理响应（后端返回 Result<Image> 格式）
+      if (result.status === 1 && result.data) {
+        // 转换为 el-upload 期望的格式
+        const uploadResult = {
+          url: result.data.objectUrl,
+          filename: result.data.objectName
+        }
+        onSuccess(uploadResult)
+        return uploadResult
+      } else {
+        throw new Error(result.message || 'Upload failed')
       }
 
     } catch (error: any) {

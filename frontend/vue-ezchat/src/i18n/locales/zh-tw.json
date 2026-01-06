@@ -109,13 +109,16 @@
     "chat_code_required": "請輸入房間代碼。",
     "chat_code_format": "房間代碼必須是8位數字。",
     "invite_url_required": "請輸入邀請連結。",
-    "invite_url_format": "不合法的邀請連結格式。"
+    "invite_url_format": "不合法的邀請連結格式。",
+    "image_upload_limit": "圖片上傳數量已達到上限。"
   },
   "api": {
     "too_many_requests": "請求太快了，請稍慢一點。",
     "unexpected_error": "發生了預料之外的錯誤。",
     "already_exists": "「{info}」已被占用。",
     "data_already_exists": "該資料已存在。",
+    "you_have_already_in_this_room": "您已經加入此房間，請勿重複加入。",
+    "is_already_exist": " 已存在。",
     "not_member": "無訪問權限：您不是該聊天室的成員。",
     "room_not_found": "房間不存在或已被解散。",
     "input_too_long": "輸入內容超過字元限制。",
@@ -170,7 +173,9 @@
     "create_room": "建立房間",
     "join_room": "加入房間",
     "no_chats": "暫無聊天",
-    "just_now": "剛剛"
+    "just_now": "剛剛",
+    "friends_view": "好友",
+    "chat_view": "聊天"
   },
   "welcome": {
     "title": "歡迎來到 EZ Chat",
@@ -209,6 +214,7 @@
     "ws_closed": "離線",
     "ws_unknown": "未知",
     "ws_send_error": "傳送失敗，請重試",
+    "ws_reconnecting": "WebSocket 連線已斷開，正在重新連線...",
     "join_chat": "加入聊天室",
     "password_mode": "密碼加入",
     "invite_mode": "邀請碼加入",
@@ -267,5 +273,29 @@
     "one_time_link": "一次性連結",
     "custom_date": "自訂日期",
     "day_n": "{n} 天"
+  },
+  "join_page": {
+    "invitation_confirmed": "邀請已確認",
+    "welcome_to_chatroom": "歡迎加入聊天室",
+    "welcome_description": "與朋友們一起交流分享，開啟愉快的聊天體驗",
+    "members": "成員",
+    "room_id_prefix": "ID:",
+    "have_account": "已有帳號？",
+    "login": "登入",
+    "temporary_use": "臨時使用？",
+    "guest_mode": "訪客模式",
+    "guest_mode_title": "訪客模式",
+    "guest_mode_description": "以訪客身份加入，離線後失效",
+    "click_to_upload_avatar": "點擊上傳頭像",
+    "enter_nickname": "請輸入暱稱",
+    "join_chat": "立即加入",
+    "welcome_back": "歡迎回來",
+    "login_and_join_description": "登入後，將自動加入此房間",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "login_and_join": "登入並加入",
+    "no_account": "沒有帳號？",
+    "register": "「註冊」",
+    "validation_expired": "邀請資訊已失效，請重新驗證"
   }
 }

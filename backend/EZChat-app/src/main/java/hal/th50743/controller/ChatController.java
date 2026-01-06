@@ -5,7 +5,6 @@ import hal.th50743.pojo.ChatMemberVO;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.JoinChatReq;
-import hal.th50743.pojo.LoginVO;
 import hal.th50743.pojo.Result;
 import hal.th50743.service.ChatService;
 import java.util.List;
@@ -73,8 +72,7 @@ public class ChatController {
      * <p>
      * 业务目的：
      * - 已登录的正式用户加入指定聊天室
-     * - 支持密码模式和邀请码模式
-     * - 返回新的 JWT token（LoginVO）
+     * - 支持密码模式和邀请码模式两种加入方式
      * <p>
      * 业务流程：
      * 1. 验证请求参数和模式互斥性
@@ -82,17 +80,16 @@ public class ChatController {
      *    - 密码模式：验证密码并加入
      *    - 邀请码模式：验证邀请码并处理使用次数
      * 3. 将用户加入聊天室
-     * 4. 生成新的 JWT token
-     * 5. 返回 LoginVO
      *
      * @param req 加入请求（包含 chatCode + password 或 inviteCode）
-     * @return 统一响应结果（LoginVO）
+     * @return 统一响应结果
      */
     @PostMapping("/join")
-    public Result<LoginVO> joinChat(@RequestBody JoinChatReq req) {
+    public Result<Void> joinChat(@RequestBody JoinChatReq req) {
         Integer userId = CurrentHolder.getCurrentId();
-        LoginVO res = chatService.joinForFormalUser(userId, req);
-        return Result.success(res);
+        req.setUserId(userId);
+        chatService.join(req);
+        return Result.success();
     }
 
 }

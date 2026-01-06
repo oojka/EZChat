@@ -32,6 +32,53 @@ export type LoginUser = {
   token: string
 }
 
+  /**
+   * 用户登录状态（使用 discriminated union 确保类型安全）
+   * 
+   * 业务逻辑：
+   * - formal 和 guest 互斥，只能有一个有值
+   * - 使用联合类型确保编译时类型安全
+   * - 通过 type 字段明确当前状态
+   */
+export type UserLoginState =
+    | { type: 'formal'; formal: LoginUser; guest: undefined }
+    | { type: 'guest'; formal: undefined; guest: LoginUser }
+    | { type: 'none'; formal: undefined; guest: undefined }
+
+export type Token =  {
+  type: 'formal'
+  accessToken?: {
+    token: string
+    payload: JwtPayload
+  }
+  refreshToken: {
+    token: string
+    payload: JwtPayload
+  }
+}
+| {
+  type: 'guest'
+  accessToken?: {
+    token: string
+    payload: JwtPayload
+  }
+  refreshToken: {
+    token: string
+    payload: JwtPayload
+  }
+}
+| {
+  type: 'none'
+  accessToken: undefined
+  refreshToken: undefined
+}
+
+export interface JwtPayload {
+  uid: string;
+  username: string;
+  iat: number; // 签发时间 (seconds)
+  exp: number; // 过期时间 (seconds)
+}
 /**
  * 登录用户详细信息（对应后端 UserVO）
  * 
@@ -162,17 +209,6 @@ export type JoinChatReq = {
   password: string
 } | {
   inviteCode: string
-}
-
-/** 房间基础信息结构 */
-export type RoomInfo = {
-  chatCode: string
-  chatName: string
-  memberCount: number
-  avatar: {
-    objectThumbUrl: string
-    objectUrl: string
-  }
 }
 
 export type JoinChatCredentialsForm = {

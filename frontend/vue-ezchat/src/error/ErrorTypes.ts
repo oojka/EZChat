@@ -39,6 +39,8 @@ export enum ErrorType {
 
   /** 未知 / 兜底错误 */
   UNKNOWN = 'UNKNOWN',
+
+
 }
 
 /**
@@ -53,6 +55,7 @@ export enum ErrorSeverity {
 
   /** 不影响主流程 */
   WARNING = 'WARNING',
+
 }
 
 /**

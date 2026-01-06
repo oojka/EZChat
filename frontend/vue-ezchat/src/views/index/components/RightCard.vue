@@ -14,8 +14,8 @@ import { useRegister } from '@/hooks/useRegister.ts'
 import { useI18n } from 'vue-i18n'
 import useLogin from '@/hooks/useLogin.ts'
 import PasswordInput from '@/components/PasswordInput.vue'
-import { ElMessage } from 'element-plus'
 import { useImageStore } from '@/stores/imageStore'
+import { ElMessage } from 'element-plus'
 import { createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 
 /**
@@ -159,6 +159,8 @@ const validateStep = async (step: number) => {
  * 验证当前步骤通过后，进入下一个注册步骤
  */
 const nextStep = async () => {
+  const valid = await registerFormRef.value.validate()
+  if (!valid) return false
   if (await validateStep(registerStep.value) && registerStep.value < 3) registerStep.value++
 }
 
@@ -186,6 +188,8 @@ const prevStep = () => {
  * - 完整的错误处理和用户反馈
  */
 const handleRegister = async () => {
+  const valid = await registerFormRef.value.validate()
+  if (!valid) return false
   if (!await validateStep(3)) return
   isRegistering.value = true
   try {
@@ -193,7 +197,7 @@ const handleRegister = async () => {
     if (!registerForm.value.avatar.objectUrl && !registerForm.value.avatar.objectThumbUrl) {
       registerForm.value.avatar = await imageStore.uploadDefaultAvatarIfNeeded(registerForm.value.avatar, 'user')
     }
-    
+
     // 调用注册 API（业务逻辑在 useRegister hook 中）
     const success = await register()
     if (success) {
@@ -250,8 +254,8 @@ const handleRegister = async () => {
           - 禁用自动验证消息（由 useLogin hook 处理）
           - 阻止表单默认提交行为
         -->
-        <el-form :model="loginForm" :show-message="false"
-          :validate-on-rule-change="false" class="login-form" @submit.prevent>
+        <el-form :model="loginForm" :show-message="false" :validate-on-rule-change="false" class="login-form"
+          @submit.prevent>
           <!-- 用户名输入框 -->
           <el-form-item class="username-input">
             <el-input v-model="loginForm.username" :placeholder="t('auth.username')" size="large">
@@ -263,7 +267,7 @@ const handleRegister = async () => {
 
           <!-- 密码输入框（使用自定义 PasswordInput 组件） -->
           <el-form-item class="password-input">
-            <PasswordInput v-model="loginForm.password" :placeholder="t('auth.password')" @enter="login"/>
+            <PasswordInput v-model="loginForm.password" :placeholder="t('auth.password')" @enter="login" />
           </el-form-item>
         </el-form>
       </div>
@@ -290,7 +294,7 @@ const handleRegister = async () => {
       <div class="register-container">
         <!-- 关闭按钮：点击返回登录面（步骤4除外） -->
         <el-button v-if="registerStep !== 4" class="close-flip-btn" :icon="Close" circle @click="onUnflip" />
-        
+
         <!-- 注册头部：进度条和标题 -->
         <div class="register-header">
           <div class="progress-section">
@@ -331,8 +335,8 @@ const handleRegister = async () => {
                       </el-icon><span>{{ t('common.change') }}</span></div>
                   </div>
                   <!-- 默认头像预览 -->
-                  <div v-else-if="defaultAvatarUrl" class="avatar-preview-lg"><img
-                      :src="defaultAvatarUrl" class="avatar-img" />
+                  <div v-else-if="defaultAvatarUrl" class="avatar-preview-lg"><img :src="defaultAvatarUrl"
+                      class="avatar-img" />
                     <div class="edit-mask-lg"><el-icon>
                         <Camera />
                       </el-icon><span>{{ t('common.change') }}</span></div>
@@ -358,9 +362,9 @@ const handleRegister = async () => {
                     v-model="registerForm.nickname" :placeholder="t('auth.nickname_placeholder')" size="large"
                     :prefix-icon="Edit" @keydown.enter.prevent="nextStep" /></el-form-item>
                 <!-- 用户名输入框 -->
-                <el-form-item :label="t('auth.username')" prop="username" class="username-input" ><el-input v-model="registerForm.username"
-                    :placeholder="t('auth.username_placeholder')" size="large" :prefix-icon="User"
-                    @keydown.enter.prevent="nextStep" /></el-form-item>
+                <el-form-item :label="t('auth.username')" prop="username" class="username-input"><el-input
+                    v-model="registerForm.username" :placeholder="t('auth.username_placeholder')" size="large"
+                    :prefix-icon="User" @keydown.enter.prevent="nextStep" /></el-form-item>
               </div>
             </div>
             <!-- 步骤3：密码设置 -->
@@ -369,12 +373,12 @@ const handleRegister = async () => {
                 <!-- 密码输入框 -->
                 <el-form-item :label="t('auth.password')" prop="password" class="password-input">
                   <PasswordInput v-model="registerForm.password" :placeholder="t('auth.password_hint')"
-                    @enter="handleRegister" />
+                    @keyup.enter="handleRegister" />
                 </el-form-item>
                 <!-- 确认密码输入框 -->
                 <el-form-item :label="t('auth.confirm_password')" prop="confirmPassword" class="confirm-password-input">
                   <PasswordInput v-model="registerForm.confirmPassword"
-                    :placeholder="t('auth.confirm_password_placeholder')" @enter="handleRegister" />
+                    :placeholder="t('auth.confirm_password_placeholder')" @keyup.enter="handleRegister" />
                 </el-form-item>
               </div>
             </div>
@@ -413,8 +417,8 @@ const handleRegister = async () => {
             <!-- 步骤4：结果页面按钮 -->
             <template v-else>
               <!-- 失败时显示重试按钮 -->
-              <el-button v-if="!registrationResult.success" @click="registerStep = 1"
-                class="step-btn-half">{{ t('common.retry') }}</el-button>
+              <el-button v-if="!registrationResult.success" @click="registerStep = 1" class="step-btn-half">{{
+                t('common.retry') }}</el-button>
               <!-- 成功时显示完整宽度登录按钮，失败时显示一半宽度 -->
               <el-button type="primary" @click="onUnflip"
                 :class="registrationResult.success ? 'step-btn-full' : 'step-btn-half'">{{ t('auth.login_now')
@@ -755,7 +759,8 @@ html.dark .has-shadow {
 .placeholder-square-lg {
   width: 150px;
   height: 150px;
-  border-radius: calc(150px * var(--avatar-border-radius-ratio)); /* 45px (30%) */
+  border-radius: calc(150px * var(--avatar-border-radius-ratio));
+  /* 45px (30%) */
   overflow: hidden;
   position: relative;
   cursor: pointer;

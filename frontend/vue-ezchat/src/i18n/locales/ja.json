@@ -109,13 +109,16 @@
     "chat_code_required": "ルームコードを入力してください。",
     "chat_code_format": "ルームコードは8桁の数字でなければなりません。",
     "invite_url_required": "招待リンクを入力してください。",
-    "invite_url_format": "無効な招待リンク形式です。"
+    "invite_url_format": "無効な招待リンク形式です。",
+    "image_upload_limit": "画像のアップロード件数が上限に達しました。"
   },
   "api": {
     "too_many_requests": "リクエストが速すぎます。少しお待ちください。",
     "unexpected_error": "予期せぬエラーが発生しました。",
     "already_exists": "「{info}」は既に使用されています。",
     "data_already_exists": "このデータは既に存在します。",
+    "you_have_already_in_this_room": "既にこのルームに参加しています。重複して参加しないでください。",
+    "is_already_exist": " は既に存在します。",
     "not_member": "アクセス権限がありません：このチャットルームのメンバーではありません。",
     "room_not_found": "ルームが存在しないか、既に解散されています。",
     "input_too_long": "入力が文字数制限を超えています。",
@@ -139,7 +142,7 @@
     "http_503": "サービスが一時的に利用できません",
     "http_504": "ゲートウェイタイムアウト",
     "errors": {
-      "42001": "ルームが見つからないか、既に削除されています。",
+      "42001": "ルームが見つからないか\n既に解散されています。",
       "40300": "参加が無効になっているか、パスワードログインが有効になっていません。",
       "42003": "パスワードが必要です。",
       "42004": "パスワードが正しくありません。",
@@ -170,7 +173,9 @@
     "create_room": "ルーム作成",
     "join_room": "ルームに参加",
     "no_chats": "チャットがありません",
-    "just_now": "たった今"
+    "just_now": "たった今",
+    "friends_view": "友達",
+    "chat_view": "チャット"
   },
   "welcome": {
     "title": "EZ Chatへようこそ",
@@ -209,6 +214,7 @@
     "ws_closed": "オフライン",
     "ws_unknown": "不明",
     "ws_send_error": "送信に失敗しました。もう一度お試しください。",
+    "ws_reconnecting": "Websocket接続が切れました。再接続中...",
     "join_chat": "チャットルームに参加",
     "password_mode": "パスワード参加",
     "invite_mode": "招待コード参加",
@@ -267,5 +273,29 @@
     "one_time_link": "ワンタイムリンク",
     "custom_date": "カスタム日時",
     "day_n": "{n} 日"
+  },
+  "join_page": {
+    "invitation_confirmed": "招待が確認されました",
+    "welcome_to_chatroom": "チャットルームへようこそ",
+    "welcome_description": "友達とつながり、経験を共有し、一緒に楽しくチャットしましょう",
+    "members": "メンバー",
+    "room_id_prefix": "ID:",
+    "have_account": "すでにアカウントをお持ちですか？",
+    "login": "ログイン",
+    "temporary_use": "一時的に利用しますか？",
+    "guest_mode": "ゲストモード",
+    "guest_mode_title": "ゲストモード",
+    "guest_mode_description": "ゲストとして参加、オフライン時にセッションが切れます",
+    "click_to_upload_avatar": "クリックしてアバターをアップロード",
+    "enter_nickname": "ニックネームを入力してください",
+    "join_chat": "今すぐ参加",
+    "welcome_back": "おかえりなさい",
+    "login_and_join_description": "ログイン後、自動的にこのルームに参加します",
+    "username": "ユーザーID",
+    "password": "パスワード",
+    "login_and_join": "ログインして参加",
+    "no_account": "アカウントをお持ちでない方は",
+    "register": "「新規登録」",
+    "validation_expired": "招待情報が期限切れです。再度確認してください"
   }
 }

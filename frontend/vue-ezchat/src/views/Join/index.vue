@@ -1,77 +1,111 @@
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted } from 'vue'
-  import { useI18n } from 'vue-i18n'
-  import { useRouter } from 'vue-router'
-  import { storeToRefs } from 'pinia'
-  import { useAppStore } from '@/stores/appStore.ts'
-  import { useJoinChat } from '@/hooks/useJoinChat.ts'
-  import useLogin from '@/hooks/useLogin.ts'
-  import AppLogo from '@/components/AppLogo.vue'
-  import SmartAvatar from '@/components/SmartAvatar.vue'
-  import PasswordInput from '@/components/PasswordInput.vue'
-  import { Moon, Sunny, User, Camera, Picture, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
-  
-  const { locale, t } = useI18n()
-  const router = useRouter()
-  const appStore = useAppStore()
-  const { isDark } = storeToRefs(appStore)
-  const { setFavicon, removeFavicon } = appStore
-  
-  const currentLangCode = {
-    en: 'EN',
-    ja: 'JP',
-    zh: 'CN',
-    ko: 'KO',
-    'zh-tw': 'TW',
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.ts'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useJoinChat } from '@/hooks/useJoinChat.ts'
+import useLogin from '@/hooks/useLogin.ts'
+import AppLogo from '@/components/AppLogo.vue'
+import SmartAvatar from '@/components/SmartAvatar.vue'
+import PasswordInput from '@/components/PasswordInput.vue'
+import { Moon, Sunny, User, Camera, Picture, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
+import { showAlertDialog } from '@/components/dialogs/AlertDialog'
+
+const { locale, t } = useI18n()
+const router = useRouter()
+const appStore = useAppStore()
+const userStore = useUserStore()
+const { validatedChatRoom } = storeToRefs(userStore)
+const { isDark } = storeToRefs(appStore)
+const { setFavicon, removeFavicon } = appStore
+
+const currentLangCode = {
+  en: 'EN',
+  ja: 'JP',
+  zh: 'CN',
+  ko: 'KO',
+  'zh-tw': 'TW',
+}
+
+const {
+  guestNickname,
+  guestAvatar,
+  isLoading,
+  handleGuestJoin,
+  handleLoginJoin,
+  handleAvatarSuccess,
+  defaultAvatarUrl,
+  initDefaultAvatarUrl,
+} = useJoinChat()
+
+// 登录表单状态（使用 useLogin hook）
+const { loginForm, resetLoginForm: resetLoginFormFromHook } = useLogin()
+
+// 模式切换（UI 逻辑）
+const showLoginMode = ref(false)
+
+// 页面内容是否准备好显示（只有验证通过后才显示）
+const isPageReady = ref(false)
+
+// 页面加载时初始化业务数据和 UI
+onMounted(async () => {
+  setFavicon()
+
+  // 先显示 loading 遮蔽层
+  appStore.loadingText = t('common.loading') || 'Loading...'
+  appStore.showLoadingSpinner = true
+  appStore.isAppLoading = true
+
+  // 等待 DOM 更新，确保 loading 遮蔽层已渲染
+  await nextTick()
+
+  if (!validatedChatRoom.value) {
+    // 验证信息已失效（可能是用户刷新了页面），提示用户重新验证
+    // Alert 会在 loading 遮蔽层之上显示
+    await showAlertDialog({
+      message: t('join_page.validation_expired') || 'Validation information has expired, please verify again',
+      type: 'info',
+    })
+    // 关闭 loading 后跳转（不显示页面内容）
+    appStore.isAppLoading = false
+    appStore.showLoadingSpinner = false
+    appStore.loadingText = ''
+    router.replace('/').catch(() => { })
+    return
   }
 
-  const {
-    guestNickname,
-    guestAvatar,
-    isLoading,
-    handleGuestJoin,
-    handleLoginJoin,
-    handleAvatarSuccess,
-    roomInfo,
-    defaultAvatarUrl,
-    initRoomInfo,
-    initDefaultAvatarUrl,
-  } = useJoinChat()
-  
-  // 登录表单状态（使用 useLogin hook）
-  const { loginForm, resetLoginForm: resetLoginFormFromHook } = useLogin()
-  
-  // 模式切换（UI 逻辑）
-  const showLoginMode = ref(false)
-  
-  // 页面加载时初始化业务数据和 UI
-  onMounted(() => {
-    setFavicon()
-    initDefaultAvatarUrl()
-    initRoomInfo()
-  })
+  // 验证信息存在，允许显示页面内容
+  isPageReady.value = true
+  initDefaultAvatarUrl()
+  // 关闭 loading 并继续初始化
+  appStore.isAppLoading = false
+  appStore.showLoadingSpinner = false
+  appStore.loadingText = ''
+})
 
-  onUnmounted(() => {
-    removeFavicon()
-  })
-  
-  // 处理加入（根据模式调用不同的函数）
-  const handleJoin = async () => {
-    if (showLoginMode.value) {
-      await handleLoginJoin(loginForm.username, loginForm.password)
-    } else {
-      await handleGuestJoin()
-    }
+onUnmounted(() => {
+  removeFavicon()
+})
+
+// 处理加入（根据模式调用不同的函数）
+const handleJoin = async () => {
+  if (showLoginMode.value) {
+    await handleLoginJoin(loginForm)
+  } else {
+    await handleGuestJoin()
   }
-  
-  // 导航到注册页面
-  const handleGoToRegister = () => {
-    router.push({ path: '/', query: { register: 'true' } })
-  }
+}
+
+// 导航到注册页面
+const handleGoToRegister = () => {
+  router.push({ path: '/', query: { register: 'true' } })
+}
 </script>
 
 <template>
-  <div class="join-root">
+  <div class="join-root" v-if="isPageReady">
     <div class="page-wrapper">
       <div class="bg-blobs">
         <div class="blob blob-1"></div>
@@ -121,31 +155,32 @@
                   <el-icon class="status-icon">
                     <CircleCheckFilled />
                   </el-icon>
-                  <span>邀请已确认</span>
+                  <span>{{ t('join_page.invitation_confirmed') }}</span>
                 </div>
 
                 <h3 class="welcome-title">
-                  欢迎加入聊天室
+                  {{ t('join_page.welcome_to_chatroom') }}
                 </h3>
                 <p class="welcome-desc">
-                  与朋友们一起交流分享，开启愉快的聊天体验
+                  {{ t('join_page.welcome_description') }}
                 </p>
               </div>
 
               <div class="room-card-preview">
                 <div class="room-avatar-wrapper">
-                  <SmartAvatar :thumb-url="roomInfo.avatar?.objectThumbUrl" :url="roomInfo.avatar?.objectUrl"
-                    :text="roomInfo.chatName" :size="100" shape="square" class="room-avatar" />
+                  <SmartAvatar :thumb-url="validatedChatRoom?.avatar?.objectThumbUrl"
+                    :url="validatedChatRoom?.avatar?.objectUrl" :text="validatedChatRoom?.chatName" :size="100"
+                    shape="square" class="room-avatar" />
                 </div>
 
                 <div class="room-details">
-                  <h2 class="room-name">{{ roomInfo.chatName }}</h2>
+                  <h2 class="room-name">{{ validatedChatRoom?.chatName }}</h2>
                   <span class="meta-badge">
                     <el-icon>
                       <User />
-                    </el-icon> {{ roomInfo.memberCount }} Members
+                    </el-icon> {{ validatedChatRoom?.memberCount }} {{ t('join_page.members') }}
                   </span>
-                  <p class="room-code">ID: {{ roomInfo.chatCode }}</p>
+                  <p class="room-code">{{ t('join_page.room_id_prefix') }} {{ validatedChatRoom?.chatCode }}</p>
                 </div>
               </div>
             </div>
@@ -155,22 +190,22 @@
             <!-- 模式切换文字链接（右上角） -->
             <div class="mode-toggle-link">
               <template v-if="!showLoginMode">
-                <span class="text-muted">关联已有账号？</span>
-                <a class="link-btn" @click="showLoginMode = true">登录并加入</a>
+                <span class="text-muted">{{ t('join_page.have_account') }}</span>
+                <a class="link-btn" @click="showLoginMode = true">{{ t('join_page.login') }}</a>
               </template>
               <template v-else>
-                <span class="text-muted">只想临时加入？</span>
-                <a class="link-btn" @click="showLoginMode = false">访客身份加入</a>
+                <span class="text-muted">{{ t('join_page.temporary_use') }}</span>
+                <a class="link-btn" @click="showLoginMode = false">{{ t('join_page.guest_mode') }}</a>
               </template>
             </div>
-            
+
             <Transition name="fade-slide" mode="out-in">
 
               <div v-if="!showLoginMode" key="guest" class="form-container">
                 <div class="form-content">
                   <div class="form-header">
-                    <h3>访客模式</h3>
-                    <p>以访客身份加入，离线后失效</p>
+                    <h3>{{ t('join_page.guest_mode_title') }}</h3>
+                    <p>{{ t('join_page.guest_mode_description') }}</p>
                   </div>
 
                   <div class="avatar-upload-area">
@@ -186,7 +221,7 @@
                               <Picture />
                             </el-icon>
                           </div>
-                          <span class="upload-text">点击上传头像</span>
+                          <span class="upload-text">{{ t('join_page.click_to_upload_avatar') }}</span>
                         </div>
 
                         <div class="hover-mask">
@@ -196,16 +231,18 @@
                         </div>
                       </div>
                     </el-upload>
+                    <p class="text-muted">{{ t('join_page.click_to_upload_avatar') }}</p>
                   </div>
 
                   <div class="input-group">
-                    <el-input v-model="guestNickname" placeholder="请输入昵称" class="custom-input" />
+                    <el-input v-model="guestNickname" :placeholder="t('join_page.enter_nickname')"
+                      class="custom-input" />
                   </div>
                 </div>
 
                 <div class="form-footer">
                   <el-button :loading="isLoading" type="primary" class="action-btn" @click="handleJoin">
-                    加入聊天
+                    {{ t('join_page.join_chat') }}
                     <el-icon class="el-icon--right">
                       <ArrowRight />
                     </el-icon>
@@ -216,32 +253,34 @@
               <div v-else key="login" class="form-container">
                 <div class="form-content">
                   <div class="form-header">
-                    <h3>欢迎回来</h3>
-                    <p>登录后，将自动加入此房间</p>
+                    <h3>{{ t('join_page.welcome_back') }}</h3>
+                    <p>{{ t('join_page.login_and_join_description') }}</p>
                   </div>
 
                   <div class="input-group vertical">
-                    <el-input class="username-input" v-model="loginForm.username" placeholder="用户名" size="large">
+                    <el-input class="username-input" v-model="loginForm.username" :placeholder="t('join_page.username')"
+                      size="large">
                       <template #prefix><el-icon>
                           <User />
                         </el-icon></template>
                     </el-input>
 
-                    <PasswordInput class="password-input" v-model="loginForm.password" placeholder="密码" />
+                    <PasswordInput class="password-input" v-model="loginForm.password"
+                      :placeholder="t('join_page.password')" />
                   </div>
                 </div>
 
                 <div class="form-footer form-footer-login">
                   <el-button :loading="isLoading" type="primary" class="action-btn" @click="handleJoin">
-                    登录并加入
+                    {{ t('join_page.login_and_join') }}
                     <el-icon class="el-icon--right">
                       <ArrowRight />
                     </el-icon>
                   </el-button>
-                  
+
                   <div class="signup-link-wrapper">
-                    <span class="signup-text">没有账号？</span>
-                    <a class="signup-btn" @click="handleGoToRegister">「注册」</a>
+                    <span class="signup-text">{{ t('join_page.no_account') }}</span>
+                    <a class="signup-btn" @click="handleGoToRegister">{{ t('join_page.register') }}</a>
                   </div>
                 </div>
               </div>
@@ -523,27 +562,27 @@ html.dark .glass-btn:hover {
   color: #10b981;
 }
 
-  .welcome-title {
-    font-size: 30px;
-    font-weight: 800;
-    color: var(--text-main);
-    margin: 0 0 16px 0;
-    letter-spacing: 0.5px;
-    background: linear-gradient(135deg, var(--text-main) 0%, var(--text-sub) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1.3;
-  }
-  
-  .welcome-desc {
-    font-size: 16px;
-    color: var(--text-sub);
-    line-height: 1.8;
-    max-width: 380px;
-    margin: 0 auto;
-    opacity: 0.9;
-  }
+.welcome-title {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 16px 0;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, var(--text-main) 0%, var(--text-sub) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.3;
+}
+
+.welcome-desc {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.8;
+  max-width: 420px;
+  margin: 0 auto;
+  opacity: 0.9;
+}
 
 /* 房间小卡片 */
 .room-card-preview {
@@ -722,15 +761,19 @@ html.dark .right-section {
   min-height: 70px;
 }
 
+.form-header {
+  margin-top: 16px;
+}
+
 .form-header h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 2px;
 }
 
 .form-header p {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text-sub);
   margin-bottom: 16px;
 }
@@ -738,8 +781,16 @@ html.dark .right-section {
 /* 头像上传样式优化 */
 .avatar-upload-area {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   margin-bottom: 2px;
+}
+
+.avatar-upload-area .text-muted {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 4px;
+  text-align: center;
 }
 
 .avatar-uploader {
@@ -751,7 +802,8 @@ html.dark .right-section {
 .avatar-wrapper {
   width: 90px;
   height: 90px;
-  border-radius: calc(90px * var(--avatar-border-radius-ratio)); /* 27px (30%) */
+  border-radius: calc(90px * var(--avatar-border-radius-ratio));
+  /* 27px (30%) */
   background: var(--input-bg);
   border: 2px solid var(--input-border);
   position: relative;
@@ -830,7 +882,7 @@ html.dark .icon-circle {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 2px;
 }
 
 .input-group.vertical {
@@ -883,7 +935,7 @@ html.dark .icon-circle {
   position: absolute;
   top: 24px;
   right: 24px;
-  font-size: 14px;
+  font-size: 11px;
   z-index: 10;
   /* 确保模式切换区域有足够的独立空间 */
   line-height: 1.5;
@@ -911,7 +963,7 @@ html.dark .icon-circle {
 .signup-link-wrapper {
   margin-top: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: 10px;
 }
 
 /* Footer 内的注册引导区域 */
@@ -928,7 +980,7 @@ html.dark .icon-circle {
   font-weight: 700;
   cursor: pointer;
   margin-left: 4px;
-  font-size: 16px;
+  font-size: 12px;
   transition: all 0.2s;
   text-decoration: none;
 }

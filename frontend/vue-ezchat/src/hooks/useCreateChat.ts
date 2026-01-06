@@ -455,7 +455,11 @@ export const useCreateChat = () => {
 
   // 4. 提交包装函数
   const handleCreate = async () => {
-    if (!await validateStep(3)) return
+    if (!await validateStep(3)) {
+      // 
+      ElMessage.error(t(''))
+      return
+    }
     isCreating.value = true
     try {
       await createFormRef.value!.validate()

@@ -1,7 +1,7 @@
 /* =========================================
    自定义 EZ Dialog (ElMessageBox)
    ========================================= */
-.ez-logout-dialog {
+.ez-dialog {
   border-radius: var(--radius-lg) !important;
   padding: 24px !important;
   box-shadow: var(--shadow-glass) !important;
@@ -13,18 +13,33 @@
   transition: all 0.3s ease;
 }
 
-.ez-logout-dialog .el-message-box__header { padding-bottom: 12px; text-align: left; }
-.ez-logout-dialog .el-message-box__title { font-size: 18px; font-weight: 800; color: var(--text-900); }
-.ez-logout-dialog .el-message-box__content { font-size: 15px; color: var(--text-700); padding: 10px 0 24px; text-align: center; }
-.ez-logout-dialog .el-message-box__btns { display: flex; justify-content: space-between; gap: 16px; width: 100%; padding-top: 0; }
+.ez-dialog .el-message-box__header { padding-bottom: 12px; text-align: left; }
+.ez-dialog .el-message-box__title { font-size: 18px; font-weight: 800; color: var(--text-900); }
+.ez-dialog .el-message-box__content { font-size: 14px; color: var(--text-700); padding: 10px 0 24px; text-align: center; }
+/* 按钮容器：右对齐 */
+.ez-dialog .el-message-box__btns { display: flex; justify-content: flex-end; gap: 12px; width: 100%; padding-top: 0; }
 
-.ez-logout-dialog .ez-dialog-btn {
-  border-radius: var(--radius-base); padding: 10px 0; font-weight: 700; height: 44px; flex: 1; margin: 0 !important;
+.ez-dialog .ez-dialog-btn {
+  border-radius: var(--radius-base); padding: 10px 24px; font-weight: 700; height: 44px; margin: 0 !important;
   border: 1px solid var(--el-border-color-light); background: var(--bg-page); color: var(--text-700);
+  min-width: 100px;
 }
-.ez-logout-dialog .ez-dialog-btn:hover { background: var(--bg-card); color: var(--text-900); }
-.ez-logout-dialog .el-button--danger { background: #fee2e2 !important; border: none !important; color: #dc2626 !important; }
-html.dark .ez-logout-dialog .el-button--danger { background: #450a0a !important; color: #f87171 !important; }
+.ez-dialog .ez-dialog-btn:hover { background: var(--bg-card); color: var(--text-900); }
+
+/* Primary 按钮样式：使用系统蓝色 */
+.ez-dialog .ez-dialog-btn.el-button--primary {
+  background: var(--primary) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+.ez-dialog .ez-dialog-btn.el-button--primary:hover {
+  background: var(--primary-dark) !important;
+  color: #ffffff !important;
+}
+
+/* Danger 按钮样式：保持红色 */
+.ez-dialog .el-button--danger { background: #fee2e2 !important; border: none !important; color: #dc2626 !important; }
+html.dark .ez-dialog .el-button--danger { background: #450a0a !important; color: #f87171 !important; }
 
 /* =========================================
    自定义 EZ Notification

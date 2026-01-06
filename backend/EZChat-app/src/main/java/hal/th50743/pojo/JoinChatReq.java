@@ -36,12 +36,7 @@ public class JoinChatReq {
      * 不能与 chatCode/password 同时存在
      */
     private String inviteCode;
-    
-    /**
-     * 用户对外ID（已废弃，由后端从Token中获取）
-     * @deprecated 使用 CurrentHolder.getCurrentUid() 替代
-     */
-    @Deprecated
-    private String uid;
+
+    private Integer userId;
 
 }

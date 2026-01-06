@@ -1,15 +1,16 @@
-import {computed, ref} from 'vue'
-import {storeToRefs} from 'pinia'
-import {ElMessage, type UploadProps} from 'element-plus'
-import type {Message} from '@/type'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useMessageStore} from '@/stores/messageStore.ts' // 引入 messageStore
-import {Cooldown} from '@/utils/cooldown.ts'
+import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { ElMessage, type UploadProps } from 'element-plus'
+import type { Message } from '@/type'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useMessageStore } from '@/stores/messageStore.ts' // 引入 messageStore
+import { Cooldown } from '@/utils/cooldown.ts'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
 import { calculateObjectHash } from '@/utils/objectHash'
 import { checkObjectExistsApi } from '@/api/Media'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
+import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 import i18n from '@/i18n'
 
 const updateLock = new Cooldown(5000, 10, 10000)
@@ -17,7 +18,6 @@ const updateLock = new Cooldown(5000, 10, 10000)
 export const useChatInput = () => {
   const { t } = i18n.global
   const userStore = useUserStore()
-  const { loginUser } = storeToRefs(userStore)
 
   const messageStore = useMessageStore() // 使用 messageStore
 
@@ -30,6 +30,7 @@ export const useChatInput = () => {
     images: [], // 存储已上传成功的图片对象
     createTime: '',
     tempId: '',
+    status: null, // 待发送消息初始状态为 null
   })
 
   // 新增：发送设置
@@ -67,8 +68,18 @@ export const useChatInput = () => {
       let rawHash: string
       try {
         rawHash = await calculateObjectHash(rawFile as File)
-      } catch (error) {
-        console.error('[ERROR] [beforePictureUpload] Failed to calculate hash:', error)
+      } catch (e) {
+        if (isAppError(e)) {
+          throw createAppError(
+            ErrorType.STATE,
+            'Failed to calculate hash',
+            {
+              severity: ErrorSeverity.ERROR,
+              component: 'useChatInput',
+              action: 'beforePictureUpload',
+              originalError: e
+            })
+        }
         // 哈希计算失败，降级为正常上传流程
         return await compressImage(rawFile as File)
       }
@@ -76,18 +87,28 @@ export const useChatInput = () => {
       // 1.3 调用比对接口，检查对象是否已存在
       try {
         const checkResult = await checkObjectExistsApi(rawHash)
-        
+
         if (checkResult.status === 1 && checkResult.data) {
           // 对象已存在，直接使用返回的 Image 对象
           // 注意：这里需要手动触发成功回调，因为 el-upload 不会自动触发
-          handlePictureSuccess(checkResult)
-          
+          // 直接添加图片到输入内容，避免调用需要3个参数的 handlePictureSuccess
+          inputContent.value.images.push(checkResult.data)
+
           // 返回 false 阻止 el-upload 实际上传对象
           return false
         }
-      } catch (error) {
-        console.error('[ERROR] [beforePictureUpload] Failed to check object existence:', error)
-        // 比对接口失败，降级为正常上传流程（继续上传）
+      } catch (e) {
+        if (isAppError(e)) {
+          throw createAppError(
+            ErrorType.STATE,
+            'Failed to check object existence',
+            {
+              severity: ErrorSeverity.ERROR,
+              component: 'useChatInput',
+              action: 'beforePictureUpload',
+              originalError: e
+            })
+        }
       }
 
       // 1.4 对象不存在或比对失败，继续正常上传流程
@@ -131,15 +152,14 @@ export const useChatInput = () => {
   const uploadHeaders = computed<{
     token: string
   }>(() => ({
-    token: loginUser.value.token
+    token: userStore.getAccessToken()
   }))
 
   const handleExceed = () => {
-    ElMessage.error('画像のアップロード件数が上限に達しました。')
+    ElMessage.warning(t('validation.image_upload_limit'))
   }
 
   return {
-    loginUser,
     inputContent,
     sendSettings,
     uploadHeaders,

@@ -49,6 +49,7 @@ html.dark {
   /* 核心优化：使用更稳重的钴蓝色 */
   --primary: #3b82f6;
   --primary-light: #131314;
+  --primary-dark: #2563eb;
 
   --text-900: #f1f3f4;
   --text-700: #e8eaed;

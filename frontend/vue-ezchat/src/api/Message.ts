@@ -1,4 +1,4 @@
-import type {ChatRoom, Message, Result} from '@/type'
+import type {ChatRoom, Message, Result, Image} from '@/type'
 import request from '@/utils/request.ts'
 
 export type GetMessageListApiReq = {
@@ -19,6 +19,32 @@ export const getMessageListApi = (
   messageList : Message[]
 }>> =>
   request.get('/message?chatCode=' + data.chatCode + '&timeStamp=' + data.createTime)
+
+/**
+ * 上传消息附件（如图片）
+ *
+ * - 后端接口：POST `/message/upload`
+ * - 业务目的：上传消息中的图片附件
+ * - 对应后端：MessageController.upload
+ *
+ * @param file 要上传的文件
+ * @param onUploadProgress 上传进度回调函数（可选）
+ * @returns 上传成功后的图片信息
+ */
+export const uploadMessageImageApi = (
+  file: File,
+  onUploadProgress?: (progressEvent: { loaded: number; total?: number }) => void
+): Promise<Result<Image>> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  return request.post('/message/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    onUploadProgress
+  })
+}
 
 /**
  * 删除已上传的图片对象（如果后端支持）

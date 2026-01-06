@@ -21,6 +21,7 @@
   const {
     joinChatCredentialsForm,
     joinChatCredentialsFormRules,
+    joinChatCredentialsFormRef,
     isLoading,
     isRoomIdPasswordMode,
     isInviteUrlMode,
@@ -83,7 +84,7 @@
             <el-form
               :model="joinChatCredentialsForm"
               :rules="joinChatCredentialsFormRules"
-              ref="joinFormRef"
+              :ref="joinChatCredentialsFormRef"
               label-position="top"
               class="join-form"
               hide-required-asterisk

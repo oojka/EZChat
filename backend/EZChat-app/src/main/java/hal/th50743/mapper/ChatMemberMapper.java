@@ -91,5 +91,5 @@ public interface ChatMemberMapper {
      * @param now    当前时间（用于 last_seen_at/create_time/update_time）
      * @return 影响行数（插入成功=1；已存在=0）
      */
-    int insertIgnore(@Param("chatId") Integer chatId, @Param("userId") Integer userId, @Param("now") LocalDateTime now);
+    void add(@Param("chatId") Integer chatId, @Param("userId") Integer userId, @Param("now") LocalDateTime now);
 }

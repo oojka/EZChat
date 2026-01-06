@@ -210,7 +210,7 @@ public class AuthServiceImpl implements AuthService {
                 guestReq.getChatCode(),
                 guestReq.getPassword(),
                 null, // inviteCode 为 null（密码模式）
-                userRes.getUid()
+                userRes.getId()
         );
 
         Chat chat = chatService.join(joinChatReq);
@@ -225,62 +225,6 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    /**
-     * 邀请码免密加入（访客）
-     *
-     * @param req 邀请加入请求
-     * @return LoginVO（包含 token）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    @Override
-    public LoginVO inviteGuest(InviteGuestReq req) {
-        if (req == null) throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
-        if (req.getInviteCode() == null || req.getInviteCode().trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "inviteCode is required");
-        }
-        if (req.getNickname() == null || req.getNickname().trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Nickname is required for guest access");
-        }
-
-        // 1) 验证邀请码并获取 chatId
-        String hash = InviteCodeUtils.sha256Hex(req.getInviteCode());
-        ChatInvite chatInvite = chatInviteMapper.findByCodeHash(hash);
-
-        if (chatInvite == null) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid or expired invite code");
-        }
-
-        // 2) 校验房间 join_enabled（关闭加入时，邀请码也不可用）
-        ChatJoinInfo joinInfo = chatService.getJoinInfo(chatInvite.getChatId());
-        if (joinInfo == null || joinInfo.getChatId() == null) {
-            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
-        }
-        if (joinInfo.getJoinEnabled() != null && joinInfo.getJoinEnabled() == 0) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat");
-        }
-
-        // 3) 消费邀请码（原子递增 used_count；过期/撤销/次数用尽都会失败）
-        int consumed = chatInviteMapper.consume(chatInvite.getChatId(), hash);
-        if (consumed <= 0) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid or expired invite code");
-        }
-
-        // 4) 创建临时用户
-        // 使用 setter 方法创建 User 对象（避免构造函数参数顺序问题）
-        User userReq = new User();
-        userReq.setNickname(req.getNickname());
-        userReq.setLastSeenAt(LocalDateTime.now());
-        userReq.setCreateTime(LocalDateTime.now());
-        userReq.setUpdateTime(LocalDateTime.now());
-        User userRes = userService.add(userReq);
-
-        // 5) 免密入群（即使房间设置了密码）
-        // 业务原因：邀请码已被消费，代表"免密加入权限"；因此此处不走 chatService.join 的密码校验分支
-        chatMemberMapper.insertIgnore(joinInfo.getChatId(), userRes.getId(), LocalDateTime.now());
-
-        // 6) 返回 JWT（访客无 username，用 nickname 作为标识）
-        return LoginVOBuilder.build(userRes.getUid(), userRes.getNickname(), jwtUtils);
-    }
 
     /**
      * 访客加入聊天室（支持头像）
@@ -301,7 +245,7 @@ public class AuthServiceImpl implements AuthService {
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public LoginVO guestJoin(GuestJoinReq req) {
+    public LoginVO joinChat(GuestJoinReq req) {
         log.info("访客尝试加入聊天室（支持头像）: nickName={}", req.getNickName());
 
         // 1. 参数验证
@@ -341,6 +285,7 @@ public class AuthServiceImpl implements AuthService {
             objectId = 1; // 默认头像ID
         }
 
+
         // 3. 创建临时访客用户
         User userReq = new User();
         userReq.setNickname(req.getNickName());
@@ -349,9 +294,9 @@ public class AuthServiceImpl implements AuthService {
         userReq.setCreateTime(LocalDateTime.now());
         userReq.setUpdateTime(LocalDateTime.now());
 
-        User userRes = userService.add(userReq);
+        User user = userService.add(userReq);
         log.info("创建访客用户成功: uid={}, nickName={}, objectId={}", 
-                userRes.getUid(), userRes.getNickname(), userRes.getObjectId());
+                user.getUid(), user.getNickname(), user.getObjectId());
 
         // 4. 执行加入聊天室逻辑
         Chat chat = null;
@@ -361,16 +306,13 @@ public class AuthServiceImpl implements AuthService {
                     req.getChatCode(),
                     req.getPassword(),
                     null, // inviteCode 为 null（密码模式）
-                    userRes.getUid()
+                    user.getId()
             );
             chat = chatService.join(joinChatReq);
-            log.info("密码模式加入聊天室: chatCode={}, uid={}", req.getChatCode(), userRes.getUid());
+            log.info("密码模式加入聊天室: chatCode={}, uid={}", req.getChatCode(), user.getUid());
         } else {
             // 邀请码模式：使用 inviteCode
             // 复用现有的 inviteGuest 逻辑，但使用已创建的用户
-            InviteGuestReq inviteReq = new InviteGuestReq();
-            inviteReq.setInviteCode(req.getInviteCode());
-            inviteReq.setNickname(req.getNickName());
             
             // 获取邀请码对应的聊天室信息
             String hash = InviteCodeUtils.sha256Hex(req.getInviteCode());
@@ -407,7 +349,7 @@ public class AuthServiceImpl implements AuthService {
             }
 
             // 免密入群（即使房间设置了密码）
-            chatMemberMapper.insertIgnore(chatInfo.getChatId(), userRes.getId(), LocalDateTime.now());
+            chatMemberMapper.add(chatInfo.getChatId(), user.getId(), LocalDateTime.now());
 
             // 获取聊天室信息
             chat = new Chat();
@@ -416,14 +358,14 @@ public class AuthServiceImpl implements AuthService {
             chat.setChatName(chatInfo.getChatName());
 
             log.info("邀请码模式加入聊天室: inviteCode={}, chatCode={}, uid={}",
-                    req.getInviteCode(), chatInfo.getChatCode(), userRes.getUid());
+                    req.getInviteCode(), chatInfo.getChatCode(), user.getUid());
         }
 
         if (chat != null && chat.getChatCode() != null) {
-            log.info("访客加入聊天室成功: uid={}, chatCode={}", userRes.getUid(), chat.getChatCode());
+            log.info("访客加入聊天室成功: uid={}, chatCode={}", user.getUid(), chat.getChatCode());
             
             // 构建 LoginVO：访客无 username，使用 nickname 作为标识构建 Token
-            return LoginVOBuilder.build(userRes.getUid(), userRes.getNickname(), jwtUtils);
+            return LoginVOBuilder.build(user.getUid(), user.getNickname(), jwtUtils);
         } else {
             log.error("访客加入聊天室失败");
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "加入聊天室失败");

@@ -8,7 +8,7 @@ import { Cooldown } from '@/utils/cooldown.ts'
 import { showAppNotification, showWelcomeNotification } from '@/components/notification.ts'
 import { useI18n } from 'vue-i18n'
 import { useCooldown } from '@/hooks/useCooldown.ts'
-import { type PasswordOptions, isValidUsername, isValidPassword} from '@/utils/validators.ts'
+import { type PasswordOptions, isValidUsername, isValidPassword } from '@/utils/validators.ts'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 import { ElMessage } from 'element-plus'
 
@@ -38,7 +38,6 @@ export default function () {
   const { t } = useI18n()                    // 国际化翻译函数
   const router = useRouter()                 // 路由实例，用于登录成功后导航
   const appStore = useAppStore()             // 应用状态管理
-  const { showLoadingSpinner } = storeToRefs(appStore) // 全局加载状态
   const { initializeApp } = appStore         // 应用初始化方法
 
   const userStore = useUserStore()           // 用户状态管理
@@ -93,33 +92,23 @@ export default function () {
       ElMessage.error(t('validation.password_Invalid') || 'Please enter a valid password.')
       return
     }
-
     // ==================== 步骤2：执行登录请求 ====================
     // 使用冷却机制包装登录逻辑，防止频繁尝试
+    isLoading.value = true
     tryExecute(
       async () => {
-        isLoading.value = true  // 开始加载，显示加载状态
+        // 开始加载，显示加载状态
         try {
           // 调用用户Store的登录方法
           const data = await userStore.loginRequest(loginForm.username, loginForm.password)
-          
+
+
           if (data) {
             // ==================== 步骤3：登录成功处理 ====================
             // 初始化应用状态（设置token、加载用户信息等）
-            await initializeApp(data.token, 'login')
-            
-            // 显示欢迎通知（如果用户信息已加载）
-            if (userStore.loginUserInfo) {
-              showWelcomeNotification(userStore.loginUserInfo)
-            }
-            
-            // 短暂延迟，让用户看到成功状态
-            await new Promise(resolve => setTimeout(resolve, 300))
-            
+            ElMessage.success(t('auth.login_success') || 'Login successful')
+            await initializeApp(userStore.getAccessToken(), 'login')
             // ==================== 步骤4：状态更新和导航 ====================
-            isLoading.value = false          // 清除按钮加载状态
-            showLoadingSpinner.value = true  // 显示全局加载动画
-            
             // 导航到聊天页面
             await router.push('/chat')
           }
@@ -143,9 +132,12 @@ export default function () {
         } finally {
           // ==================== 清理工作 ====================
           // 确保加载状态被正确清除
-          if (!showLoadingSpinner.value) {
+          setTimeout(() => {
             isLoading.value = false
-          }
+            appStore.isAppLoading = false
+            appStore.showLoadingSpinner = false
+            appStore.loadingText = ''
+          }, 300)
         }
       },
       // 冷却机制回调：当请求过于频繁时触发
@@ -176,12 +168,12 @@ export default function () {
   return {
     // 表单数据
     loginForm,        // 登录表单数据（双向绑定）
-    
+
     // 状态
     isLoading,        // 登录按钮加载状态
     isLocked,         // 冷却锁定状态（true表示被锁定）
     secondsLeft,      // 冷却剩余秒数（当isLocked为true时有效）
-    
+
     // 方法
     login,            // 执行登录操作
     resetLoginForm    // 重置登录表单

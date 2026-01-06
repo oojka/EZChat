@@ -1,19 +1,39 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { ChatLineRound, Connection, Right, Search, Ticket } from '@element-plus/icons-vue'
 import { useJoinChat } from '@/hooks/useJoinChat.ts'
 import { useI18n } from 'vue-i18n'
 import PasswordInput from '@/components/PasswordInput.vue'
+import type { FormInstance } from 'element-plus'
 
 const { t } = useI18n()
 const props = defineProps<{ active: boolean; flipped: boolean }>()
 const emit = defineEmits<{ (e: 'flip'): void; (e: 'unflip'): void }>()
 const { joinChatCredentialsForm, joinChatCredentialsFormRules, handleValidate, resetJoinForm, isValidating } = useJoinChat()
 
+// 表单 ref，用于清除校验
+const joinFormRef = ref<FormInstance>()
+
+// 翻面时重置表单和校验
 const onFlip = () => { 
-  resetJoinForm(); 
+  resetJoinForm()
+  joinFormRef.value?.clearValidate()
   emit('flip')
 }
-const onUnflip = () => { emit('unflip'); setTimeout(() => resetJoinForm(), 800) }
+
+// 取消翻面时重置表单和校验
+const onUnflip = () => { 
+  emit('unflip')
+  setTimeout(() => {
+    resetJoinForm()
+    joinFormRef.value?.clearValidate()
+  }, 800)
+}
+
+// 监听模式切换，清除校验
+watch(() => joinChatCredentialsForm.value.joinMode, () => {
+  joinFormRef.value?.clearValidate()
+})
 </script>
 
 <template>
@@ -50,7 +70,7 @@ const onUnflip = () => { emit('unflip'); setTimeout(() => resetJoinForm(), 800) 
         <div class="form-header">
           <h4>{{ t('guest.join_title') }}</h4>
         </div>
-        <el-form :model="joinChatCredentialsForm" @submit.prevent class="join-form"
+        <el-form ref="joinFormRef" :model="joinChatCredentialsForm" @submit.prevent class="join-form"
           :rules="joinChatCredentialsFormRules">
           <div class="tab-section">
             <el-radio-group v-model="joinChatCredentialsForm.joinMode" class="modern-tabs-small" size="small">
@@ -62,16 +82,16 @@ const onUnflip = () => { emit('unflip'); setTimeout(() => resetJoinForm(), 800) 
             <div v-if="joinChatCredentialsForm.joinMode === 'roomId/password'" class="input-group id-mode">
               <el-form-item class="mb-0" prop="chatCode">
                 <el-input v-model="joinChatCredentialsForm.chatCode" :placeholder="t('guest.input_id')" size="large"
-                  :prefix-icon="Search" />
+                  :prefix-icon="Search" @keyup.enter="handleValidate" />
               </el-form-item>
               <el-form-item class="mb-0" prop="password">
-                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('guest.input_pw')" />
+                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('guest.input_pw')" @keyup.enter="handleValidate" />
               </el-form-item>
             </div>
             <div v-else class="input-group link-mode">
               <el-form-item class="mb-0" prop="inviteUrl">
                 <el-input v-model="joinChatCredentialsForm.inviteUrl" :placeholder="t('guest.input_url')" size="large"
-                  :prefix-icon="Connection" type="textarea" :rows="4" resize="none" class="url-textarea" />
+                  :prefix-icon="Connection" type="textarea" :rows="4" resize="none" class="url-textarea" @keyup.enter="handleValidate" />
               </el-form-item>
             </div>
           </div>

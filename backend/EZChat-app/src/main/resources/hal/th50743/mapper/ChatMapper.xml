@@ -55,6 +55,12 @@
         FROM chats
         WHERE id = #{chatId}
     </select>
+    <select id="getChatIdByInviteCodeHash" resultType="java.lang.Integer">
+        SELECT i.chat_id
+        FROM chat_invites i
+         JOIN chats c ON i.chat_id = c.id
+        WHERE i.code_hash = #{codeHash}
+    </select>
 
     <insert id="insertChat" parameterType="hal.th50743.pojo.ChatCreate" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chats

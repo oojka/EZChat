@@ -57,11 +57,11 @@ public class ChatServiceImpl implements ChatService {
     /**
      * 核心复用方法：组装单个 ChatVO 的公共数据
      */
-    private void assembleChatVO(ChatVO c,
-                                Map<Integer, Session> onlineUsers,
-                                MessageVO lastMsg,
-                                Integer unreadCount,
-                                List<ChatMember> members) {
+    private void chatVOBuilder(ChatVO c,
+                               Map<Integer, Session> onlineUsers,
+                               MessageVO lastMsg,
+                               Integer unreadCount,
+                               List<ChatMember> members) {
         // A. 头像处理
         if (c.getAvatarObjectName() != null) {
             c.setAvatar(ImageUtils.buildImage(c.getAvatarObjectName(), minioOSSOperator));
@@ -69,34 +69,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         // B. 最后消息处理
-        if (lastMsg != null) {
-            String objectIdsJson = lastMsg.getObjectIds();
-            if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
-                try {
-                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
-                    List<Image> images = new ArrayList<>();
-                    for (Integer objectId : objectIds) {
-                        FileEntity objectEntity = fileService.findById(objectId);
-                        if (objectEntity != null) {
-                            Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
-                            if (image != null) {
-                                image.setObjectId(objectId);
-                                images.add(image);
-                            }
-                        }
-                    }
-                    lastMsg.setImages(images);
-                } catch (JsonProcessingException e) {
-                    log.error("反序列化最后消息的图片对象ID列表失败: {}", objectIdsJson, e);
-                    lastMsg.setImages(Collections.emptyList());
-                }
-            }
-            lastMsg.setObjectIds(null);
-            c.setLastMessage(lastMsg);
-            c.setLastActiveAt(lastMsg.getCreateTime());
-        } else {
-            c.setLastActiveAt(c.getCreateTime());
-        }
+        lastMessageBuilder(c, lastMsg);
 
         // C. 未读数挂载
         c.setUnreadCount(unreadCount != null ? unreadCount : 0);
@@ -110,22 +83,26 @@ public class ChatServiceImpl implements ChatService {
                 boolean isOnline = m.getUserId() != null && onlineUsers.containsKey(m.getUserId());
                 if (isOnline) onlineCount++;
 
-                ChatMemberVO vo = new ChatMemberVO();
-                vo.setUid(m.getUid());
-                vo.setNickname(m.getNickname());
-                vo.setOnline(isOnline);
-                vo.setLastSeenAt(m.getLastSeenAt());
-
-                if (m.getAvatarObjectName() != null) {
-                    vo.setAvatar(ImageUtils.buildImage(m.getAvatarObjectName(), minioOSSOperator));
-                }
-
-                memberVOList.add(vo);
+                chatMemberVOBuilder(memberVOList, m, isOnline);
             }
 
             c.setOnLineMemberCount(onlineCount);
             c.setChatMembers(memberVOList);
         }
+    }
+
+    private void chatMemberVOBuilder(List<ChatMemberVO> memberVOList, ChatMember m, boolean isOnline) {
+        ChatMemberVO vo = new ChatMemberVO();
+        vo.setUid(m.getUid());
+        vo.setNickname(m.getNickname());
+        vo.setOnline(isOnline);
+        vo.setLastSeenAt(m.getLastSeenAt());
+
+        if (m.getAvatarObjectName() != null) {
+            vo.setAvatar(ImageUtils.buildImage(m.getAvatarObjectName(), minioOSSOperator));
+        }
+
+        memberVOList.add(vo);
     }
 
     /**
@@ -136,15 +113,7 @@ public class ChatServiceImpl implements ChatService {
         List<ChatMemberVO> memberVOList = new ArrayList<>();
         for (ChatMember m : members) {
             boolean isOnline = m.getUserId() != null && onlineUsers.containsKey(m.getUserId());
-            ChatMemberVO vo = new ChatMemberVO();
-            vo.setUid(m.getUid());
-            vo.setNickname(m.getNickname());
-            vo.setOnline(isOnline);
-            vo.setLastSeenAt(m.getLastSeenAt());
-            if (m.getAvatarObjectName() != null) {
-                vo.setAvatar(ImageUtils.buildImage(m.getAvatarObjectName(), minioOSSOperator));
-            }
-            memberVOList.add(vo);
+            chatMemberVOBuilder(memberVOList, m, isOnline);
         }
         return memberVOList;
     }
@@ -164,7 +133,8 @@ public class ChatServiceImpl implements ChatService {
         Map<String, List<ChatMember>> chatMemberMap = allMembers.stream()
                 .collect(Collectors.groupingBy(ChatMember::getChatCode));
 
-        Map<String, Integer> unreadCountMap = messageMapper.getUnreadCountMapByUserId(userId).stream()
+        Map<String, Integer> unreadCountMap;
+        unreadCountMap = messageMapper.getUnreadCountMapByUserId(userId).stream()
                 .collect(Collectors.toMap(
                         row -> (String) row.get("chatCode"),
                         row -> ((Number) row.get("unreadCount")).intValue(),
@@ -180,7 +150,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         for (ChatVO c : chatVOList) {
-            assembleChatVO(c,
+            chatVOBuilder(c,
                     onlineUsers,
                     lastMessageMap.get(c.getChatCode()),
                     unreadCountMap.get(c.getChatCode()),
@@ -226,34 +196,7 @@ public class ChatServiceImpl implements ChatService {
             }
 
             MessageVO lastMsg = lastMessageMap.get(c.getChatCode());
-            if (lastMsg != null) {
-                String objectIdsJson = lastMsg.getObjectIds();
-                if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
-                    try {
-                        List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
-                        List<Image> images = new ArrayList<>();
-                        for (Integer objectId : objectIds) {
-                            FileEntity objectEntity = fileService.findById(objectId);
-                            if (objectEntity != null) {
-                                Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
-                                if (image != null) {
-                                    image.setObjectId(objectId);
-                                    images.add(image);
-                                }
-                            }
-                        }
-                        lastMsg.setImages(images);
-                    } catch (JsonProcessingException e) {
-                        log.error("反序列化最后消息的图片对象ID列表失败: {}", objectIdsJson, e);
-                        lastMsg.setImages(Collections.emptyList());
-                    }
-                }
-                lastMsg.setObjectIds(null);
-                c.setLastMessage(lastMsg);
-                c.setLastActiveAt(lastMsg.getCreateTime());
-            } else {
-                c.setLastActiveAt(c.getCreateTime());
-            }
+            lastMessageBuilder(c, lastMsg);
 
             c.setUnreadCount(unreadCountMap.getOrDefault(c.getChatCode(), 0));
             c.setOnLineMemberCount(onlineCountMap.getOrDefault(c.getChatCode(), 0));
@@ -261,6 +204,37 @@ public class ChatServiceImpl implements ChatService {
         }
 
         return new AppInitVO(chatVOList, new ArrayList<>(uniqueUserStatusMap.values()));
+    }
+
+    private void lastMessageBuilder(ChatVO c, MessageVO lastMsg) {
+        if (lastMsg != null) {
+            String objectIdsJson = lastMsg.getObjectIds();
+            if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
+                try {
+                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
+                    List<Image> images = new ArrayList<>();
+                    for (Integer objectId : objectIds) {
+                        FileEntity objectEntity = fileService.findById(objectId);
+                        if (objectEntity != null) {
+                            Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
+                            if (image != null) {
+                                image.setObjectId(objectId);
+                                images.add(image);
+                            }
+                        }
+                    }
+                    lastMsg.setImages(images);
+                } catch (JsonProcessingException e) {
+                    log.error("反序列化最后消息的图片对象ID列表失败: {}", objectIdsJson, e);
+                    lastMsg.setImages(Collections.emptyList());
+                }
+            }
+            lastMsg.setObjectIds(null);
+            c.setLastMessage(lastMsg);
+            c.setLastActiveAt(lastMsg.getCreateTime());
+        } else {
+            c.setLastActiveAt(c.getCreateTime());
+        }
     }
 
     // ============================================================
@@ -276,7 +250,7 @@ public class ChatServiceImpl implements ChatService {
             List<ChatMember> members = chatMemberMapper.getChatMemberListByChatId(chatId);
             MessageVO lastMsg = messageMapper.getLastMessageByChatId(chatId);
             Integer unreadCount = messageMapper.getUnreadCountMapByUserIdAndChatId(userId, chatId);
-            assembleChatVO(chatVO, onlineUsers, lastMsg, unreadCount, members);
+            chatVOBuilder(chatVO, onlineUsers, lastMsg, unreadCount, members);
         }
         return chatVO;
     }
@@ -310,53 +284,57 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public ChatVO validateChatJoin(ValidateChatJoinReq req) {
+        Integer chatId = null;
         if (req.getInviteCode() != null && !req.getInviteCode().isBlank()) {
-            // TODO 模式2：邀请码验证（当前未实现）
-            return null;
+            chatId = chatMapper.getChatIdByInviteCodeHash(InviteCodeUtils.sha256Hex(req.getInviteCode()));
         } else if (req.getChatCode() != null && !req.getChatCode().isBlank()) {
             if (req.getPassword() == null || req.getPassword().isEmpty()) {
                 throw new BusinessException(ErrorCode.PASSWORD_REQUIRED, "Password is required when chatCode is provided");
             }
+            chatId = chatMapper.getChatIdByChatCode(req.getChatCode());
 
-            Integer chatId = chatMapper.getChatIdByChatCode(req.getChatCode());
-            ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
-            if (info == null || info.getChatId() == null) {
-                throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
-            }
-            if (info.getJoinEnabled() == null || info.getJoinEnabled() == 0) {
-                throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat room");
-            }
+        } else {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Either inviteCode or chatCode must be provided");
+        }
+        if (chatId == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found by inviteCode or chatCode");
+        }
+        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
+        if (info == null || info.getChatId() == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+        if (info.getJoinEnabled() == null || info.getJoinEnabled() == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat room");
+        }
+        if (req.getChatCode() != null && !req.getChatCode().isBlank()) {
             if (info.getChatPasswordHash() == null || info.getChatPasswordHash().isBlank()) {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "Password login is not enabled for this chat room");
             }
             if (!PasswordUtils.matches(req.getPassword(), info.getChatPasswordHash())) {
-                throw new BusinessException(ErrorCode.PASSWORD_INCORRECT);
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Incorrect password");
             }
-
-            ChatVO chatVO = chatMapper.getChatVOByChatId(info.getChatId());
-            if (chatVO == null) {
-                throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
-            }
-
-            if (chatVO.getAvatarObjectName() != null) {
-                chatVO.setAvatar(ImageUtils.buildImage(chatVO.getAvatarObjectName(), minioOSSOperator));
-            }
-            chatVO.setAvatarObjectName(null);
-
-            chatVO.setOwnerUid(null);
-            chatVO.setJoinEnabled(null);
-            chatVO.setLastActiveAt(null);
-            chatVO.setCreateTime(null);
-            chatVO.setUpdateTime(null);
-            chatVO.setUnreadCount(null);
-            chatVO.setLastMessage(null);
-            chatVO.setOnLineMemberCount(null);
-            chatVO.setChatMembers(null);
-
-            return chatVO;
-        } else {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Either chatCode+password or inviteCode must be provided");
         }
+        ChatVO chatVO = chatMapper.getChatVOByChatId(info.getChatId());
+        if (chatVO == null) {
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+
+        if (chatVO.getAvatarObjectName() != null) {
+            chatVO.setAvatar(ImageUtils.buildImage(chatVO.getAvatarObjectName(), minioOSSOperator));
+        }
+        chatVO.setAvatarObjectName(null);
+
+        chatVO.setOwnerUid(null);
+        chatVO.setJoinEnabled(null);
+        chatVO.setLastActiveAt(null);
+        chatVO.setCreateTime(null);
+        chatVO.setUpdateTime(null);
+        chatVO.setUnreadCount(null);
+        chatVO.setLastMessage(null);
+        chatVO.setOnLineMemberCount(null);
+        chatVO.setChatMembers(null);
+
+        return chatVO;
     }
 
     // ============================================================
@@ -368,49 +346,45 @@ public class ChatServiceImpl implements ChatService {
         return chatMemberMapper.getChatMembersById(userId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public Chat join(JoinChatReq joinChatReq) {
-        if (joinChatReq == null) throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
-
-        // 判断是否使用了邀请码（暂不支持，需走 joinForFormalUser）
-        if (joinChatReq.getInviteCode() != null && !joinChatReq.getInviteCode().isEmpty()) {
-            if ((joinChatReq.getChatCode() == null || joinChatReq.getChatCode().isEmpty())) {
-                // 这是一个邀请码加入请求，当前接口兼容旧逻辑，建议前端调用 joinForFormalUser
-                return null;
-            }
+        if (joinChatReq == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "请求体不能为空");
+        }
+        
+        if (joinChatReq.getUserId() == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户ID不能为空");
         }
 
-        // 校验必填参数
-        if ((joinChatReq.getChatCode() == null || joinChatReq.getChatCode().isEmpty()) ||
-                (joinChatReq.getPassword() == null || joinChatReq.getPassword().isEmpty())) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Either chatCode+password or inviteCode must be provided");
+        // 1. 参数校验
+        validateJoinRequest(joinChatReq);
+
+        ChatJoinInfo chatInfo;
+
+        // 2. 分策略处理 (邀请码模式优先，或者密码模式)
+        if (joinChatReq.getInviteCode() != null) {
+            chatInfo = handleInviteJoin(joinChatReq.getInviteCode());
+        } else {
+            chatInfo = handlePasswordJoin(joinChatReq.getChatCode(), joinChatReq.getPassword());
         }
 
-        Integer userId = CurrentHolder.getCurrentId();
-        Integer chatId = chatMapper.getChatIdByChatCode(joinChatReq.getChatCode());
-        if (chatId == null) {
-            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        // 3. 全局检查：是否允许加入
+        if (Integer.valueOf(0).equals(chatInfo.getJoinEnabled())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该聊天室已禁止加入");
         }
 
-        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
-
-        if (info.getJoinEnabled() != null && info.getJoinEnabled() == 0) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat");
-        }
-        if (info.getChatPasswordHash() == null || info.getChatPasswordHash().isEmpty()) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "Password login is not enabled for this chat room");
-        }
-        if (!PasswordUtils.matches(joinChatReq.getPassword(), info.getChatPasswordHash())) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Incorrect password");
-        }
-
+        // 4. 执行加入
         LocalDateTime now = LocalDateTime.now();
-        chatMemberMapper.insertIgnore(info.getChatId(), userId, now);
+        chatMemberMapper.add(chatInfo.getChatId(), joinChatReq.getUserId(), now);
 
+        log.info("用户加入聊天室成功: userId={}, chatId={}", joinChatReq.getUserId(), chatInfo.getChatId());
+
+        // 5. 构建返回对象
         Chat chat = new Chat();
-        chat.setId(info.getChatId());
-        chat.setChatCode(info.getChatCode());
-        chat.setJoinEnabled(info.getJoinEnabled());
+        chat.setId(chatInfo.getChatId());
+        chat.setChatCode(chatInfo.getChatCode());
+        chat.setJoinEnabled(chatInfo.getJoinEnabled());
         chat.setCreateTime(now);
         chat.setUpdateTime(now);
         return chat;
@@ -475,7 +449,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        chatMemberMapper.insertIgnore(chatId, userId, now);
+        chatMemberMapper.add(chatId, userId, now);
 
         int expiryMinutes = chatReq.getJoinLinkExpiryMinutes() == null ? 10080 : chatReq.getJoinLinkExpiryMinutes();
         LocalDateTime expiresAt = now.plusMinutes(Math.max(1, expiryMinutes));
@@ -502,44 +476,6 @@ public class ChatServiceImpl implements ChatService {
         chatInviteMapper.insert(invite);
 
         return new CreateChatVO(chatCode, inviteCode);
-    }
-
-    /**
-     * 正式用户加入聊天室
-     * 业务流程：
-     * 1. 验证请求（参数检查、互斥性）
-     * 2. 分策略处理（邀请码模式 / 密码模式），获取 ChatJoinInfo
-     * 3. 全局检查（是否允许加入）
-     * 4. 执行加入（Insert Ignore）
-     * 5. 构建并返回登录信息
-     */
-    @Transactional(rollbackFor = Exception.class)
-    @Override
-    public LoginVO joinForFormalUser(Integer userId, JoinChatReq req) {
-        // 1. 参数校验
-        validateJoinRequest(req);
-
-        ChatJoinInfo chatInfo;
-
-        // 2. 分策略处理 (邀请码模式优先，或者密码模式)
-        if (req.getInviteCode() != null) {
-            chatInfo = handleInviteJoin(req.getInviteCode());
-        } else {
-            chatInfo = handlePasswordJoin(req.getChatCode(), req.getPassword());
-        }
-
-        // 3. 全局检查：是否允许加入
-        if (Integer.valueOf(0).equals(chatInfo.getJoinEnabled())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "该聊天室已禁止加入");
-        }
-
-        // 4. 执行加入 (利用数据库唯一索引忽略重复)
-        chatMemberMapper.insertIgnore(chatInfo.getChatId(), userId, LocalDateTime.now());
-
-        log.info("正式用户加入聊天室成功: userId={}, chatId={}", userId, chatInfo.getChatId());
-
-        // 5. 构造返回值
-        return buildLoginVO(userId);
     }
 
     // ============================================================
@@ -647,19 +583,4 @@ public class ChatServiceImpl implements ChatService {
         return info;
     }
 
-    /**
-     * 构建登录返回信息 (LoginVO)
-     */
-    private LoginVO buildLoginVO(Integer userId) {
-        User user = userService.getUserById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        // 如果是正式用户 user.getUsername() 应该有值，否则回退到 nickname
-        String username = (user.getUsername() != null) ? user.getUsername() : user.getNickname();
-
-        // 使用工具类构建 LoginVO
-        return LoginVOBuilder.build(user.getUid(), username, jwtUtils);
-    }
 }
