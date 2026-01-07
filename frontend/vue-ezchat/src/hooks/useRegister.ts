@@ -48,7 +48,7 @@ export function useRegister() {
 
   const registerForm = ref<RegisterInfo>({
     nickname: '', username: '', password: '', confirmPassword: '',
-    avatar: { objectName: '', objectUrl: '', objectThumbUrl: '' },
+    avatar: { imageName: '', imageUrl: '', imageThumbUrl: '' },
   })
 
   const beforeAvatarUpload = async (rawFile: File) => {
@@ -66,11 +66,11 @@ export function useRegister() {
     try {
       // 计算原始对象哈希（在压缩之前，确保是真正的原始对象）
       const rawHash = await calculateObjectHash(rawFile)
-      
+
       // 调用比对接口，检查对象是否已存在
       try {
         const checkResult = await checkObjectExistsApi(rawHash)
-        
+
         if (checkResult.status === 1 && checkResult.data) {
           // 对象已存在，直接使用返回的 Image 对象
           handleAvatarSuccess(checkResult)
@@ -102,7 +102,7 @@ export function useRegister() {
   const resetRegisterForm = () => {
     registerForm.value = {
       nickname: '', username: '', password: '', confirmPassword: '',
-      avatar: { objectName: '', objectUrl: '', objectThumbUrl: '' },
+      avatar: { imageName: '', imageUrl: '', imageThumbUrl: '' },
     }
     if (registerFormRef.value) registerFormRef.value.resetFields()
   }
@@ -111,10 +111,10 @@ export function useRegister() {
     if (!registerFormRef.value) return false
     try {
       // 如果用户未上传头像，上传默认头像
-      if (!registerForm.value.avatar.objectUrl && !registerForm.value.avatar.objectThumbUrl) {
+      if (!registerForm.value.avatar.imageUrl && !registerForm.value.avatar.imageThumbUrl) {
         registerForm.value.avatar = await imageStore.uploadDefaultAvatarIfNeeded(registerForm.value.avatar)
       }
-      
+
       const result = await registerApi(registerForm.value)
       // 检查返回结果的 status，只有 status === 1 才表示成功
       return result.status === 1

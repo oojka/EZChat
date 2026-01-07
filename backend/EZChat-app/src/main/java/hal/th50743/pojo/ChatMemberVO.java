@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 public class ChatMemberVO {
 
     private String uid;
+    private String chatCode;
     private String nickname;
     private Image avatar;
     private boolean online;

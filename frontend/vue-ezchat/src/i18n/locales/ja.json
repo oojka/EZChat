@@ -21,7 +21,8 @@
     "off": "OFF",
     "copy": "コピー",
     "copied": "コピーしました",
-    "copy_failed": "コピーに失敗しました"
+    "copy_failed": "コピーに失敗しました",
+    "verifying_invitation": "招待を確認中..."
   },
   "dialog": {
     "tip": "ヒント",
@@ -119,6 +120,8 @@
     "data_already_exists": "このデータは既に存在します。",
     "you_have_already_in_this_room": "既にこのルームに参加しています。重複して参加しないでください。",
     "is_already_exist": " は既に存在します。",
+    "already_joined": "既にこのルームに参加しています。",
+    "join_chat_success": "チャットに参加しました",
     "not_member": "アクセス権限がありません：このチャットルームのメンバーではありません。",
     "room_not_found": "ルームが存在しないか、既に解散されています。",
     "input_too_long": "入力が文字数制限を超えています。",
@@ -127,6 +130,7 @@
     "invalid_request": "無効なリクエストです。",
     "file_empty": "ファイルが空か、選択されていません。",
     "file_upload_failed": "アップロードに失敗しました。",
+    "image_upload_failed": "画像のアップロードに失敗しました。",
     "file_too_large": "ファイルが大きすぎます。小さなファイルを選択してください。",
     "invalid_credentials": "ユーザーIDまたはパスワードが正しくありません。",
     "network_error": "ネットワークエラー。接続を確認してください。",
@@ -135,6 +139,10 @@
     "password_login_disabled": "このルームはパスワードによる参加が禁止されています。",
     "password_required": "このルームに参加するにはパスワードが必要です。",
     "password_incorrect": "パスワード検証に失敗しました：パスワードが正しくありません。",
+    "invite_code_invalid": "無効な招待コードです。",
+    "invite_code_expired": "招待コードの有効期限が切れています。",
+    "invite_code_revoked": "招待コードは取り消されました。",
+    "invite_code_usage_limit_reached": "招待コードの使用回数制限に達しました。",
     "http_400": "リクエストパラメータエラー",
     "http_404": "リソースが見つかりません",
     "http_408": "リクエストタイムアウト。しばらくしてから再試行してください",
@@ -146,7 +154,11 @@
       "40300": "参加が無効になっているか、パスワードログインが有効になっていません。",
       "42003": "パスワードが必要です。",
       "42004": "パスワードが正しくありません。",
-      "40000": "リクエストパラメータエラー。"
+      "40000": "リクエストパラメータエラー。",
+      "42010": "無効な招待コードです。",
+      "42011": "招待コードの有効期限が切れています。",
+      "42012": "招待コードは取り消されました。",
+      "42013": "招待コードの使用回数制限に達しました。"
     }
   },
   "error_pages": {
@@ -173,7 +185,9 @@
     "create_room": "ルーム作成",
     "join_room": "ルームに参加",
     "no_chats": "チャットがありません",
+    "no_chat": "チャットがありません",
     "just_now": "たった今",
+    "current_chat": "現在のチャット",
     "friends_view": "友達",
     "chat_view": "チャット"
   },
@@ -200,6 +214,13 @@
     "emoji": "絵文字",
     "recent": "最近使用",
     "all_emojis": "すべて",
+    "room_id_missing": "URLにルームIDがありません",
+    "invalid_room_id_format": "URLのルームID形式が無効です",
+    "room_code_mismatch": "ルームコードが一致しません",
+    "validation_info_expired": "検証情報の有効期限が切れました。再開してください",
+    "avatar_upload_failed": "アバターのアップロードに失敗しました。デフォルトを使用します",
+    "target_chat_code_missing": "ターゲットチャットコードがありません",
+    "invalid_validation_info": "検証情報が無効です",
     "send_image": "画像をアップロード",
     "newline": "改行",
     "send_on_enter": "Enterで送信",

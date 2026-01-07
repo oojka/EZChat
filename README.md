@@ -393,8 +393,8 @@ Original image strategy:
 后端上传/删除统一入口（便于未来扩展"文件功能"）：  
 Unified backend entry for uploads/deletes (ready for future file features):
 
-- `hal.th50743.service.OssMediaService`
-- `hal.th50743.service.impl.OssMediaServiceImpl`
+- `hal.th50743.service.MediaService`
+- `hal.th50743.service.impl.MediaServiceImpl`
 - 删除对象：`OssMediaService.deleteObject(objectNameOrUrl)`（会联动删除缩略图）
 
 ### 默认头像与样式统一 / Default Avatar & Style Unification

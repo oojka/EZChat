@@ -1,13 +1,13 @@
-import {defineStore, storeToRefs} from 'pinia'
-import {computed, ref, watch} from 'vue'
-import {useWebsocket} from '@/WS/useWebsocket.ts'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useMessageStore} from '@/stores/messageStore.ts'
-import {useRoomStore} from '@/stores/roomStore.ts'
-import {ElMessage} from 'element-plus'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
+import { useWebsocket } from '@/WS/useWebsocket.ts'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useMessageStore } from '@/stores/messageStore.ts'
+import { useRoomStore } from '@/stores/roomStore.ts'
+import { ElMessage } from 'element-plus'
 import router from '@/router'
-import type {Image, Message} from '@/type'
-import {useConfigStore} from '@/stores/configStore.ts'
+import type { Image, Message, ChatMember } from '@/type'
+import { useConfigStore } from '@/stores/configStore.ts'
 import i18n from '@/i18n'
 
 /**
@@ -68,13 +68,17 @@ export const useWebsocketStore = defineStore('websocket', () => {
     connect(fullUrl, {
       onMessage: (data: any) => {
         // 业务消息：聊天消息（MESSAGE）
-        if (typeof data === 'string') return
+        // data 已经是 Message 类型 (包含 text, image, mixed, member_join 等)
+        // [FIX] 接受 loose data，并在业务层（store）进行类型断言，避免传输层因 strict check 丢包
         const messageStore = useMessageStore()
-        messageStore.receiveMessage(data as Message).then(() => {})
+        messageStore.receiveMessage(data).then(() => { })
       },
       onUserStatus: (uid: string, isOnline: boolean) => {
         // 系统消息：在线状态变更（USER_STATUS）
         roomStore.updateMemberStatus(uid, isOnline)
+      },
+      onChatMemberAdd: (member: ChatMember) => {
+        roomStore.addRoomMember(member)
       },
       onAck: (tempId: string) => {
         // 系统消息：服务端 ACK，标记本地“发送中”消息为 sent

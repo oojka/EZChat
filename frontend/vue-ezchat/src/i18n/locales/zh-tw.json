@@ -21,7 +21,8 @@
     "off": "關閉",
     "copy": "複製",
     "copied": "已複製",
-    "copy_failed": "複製失敗"
+    "copy_failed": "複製失敗",
+    "verifying_invitation": "驗證邀請中..."
   },
   "dialog": {
     "tip": "提示",
@@ -119,6 +120,8 @@
     "data_already_exists": "該資料已存在。",
     "you_have_already_in_this_room": "您已經加入此房間，請勿重複加入。",
     "is_already_exist": " 已存在。",
+    "already_joined": "您已經加入此房間。",
+    "join_chat_success": "成功加入聊天室",
     "not_member": "無訪問權限：您不是該聊天室的成員。",
     "room_not_found": "房間不存在或已被解散。",
     "input_too_long": "輸入內容超過字元限制。",
@@ -127,6 +130,7 @@
     "invalid_request": "非法請求。",
     "file_empty": "檔案為空或未選擇。",
     "file_upload_failed": "上傳失敗。",
+    "image_upload_failed": "圖片上傳失敗。",
     "file_too_large": "檔案過大，請選擇較小的檔案。",
     "invalid_credentials": "用戶名稱或密碼錯誤。",
     "network_error": "網路錯誤，請檢查您的連線。",
@@ -135,6 +139,10 @@
     "password_login_disabled": "該房間被禁止通過密碼加入。",
     "password_required": "該房間需要密碼才能加入。",
     "password_incorrect": "密碼驗證失敗：密碼不正確。",
+    "invite_code_invalid": "邀請碼無效。",
+    "invite_code_expired": "邀請碼已過期。",
+    "invite_code_revoked": "邀請碼已被撤銷。",
+    "invite_code_usage_limit_reached": "邀請碼使用次數已滿。",
     "http_400": "請求參數錯誤",
     "http_404": "資源未找到",
     "http_408": "請求超時，請稍後重試",
@@ -146,7 +154,11 @@
       "40300": "加入被禁用或密碼登入未啟用。",
       "42003": "密碼必填。",
       "42004": "密碼錯誤。",
-      "40000": "請求參數錯誤。"
+      "40000": "請求參數錯誤。",
+      "42010": "邀請碼無效。",
+      "42011": "邀請碼已過期。",
+      "42012": "邀請碼已被撤銷。",
+      "42013": "邀請碼使用次數已滿。"
     }
   },
   "error_pages": {
@@ -173,7 +185,9 @@
     "create_room": "建立房間",
     "join_room": "加入房間",
     "no_chats": "暫無聊天",
+    "no_chat": "暫無會話",
     "just_now": "剛剛",
+    "current_chat": "當前會話",
     "friends_view": "好友",
     "chat_view": "聊天"
   },
@@ -200,6 +214,13 @@
     "emoji": "表情",
     "recent": "最近使用",
     "all_emojis": "全部",
+    "room_id_missing": "URL中缺少房間ID",
+    "invalid_room_id_format": "URL中的房間ID格式無效",
+    "room_code_mismatch": "房間代碼不匹配",
+    "validation_info_expired": "驗證資訊已過期，請重新開始",
+    "avatar_upload_failed": "頭像上傳失敗，使用預設頭像",
+    "target_chat_code_missing": "目標聊天代碼缺失",
+    "invalid_validation_info": "驗證資訊無效",
     "send_image": "上傳圖片",
     "newline": "換行",
     "send_on_enter": "按回車發送",

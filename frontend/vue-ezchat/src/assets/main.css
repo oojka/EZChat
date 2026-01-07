@@ -219,3 +219,11 @@ html {
 .avatar-square-lg {
   border-radius: calc(150px * var(--avatar-border-radius-ratio)); /* 45px */
 }
+
+/* =========================================
+   9. Z-Index Overrides
+   ========================================= */
+/* Ensure Element Plus Dialogs/Message Boxes appear above the Global Loading Overlay (z-index: 99999) */
+.el-overlay {
+  z-index: 100000 !important;
+}

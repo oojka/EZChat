@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import type { Image } from '@/type'
 import { getImageUrlApi } from '@/api/Media'
+import { isImage } from '@/utils/validators'
 
 /**
  * ImageStore：统一管理图片 Blob 缓存与按需加载
@@ -37,17 +38,17 @@ export const useImageStore = defineStore('image', () => {
   const ensureThumbBlobUrl = async (img?: Image): Promise<string | undefined> => {
     if (!img) return undefined
     if (img.blobThumbUrl) return img.blobThumbUrl
-    if (!img.objectName && !img.objectThumbUrl && !img.objectUrl) return undefined
+    if (!img.imageName && !img.imageThumbUrl && !img.imageUrl) return undefined
 
-    const key = `${img.objectName || img.objectThumbUrl || img.objectUrl}:thumb`
+    const key = `${img.imageName || img.imageThumbUrl || img.imageUrl}:thumb`
     const existing = thumbPromiseMap.get(key)
     if (existing) return existing
 
     const task = (async () => {
       try {
         // 1) 本地 thumb URL 先试（最省）
-        if (img.objectThumbUrl) {
-          const blob = await fetchBlobUrl(img.objectThumbUrl)
+        if (img.imageThumbUrl) {
+          const blob = await fetchBlobUrl(img.imageThumbUrl)
           if (blob) {
             img.blobThumbUrl = blob
             return blob
@@ -55,20 +56,20 @@ export const useImageStore = defineStore('image', () => {
         }
 
         // 2) 回退本地原图 URL（头像场景允许用原图当“缩略图”展示）
-        if (img.objectUrl) {
-          const blob = await fetchBlobUrl(img.objectUrl)
+        if (img.imageUrl) {
+          const blob = await fetchBlobUrl(img.imageUrl)
           if (blob) {
             img.blobThumbUrl = blob
             return blob
           }
         }
 
-        // 3) 本地 URL 都失败：刷新 objectUrl（预签名过期），再拉 blob
-        if (img.objectName) {
-          const res = await getImageUrlApi(img.objectName)
+        // 3) 本地 URL 都失败：刷新 imageUrl（预签名过期），再拉 blob
+        if (img.imageName) {
+          const res = await getImageUrlApi(img.imageName)
           const refreshed = res?.data
           if (refreshed) {
-            img.objectUrl = refreshed
+            img.imageUrl = refreshed
             const blob = await fetchBlobUrl(refreshed)
             if (blob) {
               img.blobThumbUrl = blob
@@ -93,36 +94,36 @@ export const useImageStore = defineStore('image', () => {
   const ensureOriginalBlobUrl = async (img?: Image): Promise<string | undefined> => {
     if (!img) return undefined
     if (img.blobUrl) return img.blobUrl
-    if (!img.objectName && !img.objectUrl) return img.objectUrl
+    if (!img.imageName && !img.imageUrl) return img.imageUrl
 
-    const key = `${img.objectName || img.objectUrl}:original`
+    const key = `${img.imageName || img.imageUrl}:original`
     const existing = originalPromiseMap.get(key)
     if (existing) return existing
 
     const task = (async () => {
       try {
-        // 1) 优先用本地 objectUrl（避免每次预览都打后端接口）
-        if (img.objectUrl) {
-          const localBlob = await fetchBlobUrl(img.objectUrl)
+        // 1) 优先用本地 imageUrl（避免每次预览都打后端接口）
+        if (img.imageUrl) {
+          const localBlob = await fetchBlobUrl(img.imageUrl)
           if (localBlob) {
             img.blobUrl = localBlob
             return img.blobUrl
           }
         }
 
-        // 2) 本地 URL 失效：刷新预签名 URL，并替换本地 objectUrl
-        if (img.objectName) {
-          const res = await getImageUrlApi(img.objectName)
+        // 2) 本地 URL 失效：刷新预签名 URL，并替换本地 imageUrl
+        if (img.imageName) {
+          const res = await getImageUrlApi(img.imageName)
           const refreshed = res?.data
           if (refreshed) {
-            img.objectUrl = refreshed
+            img.imageUrl = refreshed
             const blob = await fetchBlobUrl(refreshed)
             if (blob) img.blobUrl = blob
-            return img.blobUrl || img.objectUrl
+            return img.blobUrl || img.imageUrl
           }
         }
 
-        return img.objectUrl
+        return img.imageUrl
       } finally {
         originalPromiseMap.delete(key)
       }
@@ -151,8 +152,8 @@ export const useImageStore = defineStore('image', () => {
   }
 
   /**
-   * 图像数组去重：基于 objectName/objectId/objectUrl 去除重复项
-   * 
+   * 图像数组去重：基于 imageName/assetId/imageUrl 去除重复项
+   *
    * @param images 图像数组（可能包含 undefined）
    * @returns 去重后的图像数组
    */
@@ -161,7 +162,7 @@ export const useImageStore = defineStore('image', () => {
       new Map(
         images
           .filter((img): img is Image => Boolean(img))
-          .map((img) => [img.objectName || img.objectId || img.objectUrl, img])
+          .map((img) => [img.imageName || img.assetId || img.imageUrl, img])
       ).values()
     ) as Image[]
   }
@@ -201,10 +202,10 @@ export const useImageStore = defineStore('image', () => {
    * @param next 新图片列表
    */
   const revokeUnusedBlobs = (prev: Image[], next: Image[]) => {
-    const nextKeys = new Set(next.map((i) => i.objectName).filter(Boolean))
+    const nextKeys = new Set(next.map((i) => i.imageName).filter(Boolean))
     prev.forEach((img) => {
-      if (!img.objectName) return
-      if (!nextKeys.has(img.objectName)) revokeImageBlobs(img)
+      if (!img.imageName) return
+      if (!nextKeys.has(img.imageName)) revokeImageBlobs(img)
     })
   }
 
@@ -245,11 +246,11 @@ export const useImageStore = defineStore('image', () => {
    * @param type 头像类型：'user' 为用户头像，'room' 为房间头像
    * @returns Image 对象（如果已存在则返回原对象，否则上传默认头像后返回）
    */
-  
+
   // TODO: 待后端实现滑动窗口token后，把默认头像上传接口全部替换为需要token验证的后端接口
   const uploadDefaultAvatarIfNeeded = async (currentAvatar?: Image, type: 'user' | 'room' = 'user'): Promise<Image> => {
     // 如果头像已存在，直接返回
-    if (currentAvatar?.objectUrl || currentAvatar?.objectThumbUrl) {
+    if (currentAvatar?.imageUrl || currentAvatar?.imageThumbUrl) {
       return currentAvatar
     }
 
@@ -277,18 +278,9 @@ export const useImageStore = defineStore('image', () => {
     const result = await uploadResponse.json()
     if (result.code === 200 && result.data) {
       const imageData = result.data
-      // 类型守卫：验证返回的数据是否为 Image 类型
-      if (
-        typeof imageData === 'object' &&
-        imageData !== null &&
-        'objectName' in imageData &&
-        'objectUrl' in imageData &&
-        'objectThumbUrl' in imageData &&
-        typeof (imageData as Record<string, unknown>).objectName === 'string' &&
-        typeof (imageData as Record<string, unknown>).objectUrl === 'string' &&
-        typeof (imageData as Record<string, unknown>).objectThumbUrl === 'string'
-      ) {
-        return imageData as Image
+      // 使用类型守卫验证返回的数据是否为 Image 类型
+      if (isImage(imageData)) {
+        return imageData
       }
       throw new Error('Invalid Image data structure in upload response')
     }

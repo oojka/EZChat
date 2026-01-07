@@ -1,4 +1,5 @@
-import {createRouter, createWebHistory} from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
+import type { JoinChatCredentialsForm, JoinChatReq } from '@/type'
 import IndexView from '@/views/index/index.vue'
 import LayoutView from '@/views/layout/index.vue'
 import ChatView from '@/views/chat/index.vue'
@@ -6,12 +7,20 @@ import JoinView from '@/views/Join/index.vue'
 import WelcomeView from '@/views/welcome/index.vue'
 import ErrorView from '@/views/error/500.vue'
 import NotFoundView from '@/views/error/404.vue'
-import { useRoute } from 'vue-router'
-import {useAppStore} from '@/stores/appStore'
-import {useWebsocketStore} from '@/stores/websocketStore'
+import { useUserStore } from '@/stores/userStore'
+import { useJoinInput } from '@/hooks/chat/join/useJoinInput'
+import { useAppStore } from '@/stores/appStore'
+import { useWebsocketStore } from '@/stores/websocketStore'
+import { useRoomStore } from '@/stores/roomStore'
+import { isValidInviteUrl } from '@/utils/validators'
+import { processInviteRoute } from '@/services/inviteService'
 import i18n from '@/i18n'
+import { showAlertDialog } from '@/components/dialogs/AlertDialog'
+import { isAppError, ErrorType, ErrorSeverity, createAppError } from '@/error/ErrorTypes'
+import { ElMessage } from 'element-plus'
 
 const { t } = i18n.global
+
 
 /**
  * 路由配置
@@ -73,7 +82,7 @@ const router = createRouter({
       meta: { title: '' },
     },
     {
-      path: '/:pathMatch(.*)*', 
+      path: '/:pathMatch(.*)*',
       name: 'NotFound',
       component: NotFoundView,
       meta: { title: '404 Not Found' },
@@ -91,10 +100,10 @@ const router = createRouter({
  * - 当前工程**没有**在 Router 层做“登录权限拦截”（登录态主要由 `request.ts` 401 处理 + App 初始化逻辑驱动）
  * - 如未来需要强制权限，请在此处校验 token，并对 `/chat/**` 做重定向
  */
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from) => {
   const appStore = useAppStore()
   const websocketStore = useWebsocketStore()
-
+  const userStore = useUserStore()
   // 业务规则：离开 /chat 体系（去到首页/错误页等）时，自动断开 WebSocket
   // 目的：避免用户不在聊天页时仍保持 WS 长连接占用资源，也防止后台重连带来额外流量。
   const isLeavingChat = from.path.startsWith('/chat') && !to.path.startsWith('/chat')
@@ -118,7 +127,8 @@ router.beforeEach((to, from, next) => {
     (from.name === 'ChatRoom' || from.name === 'Welcome')
     && to.name === 'ChatRoom'
   // 只有在非 /chat 内部切换，且路径确实发生变化时，才显示全局 Loading（错误页已在上面单独处理）
-  if (to.path !== '/error' && to.path !== from.path && !isChatSwitch) {
+  // 特殊处理：Invite 路由由其内部逻辑独立控制 Loading（区分是否来自 Chat），此处跳过
+  if (to.path !== '/error' && to.path !== from.path && !isChatSwitch && to.name !== 'Invite') {
     appStore.isAppLoading = true
     // 进入聊天体系（登录后跳转 / 刷新回到 /chat）：使用"初始化..."提示
     // 其他普通路由切换：使用"加载中..."提示
@@ -131,7 +141,26 @@ router.beforeEach((to, from, next) => {
       ? (typeof initText === 'string' ? initText : '')
       : (typeof loadingText === 'string' ? loadingText : '')
   }
-  next()
+
+  // 处理邀请链接验证
+  if (to.name === 'Invite') {
+    // 验证中显示的文本
+    const loadingText = t('common.verifying_invitation')
+
+    // 逻辑分流：来自 Chat 页面时不显示全屏 Loading
+    if (from.name === 'ChatRoom' || from.name === 'Welcome') {
+      return await processInviteRoute(to)
+    } else {
+      // 其他来源（如直接访问链接）显示全屏 "Verifying invitation..."
+      return appStore.runWithLoading(loadingText, () => processInviteRoute(to))
+        .catch(() => {
+          return { name: 'Error', replace: true }
+        })
+    }
+  }
+
+  // 继续执行导航
+  return
 })
 
 /**
@@ -150,18 +179,18 @@ router.afterEach((to) => {
   }, 100)
 
   const defaultTitle = 'EZ Chat'
-  
+
   // 设置标题（错误页标题置为空字符串，由 error/index.vue 组件自己处理）
   if (to.name === 'Error') {
     document.title = ''
   } else {
     // 其他页面正常处理标题
-    const displayTitle = to.meta.title 
+    const displayTitle = to.meta.title
       ? ([...to.matched].reverse().find((record) => record.meta?.title)?.meta?.title as string)
       : ''
     document.title = displayTitle ? `${displayTitle} | ${defaultTitle}` : defaultTitle
   }
-  
+
   // Favicon 处理：错误页由 error/index.vue 组件自己处理（移除 favicon）
   // 其他页面的 favicon 由 App.vue 统一管理（使用 /favicon_io/favicon.ico）
 })

@@ -27,9 +27,9 @@ export const useGuestJoin = () => {
     /** * 访客信息状态 */
     const guestNickname = ref('')
     const guestAvatar = ref<Image>({
-        objectThumbUrl: '',
-        objectUrl: '',
-        objectName: '',
+        imageThumbUrl: '',
+        imageUrl: '',
+        imageName: '',
         blobUrl: '',
         blobThumbUrl: '',
     })
@@ -52,8 +52,8 @@ export const useGuestJoin = () => {
     /** 头像上传成功回调 */
     const handleAvatarSuccess = (response: any) => {
         if (response?.data) {
-            guestAvatar.value.objectThumbUrl = response.data.objectThumbUrl || response.data.url || ''
-            guestAvatar.value.objectUrl = response.data.objectUrl || response.data.url || ''
+            guestAvatar.value.imageThumbUrl = response.data.imageThumbUrl || response.data.url || ''
+            guestAvatar.value.imageUrl = response.data.imageUrl || response.data.url || ''
         }
     }
 
@@ -101,7 +101,7 @@ export const useGuestJoin = () => {
             }
 
             // 3. 头像处理：如果是默认头像且未上传，先上传
-            if (!guestAvatar.value.objectUrl && !guestAvatar.value.objectThumbUrl) {
+            if (!guestAvatar.value.imageUrl && !guestAvatar.value.imageThumbUrl) {
                 try {
                     guestAvatar.value = await imageStore.uploadDefaultAvatarIfNeeded(guestAvatar.value, 'user')
                 } catch (e) {

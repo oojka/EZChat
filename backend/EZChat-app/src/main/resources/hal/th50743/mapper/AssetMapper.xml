@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.AssetMapper">
+
+    <!-- 插入文件记录 -->
+    <insert id="insert" parameterType="hal.th50743.pojo.Asset" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO assets (asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time)
+        VALUES (#{assetName}, #{originalName}, #{contentType}, #{fileSize}, #{category}, #{messageId}, #{status}, #{rawAssetHash}, #{normalizedAssetHash}, NOW(), NOW())
+    </insert>
+
+    <!-- 根据 ID 查询文件记录（使用主键索引） -->
+    <select id="findById" resultType="hal.th50743.pojo.Asset">
+        SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
+        FROM assets
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <!-- 根据 assetName 查询文件记录（使用 idx_asset_name 索引） -->
+    <select id="findByObjectName" resultType="hal.th50743.pojo.Asset">
+        SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
+        FROM assets
+        WHERE asset_name = #{objectName}
+        LIMIT 1
+    </select>
+
+    <!-- 根据 messageId 查询关联的文件列表（使用 idx_message_id 索引） -->
+    <select id="findByMessageId" resultType="hal.th50743.pojo.Asset">
+        SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
+        FROM assets
+        WHERE message_id = #{messageId}
+    </select>
+
+    <!-- 批量更新文件状态（用于消息图片激活，一次 SQL 完成所有图片的状态更新） -->
+    <update id="updateStatusBatch">
+        UPDATE assets
+        SET status = #{status},
+            category = #{category},
+            message_id = #{messageId},
+            update_time = NOW()
+        WHERE asset_name IN
+        <foreach collection="objectNames" item="name" open="(" separator="," close=")">
+            #{name}
+        </foreach>
+    </update>
+
+    <!-- 更新单个文件的状态和分类 -->
+    <update id="updateStatusAndCategory">
+        UPDATE assets
+        SET status = #{status},
+            <if test="category != null">
+            category = #{category},
+            </if>
+            update_time = NOW()
+        WHERE asset_name = #{objectName}
+    </update>
+
+    <!-- 更新单个文件的状态 -->
+    <update id="updateStatus">
+        UPDATE assets
+        SET status = #{status},
+            update_time = NOW()
+        WHERE asset_name = #{objectName}
+    </update>
+
+    <!-- 分页查询待清理的 PENDING 文件（用于 GC，使用 idx_gc_cleanup 索引） -->
+    <select id="findPendingFilesBefore" resultType="hal.th50743.pojo.Asset">
+        SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
+        FROM assets
+        WHERE status = 0 AND create_time &lt; #{beforeTime}
+        ORDER BY create_time ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 根据 ID 删除文件记录 -->
+    <delete id="deleteById">
+        DELETE FROM assets WHERE id = #{id}
+    </delete>
+
+    <!-- 批量删除文件记录（可选，用于提升 GC 性能） -->
+    <delete id="deleteByIds">
+        DELETE FROM assets WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 根据原始对象哈希查询已激活的对象（用于前端轻量级比对，使用 idx_raw_asset_hash 索引） -->
+    <select id="findByRawHashAndActive" resultType="hal.th50743.pojo.Asset">
+        SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
+        FROM assets
+        WHERE raw_asset_hash = #{rawHash} AND status = 1
+        LIMIT 1
+    </select>
+
+    <!-- 根据规范化对象哈希查询已激活的对象（用于后端最终去重，使用 idx_normalized_asset_hash 索引） -->
+    <select id="findByNormalizedHashAndActive" resultType="hal.th50743.pojo.Asset">
+        SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
+        FROM assets
+        WHERE normalized_asset_hash = #{normalizedHash} AND status = 1
+        LIMIT 1
+    </select>
+
+</mapper>

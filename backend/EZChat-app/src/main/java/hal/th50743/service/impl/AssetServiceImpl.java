@@ -2,11 +2,11 @@ package hal.th50743.service.impl;
 
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
-import hal.th50743.pojo.FileCategory;
-import hal.th50743.pojo.FileEntity;
+import hal.th50743.mapper.AssetMapper;
+import hal.th50743.pojo.AssetCategory;
+import hal.th50743.pojo.Asset;
 import hal.th50743.pojo.Image;
-import hal.th50743.service.FileService;
-import hal.th50743.service.OssMediaService;
+import hal.th50743.service.AssetService;
 import hal.th50743.utils.ImageUtils;
 import hal.th50743.utils.ObjectHashUtils;
 import io.minio.MinioOSSOperator;
@@ -18,19 +18,22 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static hal.th50743.utils.FileNameFormater.getSafeName;
 
 /**
- * 对象存储媒体服务实现类
+ * 对象存储服务实现类
  * <p>
- * 将上传与图片处理逻辑集中在此处，业务 Service（User/Message/Chat...）只负责业务校验与编排。
+ * 将上传与图片处理逻辑、数据库生命周期管理集中在此处，
+ * 业务 Service（User/Message/Chat...）只负责业务校验与编排。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OssMediaServiceImpl implements OssMediaService {
+public class AssetServiceImpl implements AssetService {
 
     private static final int NORMALIZE_MAX_DIMENSION = 2048;
     private static final double NORMALIZE_QUALITY = 0.85;
@@ -40,7 +43,9 @@ public class OssMediaServiceImpl implements OssMediaService {
     private static final int DEFAULT_IMAGE_URL_EXPIRY_MINUTES = 30;
 
     private final MinioOSSOperator minioOSSOperator;
-    private final FileService fileService;
+    private final AssetMapper assetMapper;
+
+    // ==================== 上传相关 ====================
 
     /**
      * 检查文件是否为 GIF 格式
@@ -49,9 +54,11 @@ public class OssMediaServiceImpl implements OssMediaService {
      * @return 如果是 GIF 返回 true，否则返回 false
      */
     private static boolean isGifFile(MultipartFile file) {
-        if (file == null) return false;
+        if (file == null)
+            return false;
         String contentType = file.getContentType();
-        if (contentType == null) return false;
+        if (contentType == null)
+            return false;
         return "image/gif".equals(contentType.toLowerCase());
     }
 
@@ -62,9 +69,8 @@ public class OssMediaServiceImpl implements OssMediaService {
     @Transactional(rollbackFor = Exception.class)
     public Image uploadAvatar(MultipartFile file) {
         // 头像属于公开资源：用于房间成员列表、通知等频繁展示场景
-        // 注意：暂时不传递 rawObjectHash，后续可以通过请求参数或 header 传递
-        Image image = uploadImageInternal(file, true, DEFAULT_THUMB_MAX_W, DEFAULT_THUMB_MAX_H, FileCategory.USER_AVATAR, null);
-        return image;
+        return uploadImageInternal(file, true, DEFAULT_THUMB_MAX_W, DEFAULT_THUMB_MAX_H, AssetCategory.USER_AVATAR,
+                null);
     }
 
     /**
@@ -75,9 +81,7 @@ public class OssMediaServiceImpl implements OssMediaService {
     public Image uploadMessageImage(MultipartFile file) {
         // 消息图片默认走私有区：通过预签名 URL 控制访问
         // 上传时暂存为 GENERAL，消息发送成功后会激活为 MESSAGE_IMG
-        // 注意：暂时不传递 rawObjectHash，后续可以通过请求参数或 header 传递
-        Image image = uploadImageInternal(file, false, DEFAULT_THUMB_MAX_W, DEFAULT_THUMB_MAX_H, FileCategory.GENERAL, null);
-        return image;
+        return uploadImageInternal(file, false, DEFAULT_THUMB_MAX_W, DEFAULT_THUMB_MAX_H, AssetCategory.GENERAL, null);
     }
 
     /**
@@ -98,7 +102,7 @@ public class OssMediaServiceImpl implements OssMediaService {
             String contentType;
             String extension;
             String hashForDedup;
-            
+
             if (isGifFile(file)) {
                 // GIF 文件：直接使用原始文件，不进行规范化处理
                 fileBytes = file.getBytes();
@@ -108,7 +112,8 @@ public class OssMediaServiceImpl implements OssMediaService {
                 hashForDedup = ObjectHashUtils.calculateSHA256(fileBytes);
             } else {
                 // 非 GIF 文件：进行规范化处理
-                ImageUtils.NormalizedFile normalized = ImageUtils.normalizeIfImage(file, NORMALIZE_MAX_DIMENSION, NORMALIZE_QUALITY);
+                ImageUtils.NormalizedFile normalized = ImageUtils.normalizeIfImage(file, NORMALIZE_MAX_DIMENSION,
+                        NORMALIZE_QUALITY);
                 fileBytes = normalized.bytes();
                 contentType = normalized.contentType();
                 extension = normalized.extension();
@@ -117,23 +122,21 @@ public class OssMediaServiceImpl implements OssMediaService {
             }
 
             // 3) 查询是否存在相同哈希的对象（status=1）
-            // 注意：GIF 使用原始哈希，其他图片使用规范化哈希
-            FileEntity existingObject = fileService.findActiveObjectByNormalizedHash(hashForDedup);
-            
+            Asset existingObject = findActiveObjectByNormalizedHash(hashForDedup);
+
             if (existingObject != null) {
                 // 对象已存在，复用已存在的对象（不重复上传到 MinIO）
-                log.debug("Object already exists in uploadFile, reusing: objectName={}, hash={}", 
-                    existingObject.getObjectName(), hashForDedup);
-                
+                log.debug("Object already exists in uploadFile, reusing: objectName={}, hash={}",
+                        existingObject.getAssetName(), hashForDedup);
+
                 // 重新生成 URL（避免预签名过期）
-                String url = getImageUrl(existingObject.getObjectName());
+                String url = getImageUrl(existingObject.getAssetName());
                 MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                        existingObject.getObjectName(), 
+                        existingObject.getAssetName(),
                         DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
-                        TimeUnit.MINUTES
-                );
-                
-                return new StoredObject(existingObject.getObjectName(), url, urls.getThumbUrl(), contentType);
+                        TimeUnit.MINUTES);
+
+                return new StoredObject(existingObject.getAssetName(), url, urls.getThumbUrl(), contentType);
             }
 
             // 4) 对象不存在，继续正常上传流程
@@ -149,22 +152,18 @@ public class OssMediaServiceImpl implements OssMediaService {
                     contentType,
                     isPublic,
                     DEFAULT_THUMB_MAX_W,
-                    DEFAULT_THUMB_MAX_H
-            );
-            
+                    DEFAULT_THUMB_MAX_H);
+
             // 5) MinIO 上传成功后，写入 objects 表（status=0, PENDING）
-            // 根据业务上下文确定 category：通用上传暂定为 GENERAL，后续可通过业务逻辑激活
-            // 注意：暂时传入 null 作为 rawObjectHash，后续可以通过请求参数传递
-            fileService.saveFile(
+            saveFile(
                     result.getObjectName(),
                     file.getOriginalFilename(),
                     contentType,
                     (long) fileBytes.length,
-                    FileCategory.GENERAL,
+                    AssetCategory.GENERAL,
                     null, // rawObjectHash，暂时为 null
-                    hashForDedup
-            );
-            
+                    hashForDedup);
+
             return new StoredObject(result.getObjectName(), result.getUrl(), result.getThumbUrl(), contentType);
         } catch (IOException e) {
             log.error("Upload file IO error. name={}", file.getOriginalFilename(), e);
@@ -175,6 +174,8 @@ public class OssMediaServiceImpl implements OssMediaService {
         }
     }
 
+    // ==================== 删除相关 ====================
+
     /**
      * {@inheritDoc}
      */
@@ -183,6 +184,8 @@ public class OssMediaServiceImpl implements OssMediaService {
         // 删除逻辑由 MinioOSSOperator 统一处理：会同时尝试删除对应缩略图
         minioOSSOperator.delete(objectNameOrUrl);
     }
+
+    // ==================== URL 获取相关 ====================
 
     /**
      * 获取对象访问 URL（按需刷新预签名链接）
@@ -214,19 +217,18 @@ public class OssMediaServiceImpl implements OssMediaService {
     @Override
     public Image getImageUrlWithObjectId(String objectName) {
         // 1. 查询 objects 表获取 objectId
-        FileEntity fileEntity = fileService.findByObjectName(objectName);
-        
+        Asset asset = findByObjectName(objectName);
+
         // 2. 获取最新的 URL（刷新预签名）
         String url = getImageUrl(objectName);
         MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                objectName, 
-                DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
-                TimeUnit.MINUTES
-        );
-        
+                objectName,
+                DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
+                TimeUnit.MINUTES);
+
         // 3. 构建 Image 对象（包含 objectId）
-        return new Image(objectName, url, urls.getThumbUrl(), 
-                fileEntity != null ? fileEntity.getId() : null);
+        return new Image(objectName, url, urls.getThumbUrl(),
+                asset != null ? asset.getId() : null);
     }
 
     /**
@@ -235,36 +237,182 @@ public class OssMediaServiceImpl implements OssMediaService {
     @Override
     public Image checkObjectExists(String rawHash) {
         // 1. 先查询原始对象哈希
-        FileEntity existingObject = fileService.findActiveObjectByRawHash(rawHash);
-        
+        Asset existingObject = findActiveObjectByRawHash(rawHash);
+
         if (existingObject != null) {
             // 对象已存在，重新生成 URL（避免预签名过期）
-            String url = getImageUrl(existingObject.getObjectName());
+            String url = getImageUrl(existingObject.getAssetName());
             MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                    existingObject.getObjectName(), 
-                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
-                    TimeUnit.MINUTES
-            );
-            
-            return new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
+                    existingObject.getAssetName(),
+                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
+                    TimeUnit.MINUTES);
+
+            return new Image(existingObject.getAssetName(), url, urls.getThumbUrl(), existingObject.getId());
         }
 
         // 2. 如果原始哈希不存在，再尝试规范化哈希（兼容性：如果前端规范化与后端一致）
-        existingObject = fileService.findActiveObjectByNormalizedHash(rawHash);
+        existingObject = findActiveObjectByNormalizedHash(rawHash);
         if (existingObject != null) {
-            String url = getImageUrl(existingObject.getObjectName());
+            String url = getImageUrl(existingObject.getAssetName());
             MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                    existingObject.getObjectName(), 
-                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES, 
-                    TimeUnit.MINUTES
-            );
-            
-            return new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
+                    existingObject.getAssetName(),
+                    DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
+                    TimeUnit.MINUTES);
+
+            return new Image(existingObject.getAssetName(), url, urls.getThumbUrl(), existingObject.getId());
         }
 
         // 3. 对象不存在，返回 null（前端继续上传）
         return null;
     }
+
+    // ==================== 数据库记录管理 ====================
+
+    /**
+     * 保存文件记录（默认 status=0, PENDING）
+     *
+     * @param objectName           MinIO 对象名
+     * @param originalName         原始文件名
+     * @param contentType          文件 MIME 类型
+     * @param fileSize             文件大小（字节）
+     * @param category             文件分类
+     * @param rawObjectHash        原始对象哈希（SHA-256 hex），可为 null
+     * @param normalizedObjectHash 规范化对象哈希（SHA-256 hex），可为 null
+     * @return 文件实体（包含自增 ID）
+     */
+    @Override
+    public Asset saveFile(String objectName, String originalName, String contentType, Long fileSize,
+                          AssetCategory category, String rawObjectHash, String normalizedObjectHash) {
+        Asset file = new Asset();
+        file.setAssetName(objectName);
+        file.setOriginalName(originalName);
+        file.setContentType(contentType);
+        file.setFileSize(fileSize);
+        file.setCategory(category.getValue());
+        file.setMessageId(null); // 初始状态不关联消息
+        file.setStatus(0); // PENDING
+        file.setRawAssetHash(rawObjectHash); // 原始对象哈希
+        file.setNormalizedAssetHash(normalizedObjectHash); // 规范化对象哈希
+        file.setCreateTime(LocalDateTime.now());
+        file.setUpdateTime(LocalDateTime.now());
+
+        assetMapper.insert(file);
+        log.debug("Saved file record: objectName={}, category={}, status=PENDING, rawHash={}, normalizedHash={}",
+                objectName, category, rawObjectHash, normalizedObjectHash);
+        return file;
+    }
+
+    /**
+     * 批量激活文件（用于消息图片）
+     *
+     * @param objectNames objectName 列表
+     * @param category    文件分类（通常为 MESSAGE_IMG）
+     * @param messageId   关联的消息 ID
+     */
+    @Override
+    public void activateFilesBatch(List<String> objectNames, AssetCategory category, Integer messageId) {
+        if (objectNames == null || objectNames.isEmpty()) {
+            return;
+        }
+        int updated = assetMapper.updateStatusBatch(objectNames, 1, category.getValue(), messageId);
+        log.debug("Activated {} files batch: category={}, messageId={}", updated, category, messageId);
+    }
+
+    /**
+     * 激活单个文件（用于头像/封面）
+     *
+     * @param objectName MinIO 对象名
+     * @param category   文件分类
+     */
+    @Override
+    public void activateFile(String objectName, AssetCategory category) {
+        int updated = assetMapper.updateStatusAndCategory(objectName, 1, category.getValue());
+        if (updated > 0) {
+            log.debug("Activated file: objectName={}, category={}", objectName, category);
+        } else {
+            log.warn("File not found for activation: objectName={}", objectName);
+        }
+    }
+
+    /**
+     * 激活头像文件（便捷方法）
+     *
+     * @param objectName MinIO 对象名
+     */
+    @Override
+    public void activateAvatarFile(String objectName) {
+        activateFile(objectName, AssetCategory.USER_AVATAR);
+    }
+
+    /**
+     * 激活群头像文件（便捷方法）
+     *
+     * @param objectName MinIO 对象名
+     */
+    @Override
+    public void activateChatCoverFile(String objectName) {
+        activateFile(objectName, AssetCategory.CHAT_COVER);
+    }
+
+    /**
+     * 分页查询待清理文件（用于 GC）
+     *
+     * @param hoursOld  文件年龄（小时）
+     * @param batchSize 每批查询数量
+     * @param offset    偏移量
+     * @return 文件列表
+     */
+    @Override
+    public List<Asset> findPendingFilesForGC(int hoursOld, int batchSize, int offset) {
+        LocalDateTime beforeTime = LocalDateTime.now().minusHours(hoursOld);
+        return assetMapper.findPendingFilesBefore(beforeTime, batchSize, offset);
+    }
+
+    /**
+     * 根据原始对象哈希查询已激活的对象（用于前端轻量级比对）
+     *
+     * @param rawHash 原始对象哈希（SHA-256 hex）
+     * @return 对象实体，不存在返回 null
+     */
+    @Override
+    public Asset findActiveObjectByRawHash(String rawHash) {
+        return assetMapper.findByRawHashAndActive(rawHash);
+    }
+
+    /**
+     * 根据规范化对象哈希查询已激活的对象（用于后端最终去重）
+     *
+     * @param normalizedHash 规范化对象哈希（SHA-256 hex）
+     * @return 对象实体，不存在返回 null
+     */
+    @Override
+    public Asset findActiveObjectByNormalizedHash(String normalizedHash) {
+        return assetMapper.findByNormalizedHashAndActive(normalizedHash);
+    }
+
+    /**
+     * 根据 ID 查询对象实体
+     *
+     * @param id 对象 ID
+     * @return 对象实体，不存在返回 null
+     */
+    @Override
+    public Asset findById(Integer id) {
+        return assetMapper.findById(id);
+    }
+
+    /**
+     * 根据 objectName 查询对象实体
+     *
+     * @param objectName MinIO 对象名
+     * @return 对象实体，不存在返回 null
+     */
+    @Override
+    public Asset findByObjectName(String objectName) {
+        return assetMapper.findByObjectName(objectName);
+    }
+
+    // ==================== 内部实现方法 ====================
 
     /**
      * 上传图片的内部实现
@@ -278,7 +426,8 @@ public class OssMediaServiceImpl implements OssMediaService {
      * @return Image
      */
     @Transactional(rollbackFor = Exception.class)
-    private Image uploadImageInternal(MultipartFile file, boolean isPublic, int maxW, int maxH, FileCategory category, String rawObjectHash) {
+    private Image uploadImageInternal(MultipartFile file, boolean isPublic, int maxW, int maxH, AssetCategory category,
+            String rawObjectHash) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.FILE_EMPTY);
         }
@@ -293,7 +442,7 @@ public class OssMediaServiceImpl implements OssMediaService {
             String contentType;
             String extension;
             String hashForDedup;
-            
+
             if (isGifFile(file)) {
                 // GIF 文件：直接使用原始文件，不进行规范化处理
                 fileBytes = file.getBytes();
@@ -303,7 +452,8 @@ public class OssMediaServiceImpl implements OssMediaService {
                 hashForDedup = ObjectHashUtils.calculateSHA256(fileBytes);
             } else {
                 // 非 GIF 文件：进行规范化处理
-                ImageUtils.NormalizedFile normalized = ImageUtils.normalizeIfImage(file, NORMALIZE_MAX_DIMENSION, NORMALIZE_QUALITY);
+                ImageUtils.NormalizedFile normalized = ImageUtils.normalizeIfImage(file, NORMALIZE_MAX_DIMENSION,
+                        NORMALIZE_QUALITY);
                 fileBytes = normalized.bytes();
                 contentType = normalized.contentType();
                 extension = normalized.extension();
@@ -312,23 +462,21 @@ public class OssMediaServiceImpl implements OssMediaService {
             }
 
             // 3) 查询是否存在相同哈希的对象（status=1）
-            // 注意：GIF 使用原始哈希，其他图片使用规范化哈希
-            FileEntity existingObject = fileService.findActiveObjectByNormalizedHash(hashForDedup);
-            
+            Asset existingObject = findActiveObjectByNormalizedHash(hashForDedup);
+
             if (existingObject != null) {
                 // 对象已存在，复用已存在的对象（不重复上传到 MinIO）
-                log.debug("Object already exists, reusing: objectName={}, hash={}", 
-                    existingObject.getObjectName(), hashForDedup);
-                
+                log.debug("Object already exists, reusing: objectName={}, hash={}",
+                        existingObject.getAssetName(), hashForDedup);
+
                 // 重新生成 URL（避免预签名过期）
-                String url = getImageUrl(existingObject.getObjectName());
+                String url = getImageUrl(existingObject.getAssetName());
                 MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                        existingObject.getObjectName(), 
+                        existingObject.getAssetName(),
                         DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
-                        TimeUnit.MINUTES
-                );
-                
-                return new Image(existingObject.getObjectName(), url, urls.getThumbUrl(), existingObject.getId());
+                        TimeUnit.MINUTES);
+
+                return new Image(existingObject.getAssetName(), url, urls.getThumbUrl(), existingObject.getId());
             }
 
             // 4) 对象不存在，继续正常上传流程
@@ -345,30 +493,24 @@ public class OssMediaServiceImpl implements OssMediaService {
                     contentType,
                     isPublic,
                     maxW,
-                    maxH
-            );
-            
-            // 6) 如果前端未提供 rawObjectHash，从原始对象计算（需要保留原始对象字节流）
-            // 注意：由于前端已经压缩/规范化，这里可能无法获取真正的原始对象
-            // 如果前端未提供，可以设置为 null（向后兼容）
+                    maxH);
+
+            // 6) 如果前端未提供 rawObjectHash，设置为 null（向后兼容）
             String finalRawObjectHash = rawObjectHash;
             if (finalRawObjectHash == null || finalRawObjectHash.isBlank()) {
-                // 可选：从原始文件计算（如果可能）
-                // finalRawObjectHash = ObjectHashUtils.calculateSHA256(file.getBytes());
-                finalRawObjectHash = null; // 暂时设为 null，后续可以优化
+                finalRawObjectHash = null;
             }
-            
+
             // 7) MinIO 上传成功后，写入 objects 表（status=0, PENDING）
-            FileEntity savedFile = fileService.saveFile(
+            Asset savedFile = saveFile(
                     result.getObjectName(),
                     file.getOriginalFilename(),
                     contentType,
                     (long) fileBytes.length,
                     category,
                     finalRawObjectHash,
-                    hashForDedup
-            );
-            
+                    hashForDedup);
+
             // 8) 返回 Image 对象（包含 objectId）
             return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl(), savedFile.getId());
         } catch (IOException e) {
@@ -379,21 +521,4 @@ public class OssMediaServiceImpl implements OssMediaService {
             throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
         }
     }
-
-    /**
-     * 上传图片的内部实现（重载方法，兼容旧调用）
-     *
-     * @param file     上传文件
-     * @param isPublic 是否公开访问
-     * @param maxW     缩略图最大宽度
-     * @param maxH     缩略图最大高度
-     * @param category 文件分类
-     * @return Image
-     */
-    @Transactional(rollbackFor = Exception.class)
-    private Image uploadImageInternal(MultipartFile file, boolean isPublic, int maxW, int maxH, FileCategory category) {
-        return uploadImageInternal(file, isPublic, maxW, maxH, category, null);
-    }
 }
-
-

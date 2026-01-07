@@ -23,7 +23,7 @@ public class User {
      * - 数据一致性由应用层保证（不使用物理外键约束）
      * - 如果对象被删除，应用层需要处理 object_id 的清理（设为 NULL）
      */
-    private Integer objectId;
+    private Integer assetId;
     private String bio;
     private LocalDateTime lastSeenAt;
     private LocalDateTime createTime;

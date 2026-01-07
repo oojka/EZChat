@@ -83,7 +83,7 @@ onMounted(() => editorRef.value?.focus())
           <EmojiPicker @select="onSelectEmoji" />
         </el-popover>
 
-        <el-upload class="picture-uploader" action="/api/message/upload" :headers="uploadHeaders" multiple :limit="15" :show-file-list="false" :on-success="handlePictureSuccess" :before-upload="beforePictureUpload" :on-exceed="handleExceed">
+        <el-upload class="picture-uploader" action="/api/message/upload" :headers="uploadHeaders" multiple :limit="5" :show-file-list="false" :on-success="handlePictureSuccess" :before-upload="beforePictureUpload" :on-exceed="handleExceed">
           <template #trigger><div class="tool-btn"><el-icon><Picture /></el-icon></div></template>
         </el-upload>
 
@@ -93,7 +93,7 @@ onMounted(() => editorRef.value?.focus())
 
     <div v-if="inputContent.images.length > 0" class="preview-area">
       <div v-for="(img, index) in inputContent.images" :key="index" class="preview-item">
-        <img :src="img.objectThumbUrl || img.objectUrl" />
+        <img :src="img.imageThumbUrl || img.imageUrl" />
         <div class="preview-delete" @click="removeImage(index)"><el-icon><Close /></el-icon></div>
       </div>
     </div>

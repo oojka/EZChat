@@ -2,7 +2,7 @@ package hal.th50743.controller;
 
 import hal.th50743.pojo.Image;
 import hal.th50743.pojo.Result;
-import hal.th50743.service.OssMediaService;
+import hal.th50743.service.AssetService;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -23,9 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/media")
 @RequiredArgsConstructor
 @Validated
-public class MediaController {
+public class AssetController {
 
-    private final OssMediaService ossMediaService;
+    private final AssetService assetService;
 
     /**
      * 获取图片访问 URL（按需刷新预签名链接）
@@ -39,7 +39,7 @@ public class MediaController {
      */
     @GetMapping("/url")
     public Result<Image> getImageUrl(@RequestParam String objectName) {
-        Image image = ossMediaService.getImageUrlWithObjectId(objectName);
+        Image image = assetService.getImageUrlWithObjectId(objectName);
         return Result.success(image);
     }
 
@@ -62,12 +62,8 @@ public class MediaController {
      */
     @GetMapping("/check")
     public Result<Image> checkObjectExists(
-            @RequestParam 
-            @Pattern(regexp = "^[a-fA-F0-9]{64}$", message = "Invalid hash format") 
-            String rawHash) {
-        Image image = ossMediaService.checkObjectExists(rawHash);
+            @RequestParam @Pattern(regexp = "^[a-fA-F0-9]{64}$", message = "Invalid hash format") String rawHash) {
+        Image image = assetService.checkObjectExists(rawHash);
         return Result.success(image);
     }
 }
-
-

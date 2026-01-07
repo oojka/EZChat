@@ -48,7 +48,7 @@ const {
 } = guestJoinModule
 
 const {
-    handleLoginAndJoin
+  handleLoginAndJoin
 } = loginJoinModule
 
 // 合并 Loading 状态
@@ -183,8 +183,8 @@ const handleGoToRegister = () => {
 
               <div class="room-card-preview">
                 <div class="room-avatar-wrapper">
-                  <SmartAvatar :thumb-url="validatedChatRoom?.avatar?.objectThumbUrl"
-                    :url="validatedChatRoom?.avatar?.objectUrl" :text="validatedChatRoom?.chatName" :size="100"
+                  <SmartAvatar :thumb-url="validatedChatRoom?.avatar?.imageThumbUrl"
+                    :url="validatedChatRoom?.avatar?.imageUrl" :text="validatedChatRoom?.chatName" :size="100"
                     shape="square" class="room-avatar" />
                 </div>
 
@@ -226,8 +226,11 @@ const handleGoToRegister = () => {
                   <div class="avatar-upload-area">
                     <el-upload class="avatar-uploader" action="/api/auth/register/upload" :show-file-list="false"
                       :on-success="handleAvatarSuccess">
-                      <div class="avatar-wrapper" :class="{ 'has-image': guestAvatar.objectThumbUrl }">
-                        <img v-if="guestAvatar.objectThumbUrl" :src="guestAvatar.objectThumbUrl" class="avatar-img" />
+                      <div class="avatar-wrapper"
+                        :class="{ 'has-image': guestAvatar.imageThumbUrl || guestAvatar.imageUrl || guestAvatar.blobUrl }">
+                        <img v-if="guestAvatar.imageThumbUrl || guestAvatar.imageUrl || guestAvatar.blobUrl"
+                          :src="guestAvatar.imageThumbUrl || guestAvatar.imageUrl || guestAvatar.blobUrl"
+                          class="avatar-img" />
                         <img v-else-if="defaultAvatarUrl" :src="defaultAvatarUrl" class="avatar-img" />
 
                         <div v-else class="placeholder-state">

@@ -10,9 +10,8 @@ import hal.th50743.mapper.ChatMemberMapper;
 import hal.th50743.mapper.MessageMapper;
 import hal.th50743.pojo.*;
 import hal.th50743.service.ChatService;
-import hal.th50743.service.FileService;
+import hal.th50743.service.AssetService;
 import hal.th50743.service.MessageService;
-import hal.th50743.service.OssMediaService;
 import hal.th50743.utils.ImageUtils;
 import io.minio.MinioOSSOperator;
 import lombok.RequiredArgsConstructor;
@@ -38,19 +37,18 @@ public class MessageServiceImpl implements MessageService {
     private final ChatMemberMapper chatMemberMapper;
     private final MessageMapper messageMapper;
     private final MinioOSSOperator minioOSSOperator;
-    private final OssMediaService ossMediaService;
-    private final FileService fileService;
+    private final AssetService assetService;
 
     // ObjectMapper是线程安全的，可以作为成员变量
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     @Lazy // 使用 @Lazy 解决可能的循环依赖，因为 ChatService 可能也依赖 MessageService
     private final ChatService chatService;
 
-
     /**
      * 处理WebSocket传入的新消息
-     * @param userId 发送用户ID
+     * 
+     * @param userId     发送用户ID
      * @param messageReq 消息请求对象
      * @return 需要接收该消息的用户ID列表
      */
@@ -77,9 +75,10 @@ public class MessageServiceImpl implements MessageService {
 
     /**
      * 保存消息到数据库
+     * 
      * @param userId 发送用户ID
      * @param chatId 聊天ID
-     * @param text 文本内容
+     * @param text   文本内容
      * @param images 从客户端传来的对象存储URL数组
      */
     @Override
@@ -90,11 +89,11 @@ public class MessageServiceImpl implements MessageService {
         if (images != null && !images.isEmpty()) {
             List<Integer> objectIds = new ArrayList<>();
             for (Image image : images) {
-                if (image.getObjectId() != null) {
-                    objectIds.add(image.getObjectId());
+                if (image.getAssetId() != null) {
+                    objectIds.add(image.getAssetId());
                 } else {
                     // 新工程中，上传接口必须返回 objectId，如果为 null 则记录错误
-                    log.error("Image objectId is null, skipping image: {}", image.getObjectName());
+                    log.error("Image objectId is null, skipping image: {}", image.getImageName());
                 }
             }
             if (!objectIds.isEmpty()) {
@@ -102,7 +101,8 @@ public class MessageServiceImpl implements MessageService {
                     objectIdsJson = objectMapper.writeValueAsString(objectIds);
                 } catch (JsonProcessingException e) {
                     log.error("序列化图片对象ID列表失败: ", e);
-                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to serialize image object IDs list: " + e.getMessage());
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR,
+                            "Failed to serialize image object IDs list: " + e.getMessage());
                 }
             }
         }
@@ -120,26 +120,26 @@ public class MessageServiceImpl implements MessageService {
                 text,
                 objectIdsJson, // 存储 objectId 列表的 JSON 字符串
                 LocalDateTime.now(),
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
         // 将消息添加到数据库（useGeneratedKeys 会自动填充 msg.id）
         messageMapper.addMessage(msg);
-        
+
         // 消息保存成功后，批量激活关联的图片文件（status=1, category=MESSAGE_IMG, message_id=msg.id）
         if (images != null && !images.isEmpty()) {
             List<String> objectNames = new ArrayList<>();
             for (Image image : images) {
-                objectNames.add(image.getObjectName());
+                objectNames.add(image.getImageName());
             }
-            fileService.activateFilesBatch(objectNames, FileCategory.MESSAGE_IMG, msg.getId());
+            assetService.activateFilesBatch(objectNames, AssetCategory.MESSAGE_IMG, msg.getId());
             log.debug("Activated {} files for message: messageId={}", objectNames.size(), msg.getId());
         }
     }
 
     /**
      * 根据聊天代码获取未读消息列表
-     * @param userId 当前用户ID
-     * @param chatCode 聊天室的公开代码
+     * 
+     * @param userId    当前用户ID
+     * @param chatCode  聊天室的公开代码
      * @param timeStamp 可选的时间戳，用于获取该时间点之后的消息
      * @return 经过处理的消息视图对象列表
      */
@@ -151,36 +151,36 @@ public class MessageServiceImpl implements MessageService {
             try {
                 createTime = LocalDateTime.parse(timeStamp);
             } catch (Exception e) {
-                log.warn("'非法的timeStamp'来自用户：{} 的非法的请求 chatCode:：{} 时间戳: {}",userId, chatCode, timeStamp);
+                log.warn("'非法的timeStamp'来自用户：{} 的非法的请求 chatCode:：{} 时间戳: {}", userId, chatCode, timeStamp);
                 throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid request: Incorrect timestamp format");
             }
         }
 
         Integer chatId = chatService.getChatId(userId, chatCode);
 
-
         List<MessageVO> messageList = messageMapper.getMessageListByChatIdAndTimeStamp(chatId, createTime);
-        log.info("User:{} updat LastSeenAt:{}",userId, LocalDateTime.now());
+        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
-        
+
         // 4. 对每条消息进行后处理，主要是处理附件URL
         for (MessageVO m : messageList) {
-            String objectIdsJson = m.getObjectIds();
+            String objectIdsJson = m.getAssetIds();
             if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
                 try {
                     // 1. 反序列化为 objectId 列表
-                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {});
-                    
+                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {
+                    });
+
                     // 2. 根据 objectId 列表查询 objects 表，构建 Image 对象列表
                     List<Image> images = new ArrayList<>();
                     for (Integer objectId : objectIds) {
-                        FileEntity objectEntity = fileService.findById(objectId);
+                        Asset objectEntity = assetService.findById(objectId);
                         if (objectEntity != null) {
                             // 使用 ImageUtils.buildImage() 构建 Image 对象（包含 URL）
-                            Image image = ImageUtils.buildImage(objectEntity.getObjectName(), minioOSSOperator);
+                            Image image = ImageUtils.buildImage(objectEntity.getAssetName(), minioOSSOperator);
                             // 设置 objectId（buildImage 返回的 Image 可能没有 objectId）
                             if (image != null) {
-                                image.setObjectId(objectId);
+                                image.setAssetId(objectId);
                                 images.add(image);
                             }
                         } else {
@@ -194,10 +194,10 @@ public class MessageServiceImpl implements MessageService {
                     m.setImages(Collections.emptyList());
                 }
                 // 清理掉原始的JSON字符串，不需要返回给前端
-                m.setObjectIds(null);
+                m.setAssetIds(null);
             }
         }
-        
+
         // 调用 ChatService 获取完整的 ChatVO (包含头像转换、成员列表等)
         ChatVO chatVO = chatService.getChat(userId, chatCode);
 
@@ -210,12 +210,13 @@ public class MessageServiceImpl implements MessageService {
     /**
      * 消息的上传文件
      * 存在private路径中
+     * 
      * @param file 文件对象
      * @return Image 图片对象
      */
     @Override
     public Image upload(MultipartFile file) {
         // 业务目的：消息图片上传统一交给 OSS 媒体服务处理（含图片规范化/缩略图/私有访问）
-        return ossMediaService.uploadMessageImage(file);
+        return assetService.uploadMessageImage(file);
     }
 }

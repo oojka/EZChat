@@ -21,7 +21,8 @@
     "off": "OFF",
     "copy": "Copy",
     "copied": "Copied",
-    "copy_failed": "Copy failed"
+    "copy_failed": "Copy failed",
+    "verifying_invitation": "Verifying invitation..."
   },
   "dialog": {
     "tip": "Tip",
@@ -119,6 +120,8 @@
     "data_already_exists": "This data already exists.",
     "you_have_already_in_this_room": "You have already joined this room. Please do not join again.",
     "is_already_exist": " already exists.",
+    "already_joined": "You have already joined this room.",
+    "join_chat_success": "Join chat successfully",
     "not_member": "No access permission: You are not a member of this chat room.",
     "room_not_found": "Room does not exist or has been disbanded.",
     "input_too_long": "Input exceeds the character limit.",
@@ -127,6 +130,7 @@
     "invalid_request": "Invalid request.",
     "file_empty": "File is empty or not selected.",
     "file_upload_failed": "Upload failed.",
+    "image_upload_failed": "Image upload failed.",
     "file_too_large": "File is too large. Please choose a smaller one.",
     "invalid_credentials": "Incorrect username or password.",
     "network_error": "Network error. Please check your connection.",
@@ -135,6 +139,10 @@
     "password_login_disabled": "This room is disabled from joining via password.",
     "password_required": "This room requires a password to join.",
     "password_incorrect": "Password verification failed: incorrect password.",
+    "invite_code_invalid": "Invalid invite code.",
+    "invite_code_expired": "Invite code has expired.",
+    "invite_code_revoked": "Invite code has been revoked.",
+    "invite_code_usage_limit_reached": "Invite code usage limit reached.",
     "http_400": "Bad request",
     "http_404": "Resource not found",
     "http_408": "Request timeout, please try again later",
@@ -146,16 +154,38 @@
       "40300": "Join is disabled or password login is not enabled.",
       "42003": "Password is required.",
       "42004": "Incorrect password.",
-      "40000": "Bad request."
+      "40000": "Bad request.",
+      "42010": "Invalid invite code.",
+      "42011": "Invite code has expired.",
+      "42012": "Invite code has been revoked.",
+      "42013": "Invite code usage limit reached."
     }
   },
   "error_pages": {
-    "404": { "title": "Page Not Found", "message": "The page you're looking for doesn't exist or has been moved." },
-    "403": { "title": "Access Denied", "message": "You don't have permission to view this page." },
-    "429": { "title": "Traffic Limit Exceeded", "message": "We're experiencing high traffic. Please try again in a moment." },
-    "500": { "title": "Server Error", "message": "Something went wrong on our end. We're working on it." },
-    "503": { "title": "Service Unavailable", "message": "The service is temporarily unavailable for maintenance." },
-    "default": { "title": "Error", "message": "An unexpected error occurred." }
+    "404": {
+      "title": "Page Not Found",
+      "message": "The page you're looking for doesn't exist or has been moved."
+    },
+    "403": {
+      "title": "Access Denied",
+      "message": "You don't have permission to view this page."
+    },
+    "429": {
+      "title": "Traffic Limit Exceeded",
+      "message": "We're experiencing high traffic. Please try again in a moment."
+    },
+    "500": {
+      "title": "Server Error",
+      "message": "Something went wrong on our end. We're working on it."
+    },
+    "503": {
+      "title": "Service Unavailable",
+      "message": "The service is temporarily unavailable for maintenance."
+    },
+    "default": {
+      "title": "Error",
+      "message": "An unexpected error occurred."
+    }
   },
   "error": {
     "fatal_error": "Application encountered a fatal error and cannot continue",
@@ -195,7 +225,9 @@
     "create_room": "Create Room",
     "join_room": "Join Room",
     "no_chats": "No active chats",
+    "no_chat": "No chat",
     "just_now": "Just now",
+    "current_chat": "Current Chat",
     "friends_view": "Friends",
     "chat_view": "Chats",
     "friends_coming_soon": "Friends feature coming soon"
@@ -223,6 +255,13 @@
     "emoji": "Emoji",
     "recent": "Recent",
     "all_emojis": "All",
+    "room_id_missing": "Room ID is missing in URL",
+    "invalid_room_id_format": "Invalid Room ID format in URL",
+    "room_code_mismatch": "Room code mismatch",
+    "validation_info_expired": "Validation info expired, please restart",
+    "avatar_upload_failed": "Avatar upload failed, using default",
+    "target_chat_code_missing": "Target chat code is missing",
+    "invalid_validation_info": "Invalid validation info",
     "send_image": "Upload Image",
     "newline": "New Line",
     "send_on_enter": "Enter to Send",
@@ -322,5 +361,9 @@
     "no_account": "No account yet?",
     "register": "「Register」",
     "validation_expired": "Invitation information has expired. Please verify again"
+  },
+  "system": {
+    "room_created": "Room created",
+    "member_join": "{0} joined the group"
   }
 }

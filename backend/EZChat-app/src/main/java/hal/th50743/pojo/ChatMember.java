@@ -22,9 +22,9 @@ public class ChatMember {
     private Integer userId;
     private String nickname;
     /**
-     * 关联 objects 表的 id（逻辑外键）
+     * 关联 assets 表的 id（逻辑外键）
      */
-    private Integer objectId;
+    private Integer assetId;
     private LocalDateTime lastSeenAt;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

@@ -64,7 +64,7 @@ export const useConfigStore = defineStore(
      * - WINDOW_SIZE: 滑动窗口的时间大小（毫秒）
      * - LOCKOUT_DURATION: 超过限制后的封锁持续时间（毫秒）
      */
-    const MAX_REQUESTS_PER_WINDOW = 15
+    const MAX_REQUESTS_PER_WINDOW = 20
     const WINDOW_SIZE = 3 * 1000 // 3 秒
     const LOCKOUT_DURATION = 15 * 1000 // 15 秒
 

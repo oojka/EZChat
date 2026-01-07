@@ -1,6 +1,5 @@
 package hal.th50743.pojo;
 
-import io.minio.MinioOSSResult;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,9 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Image {
 
-    private String objectName;
-    private String objectUrl;
-    private String objectThumbUrl;
+    private String imageName;
+    private String imageUrl;
+    private String imageThumbUrl;
     /**
      * 对象 ID，用于直接关联 objects 表
      * <p>
@@ -26,6 +25,6 @@ public class Image {
      * - 如果提供，后端可以直接使用 objectId 关联 objects 表，无需根据 objectName 查询
      * - 性能优化：避免频繁查询 objects 表
      */
-    private Integer objectId;
+    private Integer assetId;
 
 }

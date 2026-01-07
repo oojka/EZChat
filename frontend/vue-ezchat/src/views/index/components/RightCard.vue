@@ -20,14 +20,14 @@ import { createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 
 /**
  * 右侧卡片组件 - 登录/注册界面
- * 
+ *
  * 功能特点：
  * 1. 双面卡片设计：正面为登录界面，背面为注册界面
  * 2. 3D翻转动画效果
  * 3. 完整的登录和注册流程
  * 4. 多步骤注册向导
  * 5. 响应式设计和玻璃态视觉效果
- * 
+ *
  * 技术架构：
  * - 使用 Vue 3 Composition API + TypeScript
  * - 通过 Hooks 分离业务逻辑（useLogin, useRegister）
@@ -58,7 +58,7 @@ const defaultAvatarUrl = ref('')                    // 默认头像 URL（用于
 
 /**
  * 注册进度百分比计算
- * 
+ *
  * 计算规则：
  * - 步骤1-3：根据当前步骤计算进度（33%, 66%, 99%）
  * - 步骤4且成功：显示100%
@@ -81,7 +81,7 @@ onMounted(() => {
 // ==================== 卡片翻转控制 ====================
 /**
  * 翻转卡片到注册面
- * 
+ *
  * 操作流程：
  * 1. 重置注册状态到第一步
  * 2. 清空注册结果
@@ -103,7 +103,7 @@ const onFlip = () => {
 
 /**
  * 翻转卡片回登录面
- * 
+ *
  * 操作流程：
  * 1. 立即触发取消翻转事件
  * 2. 延迟重置注册状态（等待动画完成）
@@ -131,12 +131,12 @@ const onAvatarSuccess = (response: any) => { handleAvatarSuccess(response) }
 // ==================== 注册步骤验证 ====================
 /**
  * 验证当前注册步骤的表单字段
- * 
+ *
  * 验证规则：
  * - 步骤1（头像）：无需验证（可选）
  * - 步骤2（基本信息）：验证昵称和用户名
  * - 步骤3（密码）：验证密码和确认密码
- * 
+ *
  * @param step 当前步骤编号
  * @returns 验证是否通过
  */
@@ -175,13 +175,13 @@ const prevStep = () => {
 // ==================== 注册提交处理 ====================
 /**
  * 处理注册提交
- * 
+ *
  * 业务流程：
  * 1. 验证步骤3（密码）的表单
  * 2. 检查并上传默认头像（如果用户未设置）
  * 3. 调用注册 API
  * 4. 根据结果更新UI状态
- * 
+ *
  * 设计特点：
  * - 失败时保持在步骤3，允许用户修改后重试
  * - 成功时跳转到步骤4显示结果
@@ -194,7 +194,7 @@ const handleRegister = async () => {
   isRegistering.value = true
   try {
     // 如果用户未设置头像（Image 对象为空或空串），上传默认头像
-    if (!registerForm.value.avatar.objectUrl && !registerForm.value.avatar.objectThumbUrl) {
+    if (!registerForm.value.avatar.imageUrl && !registerForm.value.avatar.imageThumbUrl) {
       registerForm.value.avatar = await imageStore.uploadDefaultAvatarIfNeeded(registerForm.value.avatar, 'user')
     }
 
@@ -231,7 +231,7 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <!-- 
+  <!--
     双面卡片容器
     - 使用 CSS 3D 变换实现翻转效果
     - flipped 控制是否翻转（显示注册面）
@@ -248,7 +248,7 @@ const handleRegister = async () => {
 
       <!-- 登录内容区域：表单输入 -->
       <div class="login-content">
-        <!-- 
+        <!--
           登录表单
           - 使用 Element Plus 表单组件
           - 禁用自动验证消息（由 useLogin hook 处理）
@@ -274,7 +274,7 @@ const handleRegister = async () => {
 
       <!-- 登录底部：按钮和注册链接 -->
       <div class="login-footer">
-        <!-- 
+        <!--
           登录按钮
           - 加载状态显示 loading 动画
           - 冷却锁定状态禁用按钮并显示倒计时
@@ -306,7 +306,7 @@ const handleRegister = async () => {
           </div>
           <h4>{{ registerStep === 4 ? t('auth.register_result') : t('auth.register') }}</h4>
         </div>
-        <!-- 
+        <!--
           注册表单
           - 使用 Element Plus 表单验证规则
           - 标签位置在顶部
@@ -319,7 +319,7 @@ const handleRegister = async () => {
             <!-- 步骤1：头像上传 -->
             <div v-if="registerStep === 1" key="step1" class="step-container avatar-step">
               <div class="avatar-upload-box shifted-down">
-                <!-- 
+                <!--
                   头像上传组件
                   - 支持图片上传和预览
                   - 上传前验证（大小、格式）
@@ -328,8 +328,8 @@ const handleRegister = async () => {
                 <el-upload class="avatar-uploader-large" action="/api/auth/register/upload" :show-file-list="false"
                   :on-success="onAvatarSuccess" :before-upload="beforeAvatarUpload">
                   <!-- 已上传头像预览 -->
-                  <div v-if="registerForm.avatar.objectThumbUrl" class="avatar-preview-lg"><img
-                      :src="registerForm.avatar.objectThumbUrl" class="avatar-img" />
+                  <div v-if="registerForm.avatar.imageThumbUrl" class="avatar-preview-lg"><img
+                    :src="registerForm.avatar.imageThumbUrl" class="avatar-img" />
                     <div class="edit-mask-lg"><el-icon>
                         <Camera />
                       </el-icon><span>{{ t('common.change') }}</span></div>
@@ -432,7 +432,7 @@ const handleRegister = async () => {
 </template>
 
 <style scoped>
-/* 
+/*
   右侧卡片组件样式
   设计特点：
   - 玻璃态视觉效果（毛玻璃背景）

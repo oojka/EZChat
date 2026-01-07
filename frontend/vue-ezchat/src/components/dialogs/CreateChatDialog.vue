@@ -101,8 +101,8 @@ const progressPercentage = computed(() => {
               <div class="avatar-upload-box">
                 <el-upload class="avatar-uploader-large" action="/api/auth/register/upload" :show-file-list="false"
                   :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload">
-                  <div v-if="createChatForm.avatar.objectThumbUrl" class="avatar-preview-lg">
-                    <img :src="createChatForm.avatar.objectThumbUrl" class="avatar-img" />
+                  <div v-if="createChatForm.avatar.imageThumbUrl" class="avatar-preview-lg">
+                    <img :src="createChatForm.avatar.imageThumbUrl" class="avatar-img" />
                     <div class="edit-mask-lg">
                       <el-icon>
                         <Camera />

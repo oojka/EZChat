@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
 import { calculateObjectHash } from '@/utils/objectHash'
+import { isImage } from '@/utils/validators'
 import { checkObjectExistsApi } from '@/api/Media'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { createChatApi, getChatRoomApi } from '@/api/Chat'
@@ -23,30 +24,12 @@ export const useCreateChat = () => {
   // ============================================================
   // Type Guards（类型守卫函数）
   // ============================================================
-  
+
   /**
    * 类型守卫：检查值是否为字符串
    */
   const isString = (value: unknown): value is string => {
     return typeof value === 'string'
-  }
-
-  /**
-   * 类型守卫：检查值是否为 Image 对象
-   */
-  const isImage = (value: unknown): value is Image => {
-    if (typeof value !== 'object' || value === null) {
-      return false
-    }
-    const obj = value as Record<string, unknown>
-    return (
-      'objectName' in obj &&
-      'objectUrl' in obj &&
-      'objectThumbUrl' in obj &&
-      typeof obj.objectName === 'string' &&
-      typeof obj.objectUrl === 'string' &&
-      typeof obj.objectThumbUrl === 'string'
-    )
   }
 
   /**
@@ -71,7 +54,7 @@ export const useCreateChat = () => {
     const res = isString(translationResult) ? translationResult : String(translationResult)
     return res === key ? fallback : res
   }
-  
+
   const createChatForm = ref<{
     avatar: Image
     chatName: string
@@ -88,9 +71,9 @@ export const useCreateChat = () => {
     passwordConfirm: string
   }>({
     avatar: {
-      objectName: '',
-      objectUrl: '',
-      objectThumbUrl: '',
+      imageName: '',
+      imageUrl: '',
+      imageThumbUrl: '',
       blobUrl: '',
       blobThumbUrl: '',
     },
@@ -182,11 +165,11 @@ export const useCreateChat = () => {
       // 计算原始对象哈希（在压缩之前，确保是真正的原始对象）
       // rawFile 已经通过 isFile 类型守卫验证，TypeScript 会自动收窄类型
       const rawHash = await calculateObjectHash(rawFile)
-      
+
       // 调用比对接口，检查对象是否已存在
       try {
         const checkResult = await checkObjectExistsApi(rawHash)
-        
+
         if (checkResult.status === 1 && checkResult.data) {
           // 对象已存在，直接使用返回的 Image 对象
           // 注意：handleAvatarSuccess 期望的参数格式是 { data: Image }，需要适配
@@ -235,18 +218,24 @@ export const useCreateChat = () => {
   }
 
   const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
-    if (response && response.data) {
-      createChatForm.value.avatar = response.data
+    // 使用类型守卫验证 response.data 是否为 Image 类型
+    if (response && typeof response === 'object' && 'data' in response) {
+      const data = (response as { data: unknown }).data
+      if (isImage(data)) {
+        createChatForm.value.avatar = data
+      } else {
+        console.warn('[WARN] [handleAvatarSuccess] Invalid Image data format:', data)
+      }
     }
   }
-  
+
   // 重置表单
   const resetCreateForm = () => {
     createChatForm.value = {
       avatar: {
-        objectName: '',
-        objectUrl: '',
-        objectThumbUrl: '',
+        imageName: '',
+        imageUrl: '',
+        imageThumbUrl: '',
         blobUrl: '',
         blobThumbUrl: '',
       },
@@ -412,7 +401,7 @@ export const useCreateChat = () => {
     password: [{ validator: validatePassword, trigger: ['blur', 'change'] }],
     passwordConfirm: [{ validator: validatePasswordConfirm, trigger: ['blur', 'change'] }],
   })
-  
+
   // 步骤验证
   const validateStep = async (step: number): Promise<boolean> => {
     if (!createFormRef.value) return false
@@ -439,14 +428,14 @@ export const useCreateChat = () => {
       return false
     }
   }
-  
+
   // 步骤导航
   const nextStep = async () => {
     if (await validateStep(createStep.value) && createStep.value < 3) {
       createStep.value++
     }
   }
-  
+
   const prevStep = () => {
     if (createStep.value > 1 && createStep.value <= 3) {
       createStep.value--
@@ -456,19 +445,19 @@ export const useCreateChat = () => {
   // 4. 提交包装函数
   const handleCreate = async () => {
     if (!await validateStep(3)) {
-      // 
+      //
       ElMessage.error(t(''))
       return
     }
     isCreating.value = true
     try {
       await createFormRef.value!.validate()
-      
+
       // 如果用户未设置头像（Image 对象为空或空串），上传默认头像
-      if (!createChatForm.value.avatar.objectUrl && !createChatForm.value.avatar.objectThumbUrl) {
+      if (!createChatForm.value.avatar.imageUrl && !createChatForm.value.avatar.imageThumbUrl) {
         createChatForm.value.avatar = await imageStore.uploadDefaultAvatarIfNeeded(createChatForm.value.avatar, 'room')
       }
-      
+
       // API payload:
       // - joinEnable: 固定传 1（对应 DB join_enabled，全局允许加入；本期不做 UI 控制）
       // - password/passwordConfirm: 仅当 joinEnableByPassword=1 时有意义，否则后端不写 hash

@@ -21,7 +21,8 @@
     "off": "关闭",
     "copy": "复制",
     "copied": "已复制",
-    "copy_failed": "复制失败"
+    "copy_failed": "复制失败",
+    "verifying_invitation": "验证邀请中..."
   },
   "dialog": {
     "tip": "提示",
@@ -119,6 +120,8 @@
     "data_already_exists": "该数据已存在。",
     "you_have_already_in_this_room": "您已经加入此房间，请勿重复加入。",
     "is_already_exist": " 已存在。",
+    "already_joined": "您已经加入此房间。",
+    "join_chat_success": "成功加入聊天室",
     "not_member": "无访问权限：您不是该聊天室的成员。",
     "room_not_found": "房间不存在或已被解散。",
     "input_too_long": "输入内容超过字符限制。",
@@ -127,6 +130,7 @@
     "invalid_request": "非法请求。",
     "file_empty": "文件为空或未选择。",
     "file_upload_failed": "上传失败。",
+    "image_upload_failed": "图片上传失败。",
     "file_too_large": "文件过大，请选择较小的文件。",
     "invalid_credentials": "用户名或密码错误。",
     "network_error": "网络错误，请检查您的连接。",
@@ -135,6 +139,10 @@
     "password_login_disabled": "该房间被禁止通过密码加入。",
     "password_required": "该房间需要密码才能加入。",
     "password_incorrect": "密码验证失败：密码不正确。",
+    "invite_code_invalid": "邀请码无效。",
+    "invite_code_expired": "邀请码已过期。",
+    "invite_code_revoked": "邀请码已被撤销。",
+    "invite_code_usage_limit_reached": "邀请码使用次数已满。",
     "http_400": "请求参数错误",
     "http_404": "资源未找到",
     "http_408": "请求超时，请稍后重试",
@@ -146,16 +154,38 @@
       "40300": "加入被禁用或密码登录未启用。",
       "42003": "密码必填。",
       "42004": "密码错误。",
-      "40000": "请求参数错误。"
+      "40000": "请求参数错误。",
+      "42010": "邀请码无效。",
+      "42011": "邀请码已过期。",
+      "42012": "邀请码已被撤销。",
+      "42013": "邀请码使用次数已满。"
     }
   },
   "error_pages": {
-    "404": { "title": "页面未找到", "message": "您访问的页面不存在或已被移动。" },
-    "403": { "title": "访问被拒绝", "message": "您没有权限访问此页面。" },
-    "429": { "title": "流量限制", "message": "当前访问量较大，请稍后再试。" },
-    "500": { "title": "服务器错误", "message": "服务器出现了问题，我们正在修复。" },
-    "503": { "title": "服务不可用", "message": "服务暂时不可用，正在进行维护。" },
-    "default": { "title": "错误", "message": "发生了预料之外的错误。" }
+    "404": {
+      "title": "页面未找到",
+      "message": "您访问的页面不存在或已被移动。"
+    },
+    "403": {
+      "title": "访问被拒绝",
+      "message": "您没有权限访问此页面。"
+    },
+    "429": {
+      "title": "流量限制",
+      "message": "当前访问量较大，请稍后再试。"
+    },
+    "500": {
+      "title": "服务器错误",
+      "message": "服务器出现了问题，我们正在修复。"
+    },
+    "503": {
+      "title": "服务不可用",
+      "message": "服务暂时不可用，正在进行维护。"
+    },
+    "default": {
+      "title": "错误",
+      "message": "发生了预料之外的错误。"
+    }
   },
   "error": {
     "fatal_error": "应用遇到致命错误，无法继续运行",
@@ -195,7 +225,9 @@
     "create_room": "创建房间",
     "join_room": "加入房间",
     "no_chats": "暂无聊天",
+    "no_chat": "暂无会话",
     "just_now": "刚刚",
+    "current_chat": "当前会话",
     "friends_view": "好友",
     "chat_view": "聊天",
     "friends_coming_soon": "好友功能即将上线"
@@ -223,6 +255,13 @@
     "emoji": "表情",
     "recent": "最近使用",
     "all_emojis": "全部",
+    "room_id_missing": "URL中缺少房间ID",
+    "invalid_room_id_format": "URL中的房间ID格式无效",
+    "room_code_mismatch": "房间代码不匹配",
+    "validation_info_expired": "验证信息已过期，请重新开始",
+    "avatar_upload_failed": "头像上传失败，使用默认头像",
+    "target_chat_code_missing": "目标聊天代码缺失",
+    "invalid_validation_info": "验证信息无效",
     "send_image": "上传图片",
     "newline": "换行",
     "send_on_enter": "按回车发送",
@@ -322,5 +361,9 @@
     "no_account": "没有账号？",
     "register": "「注册」",
     "validation_expired": "邀请信息已失效，请重新验证"
+  },
+  "system": {
+    "room_created": "房间已创建",
+    "member_join": "{0} 加入了群聊"
   }
 }

@@ -29,14 +29,6 @@ public interface ChatService {
     List<Integer> getChatMembers(Integer userId);
 
     /**
-     * 获取用户的聊天列表及成员在线状态
-     *
-     * @param userId 用户ID
-     * @return 初始化数据视图对象
-     */
-    AppInitVO getChatVOListAndMemberStatusList(Integer userId);
-
-    /**
      * 获取用户的聊天列表及成员在线状态（轻量版）
      *
      * 业务目的：
@@ -105,7 +97,7 @@ public interface ChatService {
      * - 创建 chats 记录并让创建者自动入群
      * - 生成短邀请码（用于 7 天有效期的邀请链接，免密加入）
      *
-     * @param userId 当前用户内部 ID（创建者）
+     * @param userId  当前用户内部 ID（创建者）
      * @param chatReq 创建请求参数
      * @return 创建结果（chatCode + inviteCode）
      */
@@ -121,16 +113,16 @@ public interface ChatService {
      * <p>
      * 支持两种验证模式：
      * <ul>
-     *   <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
-     *   <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
+     * <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
+     * <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
      * </ul>
      * <p>
      * 验证逻辑：
      * <ol>
-     *   <li>检查房间是否存在（42001）</li>
-     *   <li>检查是否允许加入（joinEnabled == 1，否则返回 40300）</li>
-     *   <li>检查密码登录是否启用（password_hash 是否为 null，为 null 则返回 40300）</li>
-     *   <li>验证密码是否正确（42004）</li>
+     * <li>检查房间是否存在（42001）</li>
+     * <li>检查是否允许加入（joinEnabled == 1，否则返回 40300）</li>
+     * <li>检查密码登录是否启用（password_hash 是否为 null，为 null 则返回 40300）</li>
+     * <li>验证密码是否正确（42004）</li>
      * </ol>
      *
      * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
@@ -138,6 +130,5 @@ public interface ChatService {
      * @throws BusinessException 如果验证失败（房间不存在、禁止加入、密码错误等）
      */
     ChatVO validateChatJoin(ValidateChatJoinReq req);
-
 
 }

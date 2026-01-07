@@ -12,15 +12,16 @@ import lombok.Getter;
  * <p>
  * 错误码设计规范：
  * <ul>
- *   <li><b>200</b>：成功（HTTP 状态码兼容）</li>
- *   <li><b>4xxxx</b>：客户端错误（请求参数错误、权限问题等）</li>
- *   <li><b>41xxx</b>：用户相关业务错误（用户不存在、用户已存在、凭证无效等）</li>
- *   <li><b>42xxx</b>：聊天/消息相关业务错误（房间不存在、非成员、密码相关等）</li>
- *   <li><b>43xxx</b>：文件相关业务错误（文件为空、文件过大等）</li>
- *   <li><b>5xxxx</b>：服务器错误（系统内部错误、数据库错误等）</li>
+ * <li><b>200</b>：成功（HTTP 状态码兼容）</li>
+ * <li><b>4xxxx</b>：客户端错误（请求参数错误、权限问题等）</li>
+ * <li><b>41xxx</b>：用户相关业务错误（用户不存在、用户已存在、凭证无效等）</li>
+ * <li><b>42xxx</b>：聊天/消息相关业务错误（房间不存在、非成员、密码相关等）</li>
+ * <li><b>43xxx</b>：文件相关业务错误（文件为空、文件过大等）</li>
+ * <li><b>5xxxx</b>：服务器错误（系统内部错误、数据库错误等）</li>
  * </ul>
  * <p>
  * 使用方式：
+ * 
  * <pre>{@code
  * // 在 Service 层抛出业务异常
  * throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -124,6 +125,7 @@ public enum ErrorCode {
      * - 用户 ID 无效
      * <p>
      * 示例：
+     * 
      * <pre>{@code
      * User user = userMapper.findByUid(uid);
      * if (user == null) {
@@ -141,6 +143,7 @@ public enum ErrorCode {
      * - 创建用户时，唯一标识冲突
      * <p>
      * 示例：
+     * 
      * <pre>{@code
      * if (userMapper.existsByUsername(username)) {
      *     throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS);
@@ -217,6 +220,26 @@ public enum ErrorCode {
      * 前端处理：跳转到 `/join/error?reason=password_incorrect`
      */
     PASSWORD_INCORRECT(42004, "Incorrect password"),
+
+    /**
+     * 邀请码无效
+     */
+    INVITE_CODE_INVALID(42010, "Invalid invite code"),
+
+    /**
+     * 邀请码已过期
+     */
+    INVITE_CODE_EXPIRED(42011, "Invite code has expired"),
+
+    /**
+     * 邀请码已被撤销
+     */
+    INVITE_CODE_REVOKED(42012, "Invite code has been revoked"),
+
+    /**
+     * 邀请码使用次数已满
+     */
+    INVITE_CODE_USAGE_LIMIT_REACHED(42013, "Invite code usage limit reached"),
 
     // =========================================
     // 业务错误：文件相关 (43xxx)

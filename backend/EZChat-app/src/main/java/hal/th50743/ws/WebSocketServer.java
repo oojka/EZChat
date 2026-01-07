@@ -61,7 +61,7 @@ public class WebSocketServer {
 
     @Autowired
     public void setServices(JwtUtils jwtUtils, UserService userService,
-                            ChatService chatService, MessageService messageService) {
+            ChatService chatService, MessageService messageService) {
         WebSocketServer.jwtUtils = jwtUtils;
         WebSocketServer.userService = userService;
         WebSocketServer.chatService = chatService;
@@ -87,7 +87,7 @@ public class WebSocketServer {
             this.broadcastList = chatService.getChatMembers(this.userId);
 
             UserStatus u = new UserStatus(this.uid, true, LocalDateTime.now());
-            String message = MessageUtils.setMessage(true, "USER_STATUS", u);
+            String message = MessageUtils.setMessage(2001, "USER_STATUS", u);
 
             // 广播时不包含自己，但 OnOpen 成功不需要给自己发消息，只广播给好友
             send(message, broadcastList);
@@ -144,14 +144,13 @@ public class WebSocketServer {
                     msg.getText(),
                     null,
                     msg.getImages(),
-                    LocalDateTime.now()
-            );
+                    LocalDateTime.now());
 
             // 6. 发送
             // 给目标群体发送聊天内容
-            send(MessageUtils.setMessage(false, "MESSAGE", messageVO), sendList);
+            send(MessageUtils.setMessage(1001, "MESSAGE", messageVO), sendList);
             // 给自己发送 ACK (确认消息已达服务端)
-            sendSelf(onLineUsers.get(this.userId), MessageUtils.setMessage(true, "ACK", msg.getTempId()));
+            sendSelf(onLineUsers.get(this.userId), MessageUtils.setMessage(2002, "ACK", msg.getTempId()));
 
         } catch (JsonProcessingException e) {
             log.error("JSON解析失败: {}", rowMessage);
@@ -184,7 +183,7 @@ public class WebSocketServer {
 
             if (this.broadcastList != null && !this.broadcastList.isEmpty()) {
                 UserStatus u = new UserStatus(this.uid, false, LocalDateTime.now());
-                send(MessageUtils.setMessage(true, "USER_STATUS", u), this.broadcastList);
+                send(MessageUtils.setMessage(2001, "USER_STATUS", u), this.broadcastList);
             }
             log.info("用户下线: {}", this.userId);
 
@@ -199,11 +198,13 @@ public class WebSocketServer {
      * 群发消息 (容错处理)
      */
     private void send(String message, List<Integer> targetUserIds) {
-        if (targetUserIds == null || targetUserIds.isEmpty()) return;
+        if (targetUserIds == null || targetUserIds.isEmpty())
+            return;
 
         for (Integer targetId : targetUserIds) {
             // 跳过自己
-            if (targetId.equals(this.userId)) continue;
+            if (targetId.equals(this.userId))
+                continue;
 
             Session targetSession = onLineUsers.get(targetId);
             if (targetSession != null && targetSession.isOpen()) {
@@ -254,5 +255,29 @@ public class WebSocketServer {
 
     public static Map<Integer, Session> getOnLineUserList() {
         return onLineUsers;
+    }
+
+    /**
+     * 静态广播方法：供 Service 层调用
+     *
+     * @param message       JSON 消息字符串
+     * @param targetUserIds 接收者 ID 列表
+     */
+    public static void broadcast(String message, List<Integer> targetUserIds) {
+        if (targetUserIds == null || targetUserIds.isEmpty())
+            return;
+
+        for (Integer targetId : targetUserIds) {
+            Session targetSession = onLineUsers.get(targetId);
+            if (targetSession != null && targetSession.isOpen()) {
+                try {
+                    synchronized (targetSession) {
+                        targetSession.getBasicRemote().sendText(message);
+                    }
+                } catch (IOException e) {
+                    log.error("Broadcast failed: receiver={}, error={}", targetId, e.getMessage());
+                }
+            }
+        }
     }
 }

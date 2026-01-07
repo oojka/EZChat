@@ -56,7 +56,7 @@ public class MessageVO {
      * - 用于从数据库查询结果转换为前端需要的格式
      * - 最终会被转换为 images 字段
      */
-    private String objectIds;
+    private String assetIds;
 
     /**
      * 消息图片列表

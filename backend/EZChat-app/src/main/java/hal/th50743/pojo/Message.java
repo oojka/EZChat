@@ -28,7 +28,7 @@ public class Message {
     /**
      * 存储图片对象ID列表的 JSON 字符串（格式：JSON 数组，如 [1,2,3]）
      */
-    private String objectIds;
+    private String assetIds;
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

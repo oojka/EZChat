@@ -21,7 +21,8 @@
     "off": "OFF",
     "copy": "복사",
     "copied": "복사됨",
-    "copy_failed": "복사 실패"
+    "copy_failed": "복사 실패",
+    "verifying_invitation": "초대 확인 중..."
   },
   "dialog": {
     "tip": "팁",
@@ -119,6 +120,8 @@
     "data_already_exists": "이 데이터는 이미 존재합니다.",
     "you_have_already_in_this_room": "이미 이 룸에 참여했습니다. 다시 참여하지 마세요.",
     "is_already_exist": " 이미 존재합니다.",
+    "already_joined": "이미 이 룸에 참여했습니다.",
+    "join_chat_success": "채팅에 참여했습니다",
     "not_member": "액세스 권한이 없습니다：이 채팅방의 멤버가 아닙니다.",
     "room_not_found": "룸이 존재하지 않거나 이미 해체되었습니다.",
     "input_too_long": "입력이 문자 수 제한을 초과했습니다.",
@@ -127,6 +130,7 @@
     "invalid_request": "잘못된 요청입니다.",
     "file_empty": "파일이 비어 있거나 선택되지 않았습니다.",
     "file_upload_failed": "업로드에 실패했습니다.",
+    "image_upload_failed": "이미지 업로드에 실패했습니다.",
     "file_too_large": "파일이 너무 큽니다. 더 작은 파일을 선택해 주세요.",
     "invalid_credentials": "사용자 ID 또는 비밀번호가 올바르지 않습니다.",
     "network_error": "네트워크 오류. 연결을 확인해 주세요.",
@@ -135,6 +139,10 @@
     "password_login_disabled": "이 룸은 비밀번호를 통한 참여가 금지되었습니다.",
     "password_required": "이 룸에 참여하려면 비밀번호가 필요합니다.",
     "password_incorrect": "비밀번호 확인에 실패했습니다：비밀번호가 올바르지 않습니다.",
+    "invite_code_invalid": "잘못된 초대 코드입니다.",
+    "invite_code_expired": "초대 코드의 유효 기간이 만료되었습니다.",
+    "invite_code_revoked": "초대 코드가 취소되었습니다.",
+    "invite_code_usage_limit_reached": "초대 코드 사용 횟수 제한에 도달했습니다.",
     "http_400": "요청 매개변수 오류",
     "http_404": "리소스를 찾을 수 없습니다",
     "http_408": "요청 시간 초과. 잠시 후 다시 시도해 주세요",
@@ -146,7 +154,11 @@
       "40300": "참여가 비활성화되었거나 비밀번호 로그인이 활성화되지 않았습니다.",
       "42003": "비밀번호가 필요합니다.",
       "42004": "비밀번호가 올바르지 않습니다.",
-      "40000": "요청 매개변수 오류."
+      "40000": "요청 매개변수 오류.",
+      "42010": "잘못된 초대 코드입니다.",
+      "42011": "초대 코드의 유효 기간이 만료되었습니다.",
+      "42012": "초대 코드가 취소되었습니다.",
+      "42013": "초대 코드 사용 횟수 제한에 도달했습니다."
     }
   },
   "error_pages": {
@@ -173,7 +185,9 @@
     "create_room": "룸 만들기",
     "join_room": "룸 참여하기",
     "no_chats": "채팅이 없습니다",
+    "no_chat": "채팅이 없습니다",
     "just_now": "방금",
+    "current_chat": "현재 채팅",
     "friends_view": "친구",
     "chat_view": "채팅"
   },
@@ -200,6 +214,13 @@
     "emoji": "이모지",
     "recent": "최근 사용",
     "all_emojis": "전체",
+    "room_id_missing": "URL에 룸 ID가 없습니다",
+    "invalid_room_id_format": "URL의 룸 ID 형식이 잘못되었습니다",
+    "room_code_mismatch": "룸 코드가 일치하지 않습니다",
+    "validation_info_expired": "검증 정보가 만료되었습니다. 다시 시작해 주세요",
+    "avatar_upload_failed": "아바타 업로드에 실패했습니다. 기본값을 사용합니다",
+    "target_chat_code_missing": "대상 채팅 코드가 없습니다",
+    "invalid_validation_info": "검증 정보가 유효하지 않습니다",
     "send_image": "이미지 업로드",
     "newline": "줄바꿈",
     "send_on_enter": "Enter로 전송",

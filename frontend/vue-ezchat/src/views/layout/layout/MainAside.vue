@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {ref} from 'vue'
-import {ChatLineRound, User} from '@element-plus/icons-vue'
+import { ref } from 'vue'
+import { ChatLineRound, User } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import AsideList from '@/views/layout/components/AsideList.vue'
+import GuestAside from '@/views/layout/components/GuestAside.vue'
 import UserItem from '@/components/UserItem.vue'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useWebsocketStore} from '@/stores/websocketStore.ts'
-import {storeToRefs} from 'pinia'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useWebsocketStore } from '@/stores/websocketStore.ts'
 
 const { t } = useI18n()
 
@@ -19,30 +19,25 @@ const switchView = (view: 'friends' | 'chat') => {
 
 // 用户信息相关
 const userStore = useUserStore()
-const { loginUserInfo } = storeToRefs(userStore)
 const websocketStore = useWebsocketStore()
-const { status } = storeToRefs(websocketStore)
 </script>
 
 <template>
   <div class="main-aside-wrapper">
+    <GuestAside v-if="userStore.loginUserInfo?.userType === 'guest'" />
     <!-- 1. 视图切换区 -->
-    <div class="switcher-container">
+    <div class="switcher-container" v-if="userStore.loginUserInfo?.userType === 'formal'">
       <div class="segmented-control">
-        <div
-          class="control-item"
-          :class="{ 'is-active': activeView === 'friends' }"
-          @click="switchView('friends')"
-        >
-          <el-icon><User /></el-icon>
+        <div class="control-item" :class="{ 'is-active': activeView === 'friends' }" @click="switchView('friends')">
+          <el-icon>
+            <User />
+          </el-icon>
           <span>{{ t('aside.friends_view') }}</span>
         </div>
-        <div
-          class="control-item"
-          :class="{ 'is-active': activeView === 'chat' }"
-          @click="switchView('chat')"
-        >
-          <el-icon><ChatLineRound /></el-icon>
+        <div class="control-item" :class="{ 'is-active': activeView === 'chat' }" @click="switchView('chat')">
+          <el-icon>
+            <ChatLineRound />
+          </el-icon>
           <span>{{ t('aside.chat_view') }}</span>
         </div>
         <!-- 滑动背景指示器 -->
@@ -51,19 +46,16 @@ const { status } = storeToRefs(websocketStore)
     </div>
 
     <!-- 2. 内容展示区 -->
-    <div class="aside-body">
+    <div class="aside-body" v-if="userStore.loginUserInfo?.userType === 'formal'">
       <AsideList :type="activeView" />
     </div>
 
     <!-- 3. 用户信息区域 -->
-    <div class="aside-footer" v-if="loginUserInfo">
+    <div class="aside-footer">
       <UserItem
-        :avatar="loginUserInfo.avatar?.blobThumbUrl || loginUserInfo.avatar?.objectThumbUrl || loginUserInfo.avatar?.blobUrl || loginUserInfo.avatar?.objectUrl"
-        :nickname="loginUserInfo.nickname"
-        :uid="loginUserInfo.uid"
-        :is-online="status === 'OPEN'"
-        class="footer-user-card"
-      />
+        :avatar="userStore.loginUserInfo?.avatar?.blobThumbUrl || userStore.loginUserInfo?.avatar?.imageThumbUrl || userStore.loginUserInfo?.avatar?.blobUrl || userStore.loginUserInfo?.avatar?.imageUrl"
+        :nickname="userStore.loginUserInfo?.nickname" :uid="userStore.loginUserInfo?.uid"
+        :is-online="websocketStore.status === 'OPEN'" class="footer-user-card" />
     </div>
   </div>
 </template>
@@ -155,8 +147,15 @@ const { status } = storeToRefs(websocketStore)
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.page-fade-enter-from { opacity: 0; transform: translateY(4px); }
-.page-fade-leave-to { opacity: 0; transform: translateY(-4px); }
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
 
 .aside-footer {
   padding: 12px 16px;

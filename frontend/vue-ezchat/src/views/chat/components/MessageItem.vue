@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import {computed, ref, watchEffect} from 'vue'
-import {Loading, Picture as IconPicture, WarningFilled} from '@element-plus/icons-vue'
+import { computed, ref, watchEffect } from 'vue'
+import { Loading, Picture as IconPicture, WarningFilled } from '@element-plus/icons-vue'
 import { ElImageViewer } from 'element-plus'
 import SmartAvatar from '@/components/SmartAvatar.vue'
-import type {ChatRoom, Message, Image} from '@/type'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useImageStore} from '@/stores/imageStore'
-import {storeToRefs} from 'pinia'
+import type { ChatRoom, Message, Image } from '@/type'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useImageStore } from '@/stores/imageStore'
+import { storeToRefs } from 'pinia'
+import { hasImages } from '@/utils/validators'
 
 const props = defineProps<{
   msg: Message
@@ -26,12 +27,12 @@ const senderInfo = computed(() => {
 
 const avatarThumbUrl = computed(() =>
   senderInfo.value?.avatar?.blobThumbUrl
-  || senderInfo.value?.avatar?.objectThumbUrl
+  || senderInfo.value?.avatar?.imageThumbUrl
   || ''
 )
 const avatarUrl = computed(() =>
   senderInfo.value?.avatar?.blobUrl
-  || senderInfo.value?.avatar?.objectUrl
+  || senderInfo.value?.avatar?.imageUrl
   || ''
 )
 
@@ -39,7 +40,7 @@ const avatarUrl = computed(() =>
 watchEffect(() => {
   const avatar = senderInfo.value?.avatar
   if (avatar) {
-    imageStore.ensureThumbBlobUrl(avatar).then(() => {})
+    imageStore.ensureThumbBlobUrl(avatar).then(() => { })
   }
 })
 
@@ -64,20 +65,27 @@ const renderedText = computed(() => {
   return escaped.replace(emojiRegex, '<span class="inline-emoji">$1</span>')
 })
 
+/**
+ * 安全获取消息的 images 数组
+ */
+const messageImages = computed<Image[]>(() => {
+  return (hasImages(props.msg) && Array.isArray(props.msg.images)) ? props.msg.images : []
+})
+
 // 大图预览（原图 blob 按需拉取）
 const viewerVisible = ref(false)
 const viewerUrls = ref<string[]>([])
 const viewerIndex = ref(0)
 
 const openViewer = async (idx: number) => {
-  const images = props.msg.images || []
+  const images = messageImages.value
   if (images.length === 0) return
   viewerIndex.value = idx
   // 1) 按需拉取原图 blob（并刷新预签名 URL）
   const urls = await Promise.all(images.map((img) => imageStore.ensureOriginalBlobUrl(img)))
   // 2) 兜底：确保 url-list 中没有空值
   viewerUrls.value = urls
-    .map((u, i) => u || images[i]?.objectUrl || images[i]?.objectThumbUrl)
+    .map((u, i) => u || images[i]?.imageUrl || images[i]?.imageThumbUrl)
     .filter(Boolean) as string[]
   viewerVisible.value = true
 }
@@ -105,11 +113,11 @@ const processingImages = ref<Set<number>>(new Set())
 
 // 初始化图片 URL（优先 blobThumbUrl）
 watchEffect(() => {
-  const images = props.msg.images || []
+  const images = messageImages.value
   images.forEach((img, idx) => {
     if (!imageUrlMap.value.has(idx)) {
       // Stage 1: 最优先显示 blobThumbUrl
-      const initialUrl = img.blobThumbUrl || img.blobUrl || img.objectThumbUrl || img.objectUrl || ''
+      const initialUrl = img.blobThumbUrl || img.blobUrl || img.imageThumbUrl || img.imageUrl || ''
       if (initialUrl) {
         imageUrlMap.value.set(idx, initialUrl)
         imageFallbackStage.value.set(idx, img.blobThumbUrl ? 1 : 2)
@@ -130,7 +138,7 @@ const getImageUrl = (img: Image, idx: number): string => {
 
 /**
  * 图片加载错误处理（5 阶段降级策略，复用 imageStore 逻辑）
- * 
+ *
  * 降级顺序：
  * 1. blobThumbUrl（最优先）
  * 2. blobUrl（复用 imageStore.ensureOriginalBlobUrl，内部处理所有降级）
@@ -155,14 +163,14 @@ const handleImageError = async (img: Image, idx: number) => {
         imageFallbackStage.value.set(idx, 2)
         return
       }
-      
+
       // 进入 Stage 3
       imageFallbackStage.value.set(idx, 3)
     }
 
     // Stage 2 → Stage 3: blobUrl 失败，刷新并缓存新的 blobThumbUrl（复用 imageStore 逻辑）
     if (currentStage === 2 || imageFallbackStage.value.get(idx) === 3) {
-      if (img.objectName) {
+      if (img.imageName) {
         // 复用 imageStore.ensureThumbBlobUrl，它会自动调用 API 刷新并缓存
         const newBlobThumb = await imageStore.ensureThumbBlobUrl(img)
         if (newBlobThumb) {
@@ -171,14 +179,14 @@ const handleImageError = async (img: Image, idx: number) => {
           return
         }
       }
-      
+
       // 进入 Stage 4
       imageFallbackStage.value.set(idx, 4)
     }
 
     // Stage 3 → Stage 4: 刷新 thumb 失败，尝试缓存新的 blobUrl（复用 imageStore 逻辑）
     if (currentStage === 3 || imageFallbackStage.value.get(idx) === 4) {
-      if (img.objectName) {
+      if (img.imageName) {
         // 复用 imageStore.ensureOriginalBlobUrl，它会使用已刷新的 objectUrl
         const newBlobUrl = await imageStore.ensureOriginalBlobUrl(img)
         if (newBlobUrl) {
@@ -187,13 +195,13 @@ const handleImageError = async (img: Image, idx: number) => {
           return
         }
       }
-      
+
       // 进入 Stage 5
       imageFallbackStage.value.set(idx, 5)
     }
 
     // Stage 4 → Stage 5: 所有尝试都失败，显示失败占位符
-    if (currentStage === 4 || currentStage === 5 || imageFallbackStage.value.get(idx) === 5 || !img.objectName) {
+    if (currentStage === 4 || currentStage === 5 || imageFallbackStage.value.get(idx) === 5 || !img.imageName) {
       imageUrlMap.value.set(idx, FAILED_IMAGE_PLACEHOLDER)
       imageFallbackStage.value.set(idx, 5)
     }
@@ -205,14 +213,8 @@ const handleImageError = async (img: Image, idx: number) => {
 
 <template>
   <li class="message-row" :class="{ 'is-me': isMe }">
-    <SmartAvatar
-      class="user-avatar"
-      :size="38"
-      shape="square"
-      :thumb-url="avatarThumbUrl"
-      :url="avatarUrl"
-      :text="senderInfo?.nickname || '?'"
-    />
+    <SmartAvatar class="user-avatar" :size="38" shape="square" :thumb-url="avatarThumbUrl" :url="avatarUrl"
+      :text="senderInfo?.nickname || '?'" />
 
     <div class="content-wrapper">
       <div class="nickname" v-if="!isMe">{{ senderInfo?.nickname || 'Unknown' }}</div>
@@ -220,8 +222,12 @@ const handleImageError = async (img: Image, idx: number) => {
       <div class="bubble-wrapper">
         <!-- 自己消息的发送状态：仅在 sending/error 时渲染，避免空占位导致“图片与头像间距异常” -->
         <div v-if="isMe && (msg.status === 'sending' || msg.status === 'error')" class="status-indicator">
-          <el-icon v-if="msg.status === 'sending'" class="is-loading status-icon"><Loading /></el-icon>
-          <el-icon v-if="msg.status === 'error'" class="status-icon error"><WarningFilled /></el-icon>
+          <el-icon v-if="msg.status === 'sending'" class="is-loading status-icon">
+            <Loading />
+          </el-icon>
+          <el-icon v-if="msg.status === 'error'" class="status-icon error">
+            <WarningFilled />
+          </el-icon>
         </div>
 
         <div class="message-stack">
@@ -231,26 +237,23 @@ const handleImageError = async (img: Image, idx: number) => {
           </div>
 
           <!-- 图片组：type=1(Image) 或 type=2(Mixed) -->
-          <div
-            v-if="msg.type !== 0 && msg.images?.length"
-            class="message-img-container"
-            :class="{ 'multi-imgs': msg.images.length > 1 }"
-          >
-            <el-image
-              v-for="(img, idx) in msg.images"
-              :key="`${idx}-${imageUrlMap.get(idx) || ''}`"
-              :src="getImageUrl(img, idx)"
-              class="img-item"
-              fit="contain"
-              loading="lazy"
-              @click="openViewer(idx)"
-              @error="handleImageError(img, idx)"
-            >
-              <template #placeholder><div class="img-placeholder"><el-icon class="is-loading"><Loading /></el-icon></div></template>
+          <div v-if="msg.type !== 0 && messageImages.length > 0" class="message-img-container"
+            :class="{ 'multi-imgs': messageImages.length > 1 }">
+            <el-image v-for="(img, idx) in messageImages" :key="`${idx}-${imageUrlMap.get(idx) || ''}`"
+              :src="getImageUrl(img, idx)" class="img-item" fit="contain" loading="lazy" @click="openViewer(idx)"
+              @error="handleImageError(img, idx)">
+              <template #placeholder>
+                <div class="img-placeholder"><el-icon class="is-loading">
+                    <Loading />
+                  </el-icon></div>
+              </template>
               <template #error>
                 <div class="img-error">
-                  <img v-if="getImageUrl(img, idx) === FAILED_IMAGE_PLACEHOLDER" :src="FAILED_IMAGE_PLACEHOLDER" alt="Failed to load" />
-                  <el-icon v-else><IconPicture /></el-icon>
+                  <img v-if="getImageUrl(img, idx) === FAILED_IMAGE_PLACEHOLDER" :src="FAILED_IMAGE_PLACEHOLDER"
+                    alt="Failed to load" />
+                  <el-icon v-else>
+                    <IconPicture />
+                  </el-icon>
                 </div>
               </template>
             </el-image>
@@ -258,36 +261,81 @@ const handleImageError = async (img: Image, idx: number) => {
         </div>
       </div>
 
-      <div class="message-timeStamp" :class="{ 'is-me': isMe }">{{ msg.createTime?.replace('T', ' ').slice(0, 16) }}</div>
+      <div class="message-timeStamp" :class="{ 'is-me': isMe }">{{ msg.createTime?.replace('T', ' ').slice(0, 16) }}
+      </div>
     </div>
   </li>
 
   <!-- 自定义大图预览：等原图准备好后再打开，避免预签名过期/重复下载 -->
-  <el-image-viewer
-    v-if="viewerVisible"
-    :url-list="viewerUrls"
-    :initial-index="viewerIndex"
-    @close="viewerVisible = false"
-  />
+  <el-image-viewer v-if="viewerVisible" :url-list="viewerUrls" :initial-index="viewerIndex"
+    @close="viewerVisible = false" />
 </template>
 
 <style scoped>
-.message-row { display: flex; align-items: flex-start; gap: 12px; width: 100%; }
-.message-row.is-me { flex-direction: row-reverse; }
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
 
-.user-avatar { flex-shrink: 0; border: 1px solid var(--el-border-color-light); transition: all 0.3s ease; }
-html.dark .user-avatar { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.1); }
+.message-row.is-me {
+  flex-direction: row-reverse;
+}
 
-.content-wrapper { display: flex; flex-direction: column; gap: 4px; max-width: 75%; align-items: flex-start; }
-.message-row.is-me .content-wrapper { align-items: flex-end; }
-.nickname { font-size: 11px; color: var(--text-500); margin-bottom: 2px; font-weight: 600; }
+.user-avatar {
+  flex-shrink: 0;
+  border: 1px solid var(--el-border-color-light);
+  transition: all 0.3s ease;
+}
 
-.bubble-wrapper { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+html.dark .user-avatar {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 75%;
+  align-items: flex-start;
+}
+
+.message-row.is-me .content-wrapper {
+  align-items: flex-end;
+}
+
+.nickname {
+  font-size: 11px;
+  color: var(--text-500);
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.bubble-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
 /* 自己消息：气泡与图片靠右贴近头像；状态图标在最右侧（更贴近头像） */
-.message-row.is-me .bubble-wrapper { flex-direction: row-reverse; justify-content: flex-start; }
+.message-row.is-me .bubble-wrapper {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
 
-.message-stack { display: flex; flex-direction: column; gap: 3px; max-width: 100%; }
-.message-row.is-me .message-stack { align-items: flex-end; }
+.message-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 100%;
+}
+
+.message-row.is-me .message-stack {
+  align-items: flex-end;
+}
 
 /* --- 文字气泡基础样式 --- */
 .message-text-bubble {
@@ -320,6 +368,7 @@ html.dark .user-avatar { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); border-color
   border-color: var(--el-border-color-light);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
+
 html.dark .message-row:not(.is-me) .message-text-bubble {
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.02), 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -357,7 +406,15 @@ html.dark .message-row.is-me .message-text-bubble {
   -webkit-font-feature-settings: "palt" 1;
   font-optical-sizing: none;
 }
-:deep(.inline-emoji) { font-size: 1.4em; vertical-align: -0.15em; line-height: 1; display: inline-block; margin: 0 1px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
+
+:deep(.inline-emoji) {
+  font-size: 1.4em;
+  vertical-align: -0.15em;
+  line-height: 1;
+  display: inline-block;
+  margin: 0 1px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
 
 /* 图片消息：容器负责宽度约束（<= 80%），子项填满容器，避免百分比嵌套导致异常占位 */
 .message-img-container {
@@ -414,9 +471,14 @@ html.dark .img-item {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border-color: rgba(255, 255, 255, 0.1);
 }
-html.dark .img-item:hover { filter: brightness(1) contrast(1); transform: scale(1.01); }
 
-.img-placeholder, .img-error {
+html.dark .img-item:hover {
+  filter: brightness(1) contrast(1);
+  transform: scale(1.01);
+}
+
+.img-placeholder,
+.img-error {
   width: 100%;
   min-height: 120px;
   display: flex;
@@ -427,9 +489,29 @@ html.dark .img-item:hover { filter: brightness(1) contrast(1); transform: scale(
   font-size: 20px;
 }
 
-.status-indicator { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; }
-.status-icon { font-size: 14px; color: var(--text-400); }
-.status-icon.error { color: var(--el-color-danger); cursor: pointer; }
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
 
-.message-timeStamp { font-size: 10px; color: var(--text-400); margin-top: 4px; letter-spacing: 0.5px; transition: color 0.3s ease; }
+.status-icon {
+  font-size: 14px;
+  color: var(--text-400);
+}
+
+.status-icon.error {
+  color: var(--el-color-danger);
+  cursor: pointer;
+}
+
+.message-timeStamp {
+  font-size: 10px;
+  color: var(--text-400);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
 </style>

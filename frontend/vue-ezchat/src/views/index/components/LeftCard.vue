@@ -31,16 +31,17 @@ const {
  * 替代原有的 handleValidate
  */
 const handleValidateAndRedirect = async () => {
-    const payload = await validateAndGetPayload()
-    if (payload) {
-        // 验证成功，userStore.validatedChatRoom 已更新
-        // 直接跳转到加入页面
-        // 注意：这里需要获取 validatedChatRoom 中的 chatCode
-        const chatCode = userStore.validatedChatRoom?.chatCode
-        if (chatCode) {
-            router.push(`/Join/${chatCode}`)
-        }
-    }
+  const isValid = await joinFormRef.value?.validate()
+  if (!isValid) return false
+  const payload = await validateAndGetPayload()
+  // 验证成功，userStore.validatedChatRoom 已更新
+  // 直接跳转到加入页面
+  // 注意：这里需要获取 validatedChatRoom 中的 chatCode
+  const chatCode = userStore.validatedChatRoom?.chatCode
+  if (chatCode) {
+    router.push(`/Join/${chatCode}`)
+
+  }
 }
 
 
@@ -119,13 +120,15 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
                   :prefix-icon="Search" @keyup.enter="handleValidateAndRedirect" />
               </el-form-item>
               <el-form-item class="mb-0" prop="password">
-                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('guest.input_pw')" @keyup.enter="handleValidateAndRedirect" />
+                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('guest.input_pw')"
+                  @keyup.enter="handleValidateAndRedirect" />
               </el-form-item>
             </div>
             <div v-else class="input-group link-mode">
               <el-form-item class="mb-0" prop="inviteUrl">
                 <el-input v-model="joinChatCredentialsForm.inviteUrl" :placeholder="t('guest.input_url')" size="large"
-                  :prefix-icon="Connection" type="textarea" :rows="4" resize="none" class="url-textarea" @keyup.enter="handleValidateAndRedirect" />
+                  :prefix-icon="Connection" type="textarea" :rows="4" resize="none" class="url-textarea"
+                  @keyup.enter="handleValidateAndRedirect" />
               </el-form-item>
             </div>
           </div>

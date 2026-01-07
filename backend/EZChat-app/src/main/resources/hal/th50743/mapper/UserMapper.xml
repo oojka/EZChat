@@ -8,8 +8,8 @@
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
-        INSERT INTO users (uid, nickname, object_id, bio, last_seen_at, create_time, update_time)
-        VALUES (#{uid}, #{nickname}, #{objectId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
+        INSERT INTO users (uid, nickname, asset_id, bio, last_seen_at, create_time, update_time)
+        VALUES (#{uid}, #{nickname}, #{assetId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
     </insert>
 
     <insert id="addFormalUser">
@@ -21,7 +21,7 @@
         UPDATE users
         <set>
             <if test="nickname != null and nickname != ''">nickname = #{nickname},</if>
-            <if test="objectId != null">object_id = #{objectId},</if>
+            <if test="assetId != null">asset_id = #{assetId},</if>
             <if test="bio != null and bio != ''">bio = #{bio},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
@@ -48,7 +48,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.object_id,
+               u.asset_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -62,7 +62,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.object_id,
+               u.asset_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -80,7 +80,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.object_id,
+               u.asset_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -95,7 +95,7 @@
         SELECT u.id,
                u.uid,
                u.nickname,
-               u.object_id,
+               u.asset_id,
                u.bio,
                u.last_seen_at,
                u.create_time,
@@ -106,26 +106,47 @@
         WHERE u.uid = #{uid}
     </select>
 
-    <!-- 根据 UID 查询用户信息（JOIN objects 表获取头像 object_name） -->
+    <!-- 根据 UID 查询用户信息（JOIN assets 表获取头像 asset_name） -->
     <select id="findByUidWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
-            u.id, u.uid, u.nickname, u.object_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
-            o.object_name as avatarObjectName
+            u.id, u.uid, u.nickname, u.asset_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
+            a.asset_name as avatarObjectName
         FROM users u
-        LEFT JOIN objects o ON u.object_id = o.id
+        LEFT JOIN assets a ON u.asset_id = a.id
         WHERE u.uid = #{uid}
         LIMIT 1
     </select>
 
-    <!-- 根据 ID 查询用户信息（JOIN objects 表） -->
+    <!-- 根据 ID 查询用户信息（JOIN assets 表） -->
     <select id="findByIdWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
-            u.id, u.uid, u.nickname, u.object_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
-            o.object_name as avatarObjectName
+            u.id, u.uid, u.nickname, u.asset_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
+            a.asset_name as avatarObjectName
         FROM users u
-        LEFT JOIN objects o ON u.object_id = o.id
+        LEFT JOIN assets a ON u.asset_id = a.id
         WHERE u.id = #{id}
         LIMIT 1
+    </select>
+
+    <select id="getUsernameByUserId" resultType="java.lang.String">
+        SELECT username
+        FROM formal_users
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="getUserById" resultType="hal.th50743.pojo.User">
+        SELECT u.id,
+               u.uid,
+               u.nickname,
+               u.asset_id,
+               u.bio,
+               u.last_seen_at,
+               u.create_time,
+               u.update_time,
+               f.username
+        FROM users u
+                 LEFT JOIN formal_users f ON u.id = f.user_id
+        WHERE u.id = #{userId}
     </select>
 
 </mapper>

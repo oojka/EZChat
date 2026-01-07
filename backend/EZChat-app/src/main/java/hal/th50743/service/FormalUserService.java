@@ -27,9 +27,28 @@ public interface FormalUserService {
     void add(FormalUser formalUser);
 
     /**
-     * 根据 UId 添加正式用户（转正）
+     * 根据用户ID获取用户名（仅限正式用户）
      *
+     * @param userId 用户 ID
+     * @return 用户名，如果非正式用户返回 null
+     */
+    String getUsernameById(Integer userId);
+
+    /**
+     * 根据 UId 添加正式用户（转正）
+     * 
+     * @deprecated 使用 addByUserId 替代，业务逻辑应使用内部 userId 而非外部 userUid
      * @param formalUser 正式用户对象（包含 userUid）
      */
+    @Deprecated
     void addByUId(FormalUser formalUser);
+
+    /**
+     * 根据用户ID添加正式用户（转正）
+     * <p>
+     * 直接使用内部用户ID，不依赖外部标识符。
+     *
+     * @param formalUser 正式用户对象（包含 userId）
+     */
+    void addByUserId(FormalUser formalUser);
 }

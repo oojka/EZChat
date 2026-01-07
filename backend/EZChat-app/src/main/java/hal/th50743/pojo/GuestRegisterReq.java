@@ -12,5 +12,6 @@ public class GuestRegisterReq {
     private String chatCode;
     private String password;
     private String nickname;
+    private Image avatar;
 
 }

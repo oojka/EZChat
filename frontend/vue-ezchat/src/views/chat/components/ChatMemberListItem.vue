@@ -19,8 +19,8 @@ const { wsDisplayState } = storeToRefs(websocketStore)
           class="member-avatar"
           :size="40"
           shape="square"
-          :thumb-url="member.avatar.blobThumbUrl || member.avatar.objectThumbUrl"
-          :url="member.avatar.blobUrl || member.avatar.objectUrl"
+          :thumb-url="member.avatar.blobThumbUrl || member.avatar.imageThumbUrl"
+          :url="member.avatar.blobUrl || member.avatar.imageUrl"
           :text="member.nickname"
         />
       </el-badge>

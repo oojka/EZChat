@@ -7,7 +7,7 @@ import { validateChatJoinApi } from '@/api/Auth'
 import { useUserStore } from '@/stores/userStore.ts'
 import { useImageStore } from '@/stores/imageStore'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes'
-import { useI18n } from 'vue-i18n'
+import i18n from '@/i18n'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -23,7 +23,7 @@ export const useRoomStore = defineStore('room', () => {
   // =========================================
   // 1. 基础依赖与状态 (State)
   // =========================================
-  const { t } = useI18n()
+  const { t } = i18n.global
   const router = useRouter()
 
   const userStore = useUserStore()
@@ -260,6 +260,40 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   /**
+   * 添加单个成员到房间 (WeSocket 推送)
+   */
+  /**
+   * 添加单个成员到房间 (WeSocket 推送)
+   */
+  const addRoomMember = (member: any) => {
+    if (!member || !member.chatCode) return
+    const room = _roomList.value.find(r => r.chatCode === member.chatCode)
+    if (room) {
+      // 1. 总是更新统计数据
+      room.memberCount = (room.memberCount || 0) + 1
+      if (member.online) {
+        room.onLineMemberCount = (room.onLineMemberCount || 0) + 1
+        // 更新全局在线表
+        const exists = userStatusList.value.find(u => u.uid === member.uid)
+        if (!exists) {
+          userStatusList.value.push({ uid: member.uid, online: true, updateTime: new Date().toISOString() })
+        } else {
+          exists.online = true
+        }
+      }
+
+      // 2. 只有当列表已被加载过（存在且不为空）时，才追加新成员
+      // 防止：列表为空 -> 插入1个 -> fetchRoomMembers 误判已加载 -> 只显示1个成员
+      if (room.chatMembers && room.chatMembers.length > 0) {
+        // 避免重复
+        if (!room.chatMembers.some(m => m.uid === member.uid)) {
+          room.chatMembers.push(member)
+        }
+      }
+    }
+  }
+
+  /**
    * 更新房间预览信息
    */
   const updateRoomPreview = (message: Message) => {
@@ -317,6 +351,8 @@ export const useRoomStore = defineStore('room', () => {
     } catch (e) {
       if (e instanceof Error && e.message === 'IS_ALREADY_JOINED') {
         // 用户已经加入此房间，显示提示并返回 true（表示用户已在房间）
+        // Global Loading (z-99999) is active, but Main.css forces .el-overlay to z-100000
+        // so this Dialog is now clickable. We await user confirmation before proceeding.
         await showAlertDialog({
           message: t('api.you_have_already_in_this_room'),
           type: 'warning',
@@ -350,25 +386,15 @@ export const useRoomStore = defineStore('room', () => {
    * @param req 验证请求对象
    * @returns 验证成功的房间信息
    */
-  const validateRoomAccess = async (req: ValidateChatJoinReq): Promise<ChatRoom> => {
+  const validateRoomAccess = async (req: ValidateChatJoinReq): Promise<ChatRoom | null> => {
     try {
       const result = await validateChatJoinApi(req)
-
       if (result && result.data && result.data.chatCode) {
         // 验证成功，将信息存储到 userStore
         userStore.setValidatedJoinChatInfo(req, result.data)
         return result.data
       }
-
-      throw createAppError(
-        ErrorType.NETWORK,
-        'Room validation failed',
-        {
-          severity: ErrorSeverity.ERROR,
-          component: 'roomStore',
-          action: 'validateRoomAccess'
-        }
-      )
+      return null;
     } catch (e) {
       if (isAppError(e)) {
         throw e
@@ -397,6 +423,7 @@ export const useRoomStore = defineStore('room', () => {
     initRoomList,
     updateRoomInfo,
     updateMemberStatus,
+    addRoomMember,
     updateRoomPreview,
     fetchRoomMembers,
     isCurrentRoomMembersLoading,

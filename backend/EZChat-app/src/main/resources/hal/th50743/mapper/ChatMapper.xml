@@ -15,11 +15,11 @@
                c.join_enabled,
                c.create_time,
                c.update_time,
-               o.object_name AS avatarObjectName,
+               a.asset_name AS avatarObjectName,
                (SELECT COUNT(*) FROM chat_members cm WHERE cm.chat_id = c.id) member_count
         FROM chats c 
         JOIN users u ON c.owner_id = u.id
-        LEFT JOIN objects o ON c.object_id = o.id
+        LEFT JOIN assets a ON c.asset_id = a.id
         WHERE EXISTS(
             SELECT * FROM chat_members m
             WHERE c.id = m.chat_id
@@ -38,11 +38,11 @@
                c.join_enabled,
                c.create_time,
                c.update_time,
-               o.object_name AS avatarObjectName,
+               a.asset_name AS avatarObjectName,
                (SELECT COUNT(*) FROM chat_members cm WHERE cm.chat_id = c.id) member_count
         FROM chats c 
         JOIN users u ON c.owner_id = u.id
-        LEFT JOIN objects o ON c.object_id = o.id
+        LEFT JOIN assets a ON c.asset_id = a.id
         WHERE c.id = #{chatId}
     </select>
 
@@ -64,7 +64,7 @@
 
     <insert id="insertChat" parameterType="hal.th50743.pojo.ChatCreate" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chats
-        (chat_code, chat_name, owner_id, chat_password_hash, join_enabled, object_id, create_time, update_time)
+        (chat_code, chat_name, owner_id, chat_password_hash, join_enabled, asset_id, create_time, update_time)
         VALUES
         (#{chatCode}, #{chatName}, #{ownerId}, #{chatPasswordHash}, #{joinEnabled}, #{objectId}, NOW(), NOW())
     </insert>

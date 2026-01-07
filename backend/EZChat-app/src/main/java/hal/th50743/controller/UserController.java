@@ -1,8 +1,14 @@
 package hal.th50743.controller;
 
+import hal.th50743.exception.BusinessException;
+import hal.th50743.exception.ErrorCode;
+import hal.th50743.pojo.FormalUserRegisterReq;
+import hal.th50743.pojo.LoginVO;
 import hal.th50743.pojo.Result;
+import hal.th50743.pojo.User;
 import hal.th50743.pojo.UserReq;
 import hal.th50743.pojo.UserVO;
+import hal.th50743.service.AuthService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
     /**
      * 获取用户信息
@@ -43,6 +50,40 @@ public class UserController {
         userReq.setUserId(CurrentHolder.getCurrentId());
         log.info("update user info, user={}", userReq);
         userService.update(userReq);
+    }
+
+    /**
+     * Guest用户升级为正式用户
+     * <p>
+     * 将当前登录的Guest用户升级为正式用户，创建用户名和密码账号。
+     * 升级成功后返回新的LoginVO（包含新的Token）。
+     *
+     * @param req 正式用户注册请求对象（包含用户名、密码、昵称、头像等信息）
+     * @return 升级成功返回包含新的Token等信息的结果
+     */
+    @PostMapping("/upgrade")
+    public Result<LoginVO> upgradeToFormalUser(@RequestBody FormalUserRegisterReq req) {
+        // 获取当前登录用户的ID
+        Integer currentUserId = CurrentHolder.getCurrentId();
+        if (currentUserId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+
+        // 验证当前用户是否存在
+        User currentUser = userService.getUserById(currentUserId);
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "Current user not found");
+        }
+
+        // 设置userId，用于标识这是临时用户转正（业务逻辑使用内部ID）
+        req.setUserId(currentUserId);
+
+        // 调用认证服务执行升级逻辑（情况B：临时用户转为正式用户）
+        LoginVO res = authService.userRegister(req);
+        log.info("Guest user upgraded to formal user successfully: userId={}, username={}", 
+                currentUserId, req.getUsername());
+
+        return Result.success(res);
     }
 
 }

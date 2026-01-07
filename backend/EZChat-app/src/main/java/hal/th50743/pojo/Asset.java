@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class FileEntity {
+public class Asset {
 
     /**
      * 自增主键
@@ -30,7 +30,7 @@ public class FileEntity {
     /**
      * MinIO 对象名（Object Key），唯一标识
      */
-    private String objectName;
+    private String AssetName;
 
     /**
      * 原始文件名（用户上传时的文件名）
@@ -70,7 +70,7 @@ public class FileEntity {
      * - 用于快速比对，避免不必要的对象上传
      * - 可能为 NULL（历史对象或前端未提供）
      */
-    private String rawObjectHash;
+    private String rawAssetHash;
 
     /**
      * 规范化对象哈希（SHA-256 hex），后端计算，用于最终去重比对
@@ -80,7 +80,7 @@ public class FileEntity {
      * - 用于最终去重比对（因为规范化后的内容才是真正存储的）
      * - 可能为 NULL（历史对象）
      */
-    private String normalizedObjectHash;
+    private String normalizedAssetHash;
 
     /**
      * 创建时间
@@ -92,5 +92,3 @@ public class FileEntity {
      */
     private LocalDateTime updateTime;
 }
-
-

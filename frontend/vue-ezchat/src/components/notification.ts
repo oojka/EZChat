@@ -42,25 +42,25 @@ type NotificationSender = {
  */
 export const showMessageNotification = (message: Message, sender: NotificationSender, chatName: string) => {
   const previewText = getPreviewContent(message)
-  const thumbUrl = sender.avatar?.objectThumbUrl || ''
-  const originalUrl = sender.avatar?.objectUrl || ''
+  const thumbUrl = sender.avatar?.imageThumbUrl || ''
+  const originalUrl = sender.avatar?.imageUrl || ''
   const initialUrl = thumbUrl || originalUrl || ''
   const nickname = sender.nickname || ''
   const firstChar = nickname.charAt(0)?.toUpperCase() || '?'
-  
+
   // 头像加载失败处理：缩略图失败时尝试原图，原图失败则显示默认占位
   const handleAvatarError = (event: Event) => {
     const imgElement = event.target as HTMLImageElement
     if (!imgElement) return
-    
+
     const currentSrc = imgElement.src
-    
+
     // 如果当前是缩略图且存在原图，切换到原图
     if (currentSrc === thumbUrl && originalUrl && originalUrl !== thumbUrl) {
       imgElement.src = originalUrl
       return
     }
-    
+
     // 原图也失败或没有原图：替换为文字占位符
     const container = imgElement.closest('.ez-notify-avatar-wrapper')
     if (container) {
@@ -102,25 +102,25 @@ export const showMessageNotification = (message: Message, sender: NotificationSe
  * @param loginUserInfo 当前登录用户信息（昵称/头像）
  */
 export const showWelcomeNotification = (loginUserInfo: LoginUserInfo) => {
-  const thumbUrl = loginUserInfo.avatar?.objectThumbUrl || ''
-  const originalUrl = loginUserInfo.avatar?.objectUrl || ''
+  const thumbUrl = loginUserInfo.avatar?.imageThumbUrl || ''
+  const originalUrl = loginUserInfo.avatar?.imageUrl || ''
   const initialUrl = thumbUrl || originalUrl || ''
   const nickname = loginUserInfo.nickname || ''
   const firstChar = nickname.charAt(0)?.toUpperCase() || '?'
-  
+
   // 头像加载失败处理：缩略图失败时尝试原图，原图失败则显示默认占位
   const handleAvatarError = (event: Event) => {
     const imgElement = event.target as HTMLImageElement
     if (!imgElement) return
-    
+
     const currentSrc = imgElement.src
-    
+
     // 如果当前是缩略图且存在原图，切换到原图
     if (currentSrc === thumbUrl && originalUrl && originalUrl !== thumbUrl) {
       imgElement.src = originalUrl
       return
     }
-    
+
     // 原图也失败或没有原图：替换为文字占位符
     const container = imgElement.closest('.ez-welcome-avatar-wrapper')
     if (container) {

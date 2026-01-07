@@ -1,6 +1,6 @@
 package hal.th50743.mapper;
 
-import hal.th50743.pojo.FileEntity;
+import hal.th50743.pojo.Asset;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.time.LocalDateTime;
@@ -12,7 +12,7 @@ import java.util.List;
  * 负责文件生命周期管理和 GC 相关的数据库操作。
  */
 @Mapper
-public interface FileMapper {
+public interface AssetMapper {
 
     /**
      * 插入文件记录
@@ -20,7 +20,7 @@ public interface FileMapper {
      * @param file 文件实体
      * @return 影响行数
      */
-    int insert(FileEntity file);
+    int insert(Asset file);
 
     /**
      * 根据 ID 查询文件记录
@@ -28,7 +28,7 @@ public interface FileMapper {
      * @param id 文件 ID
      * @return 文件实体，不存在返回 null
      */
-    FileEntity findById(Integer id);
+    Asset findById(Integer id);
 
     /**
      * 根据 objectName 查询文件记录
@@ -36,7 +36,7 @@ public interface FileMapper {
      * @param objectName MinIO 对象名
      * @return 文件实体，不存在返回 null
      */
-    FileEntity findByObjectName(String objectName);
+    Asset findByObjectName(String objectName);
 
     /**
      * 根据 messageId 查询关联的文件列表
@@ -44,7 +44,7 @@ public interface FileMapper {
      * @param messageId 消息 ID
      * @return 文件列表
      */
-    List<FileEntity> findByMessageId(Integer messageId);
+    List<Asset> findByMessageId(Integer messageId);
 
     /**
      * 批量更新文件状态（用于消息图片激活）
@@ -88,7 +88,7 @@ public interface FileMapper {
      * @param offset     偏移量
      * @return 文件列表（最多 limit 条）
      */
-    List<FileEntity> findPendingFilesBefore(LocalDateTime beforeTime, int limit, int offset);
+    List<Asset> findPendingFilesBefore(LocalDateTime beforeTime, int limit, int offset);
 
     /**
      * 根据 ID 删除文件记录
@@ -112,7 +112,7 @@ public interface FileMapper {
      * @param rawHash 原始对象哈希（SHA-256 hex）
      * @return 对象实体，不存在返回 null
      */
-    FileEntity findByRawHashAndActive(String rawHash);
+    Asset findByRawHashAndActive(String rawHash);
 
     /**
      * 根据规范化对象哈希查询已激活的对象（用于后端最终去重）
@@ -120,6 +120,6 @@ public interface FileMapper {
      * @param normalizedHash 规范化对象哈希（SHA-256 hex）
      * @return 对象实体，不存在返回 null
      */
-    FileEntity findByNormalizedHashAndActive(String normalizedHash);
+    Asset findByNormalizedHashAndActive(String normalizedHash);
 }
 

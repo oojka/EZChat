@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, type UploadProps } from 'element-plus'
-import type { Message } from '@/type'
+import type { Image } from '@/type'
 import { useUserStore } from '@/stores/userStore.ts'
 import { useMessageStore } from '@/stores/messageStore.ts' // 引入 messageStore
 import { Cooldown } from '@/utils/cooldown.ts'
@@ -21,8 +21,17 @@ export const useChatInput = () => {
 
   const messageStore = useMessageStore() // 使用 messageStore
 
-  // 定义待发送消息结构
-  const inputContent = ref<Message>({
+  // 定义待发送消息草稿结构（宽泛类型，避免 strict union 导致 type=0 时 images 必须为 never）
+  const inputContent = ref<{
+    sender: string
+    chatCode: string
+    type: number
+    text: string
+    images: Image[]
+    createTime: string
+    tempId: string
+    status: 'sending' | 'sent' | 'error' | null
+  }>({
     sender: '', // 发送时填充
     chatCode: '',
     type: 0,

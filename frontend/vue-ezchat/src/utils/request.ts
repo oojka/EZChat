@@ -9,6 +9,7 @@ import { useConfigStore } from "@/stores/configStore";
 import { showAlertDialog } from "@/components/dialogs/AlertDialog";
 import { useWebsocketStore } from "@/stores/websocketStore";
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from "@/error/ErrorTypes";
+import { ErrorCode } from "@/error/ErrorCode";
 
 const { t } = i18n.global;
 
@@ -150,7 +151,7 @@ request.interceptors.request.use(
 
       // localStorage 中存在登录信息，但内存中没有 token 时，尝试恢复
       if (!userStore.hasToken()) {
-        userStore.restoreLoginGuestFromStorage() || userStore.restoreLoginUserFromStorage();
+         userStore.restoreLoginUserFromStorage() || userStore.restoreLoginGuestFromStorage();
       }
 
       // 每次请求都获取最新的 token（响应式，自动获取最新值）
@@ -173,7 +174,7 @@ request.interceptors.response.use(
    * - status=1：业务成功
    * - status=0：业务失败（仍可能是 HTTP 200）
    */
-  (response) => {
+  async (response) => {
     const { status, code, message } = response.data;
     const userStore = useUserStore();
     const roomStore = useRoomStore();
@@ -211,10 +212,10 @@ request.interceptors.response.use(
       // 4. 根据业务错误码进行路由跳转
       if (code) {
         switch (code) {
-          case 42001: // CHAT_NOT_FOUND
+          case ErrorCode.CHAT_NOT_FOUND: // 42001
             // 如果当前路径在 /chat 下，回到聊天欢迎页
             showAlertDialog({
-              message: errorMsg,
+              message: t('api.room_not_found'),
               type: 'warning',
             });
             if (router.currentRoute.value.path.startsWith('/chat')) {
@@ -222,7 +223,7 @@ request.interceptors.response.use(
             }
             return false;
 
-          case 42002: // NOT_A_MEMBER
+          case ErrorCode.NOT_A_MEMBER: // 42002
             // 非成员：如果当前路径在 /chat 下，回到聊天欢迎页
             if (router.currentRoute.value.path.startsWith('/chat')) {
               // 无访问权限：您不是该聊天室的成员
@@ -231,13 +232,13 @@ request.interceptors.response.use(
             }
             break;
 
-          case 40100: // UNAUTHORIZED
+          case ErrorCode.UNAUTHORIZED: // 40100
             // 后端业务码表示未授权：清理登录态并回到首页
             localStorage.removeItem('loginUser');
             router.replace('/').catch(() => { });
             break;
 
-          case 40300: // FORBIDDEN
+          case ErrorCode.FORBIDDEN: // 40300
             // 禁止访问：根据错误消息区分不同场景
             const msg = (message || '').toLowerCase();
             // 该房间被禁止加入
@@ -255,27 +256,51 @@ request.interceptors.response.use(
             }
             break;
 
-          case 42003: // PASSWORD_REQUIRED
+          case ErrorCode.PASSWORD_REQUIRED: // 42003
             // 该房间需要密码才能加入
             ElMessage.error(t('api.password_required'));
             break;
 
-          case 42004: // PASSWORD_INCORRECT
+          case ErrorCode.PASSWORD_INCORRECT: // 42004
             // 密码验证失败：密码不正确
             ElMessage.error(t('api.password_incorrect'));
             break;
 
-          case 40000: // BAD_REQUEST
+          case ErrorCode.BAD_REQUEST: // 40000
             // 请求参数错误：如果是加入验证相关错误，跳转到错误页
             const badRequestMsg = (message || '').toLowerCase();
-            if (badRequestMsg.includes('validation') || badRequestMsg.includes('验证') ||
-              badRequestMsg.includes('join') || badRequestMsg.includes('加入')) {
+            if (badRequestMsg.includes('validation') ||
+              badRequestMsg.includes('join')) {
               router.push('/join/error?reason=validation_failed').catch(() => { });
             }
-            // 其他 BAD_REQUEST 不跳转（可能是参数错误，用户可修正）
+            return false;
+
+          case ErrorCode.INVITE_CODE_INVALID: // 42010
+            ElMessage.error(t('api.invite_code_invalid'));
             break;
 
-          case 50001: // IS_ALREADY_EXIST
+          case ErrorCode.INVITE_CODE_EXPIRED: // 42011
+            showAlertDialog({
+              message: t('api.invite_code_expired'),
+              type: 'warning',
+            });
+            return false;
+
+          case ErrorCode.INVITE_CODE_REVOKED: // 42012
+            showAlertDialog({
+              message: t('api.invite_code_revoked'),
+              type: 'warning',
+            });
+            return false;
+
+          case ErrorCode.INVITE_CODE_USAGE_LIMIT_REACHED: // 42013
+            showAlertDialog({
+              message: t('api.invite_code_usage_limit_reached'),
+              type: 'warning',
+            });
+            return false;
+
+          case ErrorCode.DATABASE_ERROR: // 50001
             // 根据请求 URL 路径区分：如果是加入聊天室相关的请求，显示特殊提示
             const requestUrl = response.config?.url || ''
             if (requestUrl.includes('/chat/join') || requestUrl.includes('/auth/guest/join')) {
@@ -283,11 +308,19 @@ request.interceptors.response.use(
             }
             // 数据库冲突：数据库中已存在相同的记录
             ElMessage.error(message.split("'")[1].trim() + t('api.is_already_exist'));
-            return Promise.reject(new Error('DATABASE_DUPLICATE_ENTRY'));
+            return false;
         }
       }
 
-      ElMessage.error(errorMsg);
+      throw createAppError(
+        ErrorType.UNKNOWN,
+        errorMsg,
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'responseInterceptor',
+          action: 'handleResponse'
+        }
+      );
     }
     return response.data;
   },

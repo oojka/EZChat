@@ -1,18 +1,16 @@
 package hal.th50743.service.impl;
 
+import hal.th50743.assembler.UserAssembler;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
 import hal.th50743.mapper.ChatMapper;
 import hal.th50743.mapper.ChatMemberMapper;
 import hal.th50743.mapper.UserMapper;
 import hal.th50743.pojo.*;
-import hal.th50743.service.FileService;
-import hal.th50743.service.OssMediaService;
+import hal.th50743.service.AssetService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
-import hal.th50743.utils.UserVOConverter;
-import io.minio.MinioOSSOperator;
-import io.minio.MinioOSSResult;
+import hal.th50743.service.FormalUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -20,11 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-import static hal.th50743.utils.FileNameFormater.getSafeName;
 import static hal.th50743.utils.UidGenerator.generateUid;
 
 /**
@@ -38,11 +34,11 @@ import static hal.th50743.utils.UidGenerator.generateUid;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
-    private final MinioOSSOperator minioOSSOperator;
-    private final FileService fileService;
     private final ChatMemberMapper chatMemberMapper;
     private final ChatMapper chatMapper;
-    private final OssMediaService ossMediaService;
+    private final AssetService assetService;
+    private final UserAssembler userAssembler;
+    private final FormalUserService formalUserService;
 
     /**
      * 获取用户信息
@@ -68,11 +64,12 @@ public class UserServiceImpl implements UserService {
 
         if (!isSelf && !isColleague) {
             log.warn("[越权访问] 用户 {} 尝试获取非好友/非群员 {} 的信息", reqId, uid);
-            throw new BusinessException(ErrorCode.FORBIDDEN, "Permission denied: You do not have permission to view this user's profile");
+            throw new BusinessException(ErrorCode.FORBIDDEN,
+                    "Permission denied: You do not have permission to view this user's profile");
         }
 
         // 使用转换工具类进行 Entity 到 VO 的转换
-        return UserVOConverter.toUserVO(user, minioOSSOperator);
+        return userAssembler.toUserVO(user);
     }
 
     /**
@@ -132,17 +129,13 @@ public class UserServiceImpl implements UserService {
         u.setUid(userReq.getUid());
         u.setNickname(userReq.getNickname());
         if (userReq.getAvatar() != null) {
-            String avatarObjectName = userReq.getAvatar().getObjectName();
-            // 查询 objects 表，获取 object_id（逻辑约束：验证对象存在）
-            FileEntity objectEntity = fileService.findByObjectName(avatarObjectName);
-            if (objectEntity != null) {
-                u.setObjectId(objectEntity.getId());
-                // 激活对象（如果还未激活）
-                fileService.activateAvatarFile(avatarObjectName);
-                log.debug("Updated user avatar: objectId={}, objectName={}", objectEntity.getId(), avatarObjectName);
-            } else {
-                log.warn("Avatar object not found in objects table: {}", avatarObjectName);
-                // 逻辑约束：如果对象不存在，不设置 object_id（保持为 NULL 或抛出异常）
+            String avatarObjectName = userReq.getAvatar().getImageName();
+            Integer objectId = userAssembler.resolveAvatarId(avatarObjectName);
+            // 逻辑约束：如果对象不存在，不设置 object_id（保持为 NULL 或抛出异常）
+            // 注意：resolveAvatarId 已包含判空和日志
+            if (objectId != null) {
+                u.setAssetId(objectId);
+                log.debug("Updated user avatar: objectId={}, objectName={}", objectId, avatarObjectName);
             }
         }
         u.setBio(userReq.getBio());
@@ -160,7 +153,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public Image uploadAvatar(MultipartFile file) {
         // 业务目的：头像上传统一交给 OSS 媒体服务处理（含图片规范化/缩略图/public 访问）
-        return ossMediaService.uploadAvatar(file);
+        return assetService.uploadAvatar(file);
     }
 
     /**
@@ -193,7 +186,7 @@ public class UserServiceImpl implements UserService {
             return null;
         }
         // 查询 formal_users 表获取用户名
-        return userMapper.getUsernameByUserId(userId);
+        return formalUserService.getUsernameById(userId);
     }
 
     /**

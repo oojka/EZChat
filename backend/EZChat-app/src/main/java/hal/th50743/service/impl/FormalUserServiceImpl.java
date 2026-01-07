@@ -36,16 +36,49 @@ public class FormalUserServiceImpl implements FormalUserService {
     }
 
     /**
+     * 根据用户ID获取用户名（仅限正式用户）
+     *
+     * @param userId 用户 ID
+     * @return 用户名，如果非正式用户返回 null
+     */
+    @Override
+    public String getUsernameById(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userMapper.getUsernameByUserId(userId);
+    }
+
+    /**
      * 根据 UId 添加正式用户（转正）
      *
+     * @deprecated 使用 addByUserId 替代，业务逻辑应使用内部 userId 而非外部 userUid
      * @param formalUserReq 正式用户请求对象（包含 userUid）
      */
+    @Deprecated
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addByUId(FormalUser formalUserReq) {
         log.info("add user by UId, user={}", formalUserReq);
         User user = userMapper.selectByUid(formalUserReq.getUserUid());
         formalUserReq.setUserId(user.getId());
+        add(formalUserReq);
+    }
+
+    /**
+     * 根据用户ID添加正式用户（转正）
+     * <p>
+     * 直接使用内部用户ID，不依赖外部标识符。
+     *
+     * @param formalUserReq 正式用户请求对象（包含 userId）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void addByUserId(FormalUser formalUserReq) {
+        log.info("Add formal user by userId: userId={}", formalUserReq.getUserId());
+        if (formalUserReq.getUserId() == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "UserId is required for user upgrade");
+        }
         add(formalUserReq);
     }
 

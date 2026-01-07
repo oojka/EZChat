@@ -50,4 +50,9 @@ public class FormalUserRegisterReq {
      */
     private Image avatar;
 
+    /**
+     * 个人简介（可选）
+     */
+    private String bio;
+
 }

@@ -27,7 +27,6 @@ public class AuthController {
     private final UserService userService;
     private final ChatService chatService;
 
-
     /**
      * 用户登录接口。
      *
@@ -35,7 +34,7 @@ public class AuthController {
      * @return 登录成功返回包含Token等信息的结果，失败则返回错误信息。
      */
     @PostMapping("/login")
-    public Result<LoginVO> login(@RequestBody LoginReq loginReq){
+    public Result<LoginVO> login(@RequestBody LoginReq loginReq) {
         // 调用认证服务执行登录逻辑
         LoginVO res = authService.login(loginReq);
         // 如果返回结果不为null，表示登录成功
@@ -57,7 +56,7 @@ public class AuthController {
      * @return 注册成功返回包含Token等信息的结果。
      */
     @PostMapping("/register")
-    public Result<LoginVO> register(@RequestBody FormalUserRegisterReq formalUserRegisterReq){
+    public Result<LoginVO> register(@RequestBody FormalUserRegisterReq formalUserRegisterReq) {
         // 调用认证服务执行用户注册逻辑
         LoginVO res = authService.userRegister(formalUserRegisterReq);
         // 注册成功后，直接返回成功响应
@@ -75,20 +74,6 @@ public class AuthController {
         Image image = userService.uploadAvatar(file);
         return Result.success(image);
     }
-    
-    /**
-     * 访客加入聊天接口。
-     *
-     * @param guestRegisterReq 包含访客昵称和聊天码的请求体。
-     * @return 加入成功返回包含Token等信息的结果，失败则返回错误信息。
-     */
-    @PostMapping("/guest")
-    public Result<LoginVO> guestRegister(@RequestBody GuestRegisterReq guestRegisterReq){
-        // 调用认证服务处理访客加入逻辑
-        LoginVO res = authService.guestRegister(guestRegisterReq);
-        // 加入成功，返回成功响应
-        return Result.success(res);
-    }
 
     /**
      * 验证聊天室加入请求
@@ -100,8 +85,8 @@ public class AuthController {
      * <p>
      * 支持两种验证模式：
      * <ul>
-     *   <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
-     *   <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
+     * <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
+     * <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
      * </ul>
      * <p>
      * 注意：此接口必须放在 AuthController 中，因为只有 `/auth` 路径可以跳过 token 检查
@@ -114,8 +99,6 @@ public class AuthController {
         ChatVO chatVO = chatService.validateChatJoin(req);
         return Result.success(chatVO);
     }
-
-
 
     /**
      * 访客加入聊天室（支持头像）

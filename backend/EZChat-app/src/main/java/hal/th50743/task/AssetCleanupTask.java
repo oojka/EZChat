@@ -1,9 +1,8 @@
 package hal.th50743.task;
 
-import hal.th50743.mapper.FileMapper;
-import hal.th50743.pojo.FileEntity;
-import hal.th50743.service.FileService;
-import hal.th50743.service.OssMediaService;
+import hal.th50743.mapper.AssetMapper;
+import hal.th50743.pojo.Asset;
+import hal.th50743.service.AssetService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,14 +25,13 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class FileCleanupTask {
+public class AssetCleanupTask {
 
     private static final int BATCH_SIZE = 100; // 每批处理 100 条
     private static final int GC_HOURS_OLD = 24; // 清理 24 小时前的文件
 
-    private final FileService fileService;
-    private final OssMediaService ossMediaService;
-    private final FileMapper fileMapper;
+    private final AssetService assetService;
+    private final AssetMapper assetMapper;
 
     /**
      * 清理待处理的过期文件
@@ -44,16 +42,15 @@ public class FileCleanupTask {
     public void cleanupPendingFiles() {
         log.info("=== 开始执行文件 GC 任务 ===");
         long startTime = System.currentTimeMillis();
-        
+
         int totalDeleted = 0;
         int totalFailed = 0;
         int offset = 0;
 
         do {
             // 1. 分页查询 PENDING 文件（每次最多 100 条）
-            List<FileEntity> pendingFiles = fileService.findPendingFilesForGC(
-                    GC_HOURS_OLD, BATCH_SIZE, offset
-            );
+            List<Asset> pendingFiles = assetService.findPendingFilesForGC(
+                    GC_HOURS_OLD, BATCH_SIZE, offset);
 
             if (pendingFiles.isEmpty()) {
                 break; // 没有更多数据，退出循环
@@ -62,16 +59,16 @@ public class FileCleanupTask {
             log.debug("GC batch: offset={}, found {} files", offset, pendingFiles.size());
 
             // 2. 批量删除 MinIO 对象和数据库记录
-            for (FileEntity file : pendingFiles) {
+            for (Asset file : pendingFiles) {
                 try {
                     // 先删除 MinIO 对象（会自动删除缩略图）
-                    ossMediaService.deleteObject(file.getObjectName());
+                    assetService.deleteObject(file.getAssetName());
                     // 再删除数据库记录
-                    fileMapper.deleteById(file.getId());
+                    assetMapper.deleteById(file.getId());
                     totalDeleted++;
                 } catch (Exception e) {
-                    log.error("Failed to delete file: objectName={}, id={}", 
-                            file.getObjectName(), file.getId(), e);
+                    log.error("Failed to delete file: objectName={}, id={}",
+                            file.getAssetName(), file.getId(), e);
                     totalFailed++;
                 }
             }
@@ -92,14 +89,7 @@ public class FileCleanupTask {
         // 4. 记录汇总日志
         long duration = System.currentTimeMillis() - startTime;
         log.info("=== 文件 GC 任务完成 ===");
-        log.info("Total deleted: {}, Total failed: {}, Duration: {}ms", 
+        log.info("Total deleted: {}, Total failed: {}, Duration: {}ms",
                 totalDeleted, totalFailed, duration);
     }
 }
-
-
-
-
-
-
-

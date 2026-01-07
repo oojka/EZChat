@@ -1,63 +1,226 @@
-## [2026-01-07] JoinChatDialog 组件全球化完善
-
-### 目标
-完善 `JoinChatDialog.vue` 组件的国际化支持，补充缺失的翻译键值，移除后备中文文本，确保完全依赖国际化系统。
-
-### 修改内容
-
-#### 1. 国际化文件更新
-- **en.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
-- **zh.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
-- **ja.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
-- **zh-tw.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
-- **ko.json**: 在 `chat` 部分添加了 `invite_url` 和 `invite_url_placeholder` 键值
-
-#### 2. 组件修改
-- **JoinChatDialog.vue**: 
-  - 第118行：移除 `|| '加入成功'` 和 `|| '加入失败'` 后备文本
-  - 第127行：移除 `|| '立即进入'` 和 `|| '重试'` 后备文本
-  - 现在完全依赖 `t('chat.join_success')`、`t('chat.join_failed')`、`t('create_chat.enter_now')` 和 `t('common.retry')` 国际化键值
-
-#### 3. 新增翻译键值
-- `chat.invite_url`: 邀请链接/Invite URL
-- `chat.invite_url_placeholder`: 请在此粘贴邀请链接/Paste the invite URL here
-
-### 技术细节
-- 使用 `vue-i18n` 的 `useI18n()` hook
-- 保持现有组件结构不变
-- 确保所有翻译键值都有对应的翻译文本
-- 遵循项目现有的国际化命名规范
-
-### 验证结果
-- 所有语言文件中的 `chat` 部分现在都有完整的键值集合
-- 组件中使用的所有国际化键值都在语言文件中存在
-- 无语法错误，组件功能正常
-## [2026-01-07 05:20] Remove Full-Screen Loading in Join Chat
-- **Goal**: Optimize user experience by removing the full-screen blocking loading overlay during chat room joining, replacing it with a local button loading state.
-- **Changes**: Modified `frontend/vue-ezchat/src/hooks/chat/join/useJoinChat.ts` (handleDialogJoinChat).
-
-## [2026-01-07 05:25] Handle Duplicate Join Navigation
-- **Goal**: Skip the result page and navigate directly to the chat room if the user is already joined.
+## [2026-01-07 14:40] Fix Invite Route & Infinite Loading
+- **Goal**: Fix "Already Joined" infinite loading bug and I18n SyntaxError in RoomStore.
 - **Changes**:
-  - `stores/roomStore.ts`: Updated `joinChat` to return `'SUCCESS' | 'ALREADY_JOINED' | false`.
-  - `hooks/chat/join/useJoinDialogController.ts`: Added `navigateToChat` to handle navigation.
-  - `hooks/chat/join/useJoinChat.ts`: Updated `handleDialogJoinChat` to handle `ALREADY_JOINED` by calling `navigateToChat` immediately.
-  - `hooks/chat/join/useJoinAction.ts`: Updated return value check for `joinChat`.
-Refactored Join Chat Module
-
-## [2026-01-07 06:25] Fix Join Screen Flicker on Dialog
-- **Goal**: Fix screen flickering issue in JoinChatDialog caused by global loading overlay, without affecting other components.
+  - `frontend/vue-ezchat/src/assets/main.css`: Added z-index override (100000) for `.el-overlay`.
+  - `frontend/vue-ezchat/src/stores/roomStore.ts`: Reverted to blocking `showAlertDialog`, fixed `useI18n` usage.
+  - `frontend/vue-ezchat/src/utils/request.ts`: Removed redundant error handling.
+  - `frontend/vue-ezchat/src/router/index.ts`: Updated invite route guard.
+  - `frontend/vue-ezchat/src/hooks/chat/join/useJoinInput.ts`: Fixed `useI18n` usage outside setup.
+  
+## [2026-01-07 14:45] Internationalize Join Chat Success Message
+- **Goal**: Internationalize success message in router invite validation
 - **Changes**:
-  - Modified `src/hooks/chat/join/useJoinInput.ts`: `validateAndGetPayload` now accepts `useGlobalLoading` optional param.
-  - Modified `src/components/dialogs/JoinChatDialog.vue`: pass `false` to `validateAndGetPayload` to disable global loading.
-
-## [2026-01-07 06:40] Fix Join Redirect for RoomId Mode
-- **Goal**: Fix redirection failure when joining a room via RoomID/Password if already joined.
+  - [MODIFY] `router/index.ts` (line 204):
+    - Internationalized success message: `ElMessage.success('Join chat successfully')` → `ElMessage.success(t('api.join_chat_success'))`
+  - [MODIFY] `i18n/locales/en.json`:
+    - Added `join_chat_success` translation key: "Join chat successfully"
+  - [MODIFY] `i18n/locales/zh.json`:
+    - Added `join_chat_success` translation key: "成功加入聊天室"
+  - [MODIFY] `i18n/locales/ja.json`:
+    - Added `join_chat_success` translation key: "チャットに参加しました"
+  - [MODIFY] `i18n/locales/ko.json`:
+    - Added `join_chat_success` translation key: "채팅에 참여했습니다"
+  - [MODIFY] `i18n/locales/zh-tw.json`:
+    - Added `join_chat_success` translation key: "成功加入聊天室"
+  
+## [2026-01-07 14:50] Complete Globalization of Invite Verification Text
+- **Goal**: Fully internationalize invite verification loading text
 - **Changes**:
-  - Modified `src/components/dialogs/JoinChatDialog.vue` logic in `handleJoin` and `handleResultConfirm` to robustly extract `targetCode` from payload/form when store data might be missing.
-
-## [2026-01-07 06:45] Auto-scroll in AsideList
-- **Goal**: Auto-scroll to active chat room on route change.
+  - [MODIFY] `router/index.ts` (line 147):
+    - Removed fallback text: `t('common.verifying_invitation') || 'Verifying invitation...'` → `t('common.verifying_invitation')`
+  - [MODIFY] `i18n/locales/en.json`:
+    - Added `verifying_invitation` translation key: "Verifying invitation..."
+  - [MODIFY] `i18n/locales/zh.json`:
+    - Added `verifying_invitation` translation key: "验证邀请中..."
+  - [MODIFY] `i18n/locales/ja.json`:
+    - Added `verifying_invitation` translation key: "招待を確認中..."
+  - [MODIFY] `i18n/locales/ko.json`:
+    - Added `verifying_invitation` translation key: "초대 확인 중..."
+  - [MODIFY] `i18n/locales/zh-tw.json`:
+    - Added `verifying_invitation` translation key: "驗證邀請中..."
+## [2026-01-07 15:52] Refactor Invite Route Logic
+- **Goal**: Extract complex invite verification logic from router guard to a dedicated service service.
 - **Changes**:
-  - Modified `src/views/layout/components/AsideList.vue` to watch `route.params.chatCode` and `isRoomListLoading`.
-  - Updated `scrollToCurrentRoom` to accept optional target code.
+  - NEW `frontend/vue-ezchat/src/services/inviteService.ts`: Contains `processInviteRoute` logic.
+  - MOD `frontend/vue-ezchat/src/router/index.ts`: Replaced inline logic with `processInviteRoute` call.
+  
+## [2026-01-07 15:55] Internationalize Image Upload Error Message
+- **Goal**: Internationalize Japanese error message in useUpload hook
+- **Changes**:
+  - [MODIFY] `hooks/useUpload.ts`:
+    - Added i18n import: `import i18n from '@/i18n'`
+    - Added t function inside customUpload method: `const { t } = i18n.global`
+    - Internationalized error message: `ElMessage.error('画像のアップロードに失敗しました')` → `ElMessage.error(t('api.image_upload_failed'))`
+  - [MODIFY] `i18n/locales/en.json`:
+    - Added `image_upload_failed` translation key: "Image upload failed."
+  - [MODIFY] `i18n/locales/zh.json`:
+    - Added `image_upload_failed` translation key: "图片上传失败。"
+  - [MODIFY] `i18n/locales/ja.json`:
+    - Added `image_upload_failed` translation key: "画像のアップロードに失敗しました。"
+  - [MODIFY] `i18n/locales/ko.json`:
+    - Added `image_upload_failed` translation key: "이미지 업로드에 실패했습니다。"
+  - [MODIFY] `i18n/locales/zh-tw.json`:
+    - Added `image_upload_failed` translation key: "圖片上傳失敗。"
+  
+## [2026-01-07 16:00] Fix Missing Translation Key in GuestAside
+- **Goal**: Fix missing 'aside.current_chat' and 'aside.no_chat' translation key warnings
+- **Changes**:
+  - [MODIFY] `views/layout/components/GuestAside.vue` (line 165):
+    - Removed fallback text: `t('aside.current_chat', '当前会话')` → `t('aside.current_chat')`
+  - [MODIFY] `views/layout/components/GuestAside.vue` (line 172):
+    - Removed fallback text: `t('aside.no_chat', '暂无会话')` → `t('aside.no_chat')`
+  - [MODIFY] `i18n/locales/en.json`:
+    - Added `current_chat` translation key in aside section: "Current Chat"
+    - Added `no_chat` translation key in aside section: "No chat"
+  - [MODIFY] `i18n/locales/zh.json`:
+    - Added `current_chat` translation key in aside section: "当前会话"
+    - Added `no_chat` translation key in aside section: "暂无会话"
+  - [MODIFY] `i18n/locales/ja.json`:
+    - Added `current_chat` translation key in aside section: "現在のチャット"
+    - Added `no_chat` translation key in aside section: "チャットがありません"
+  - [MODIFY] `i18n/locales/ko.json`:
+    - Added `current_chat` translation key in aside section: "현재 채팅"
+    - Added `no_chat` translation key in aside section: "채팅이 없습니다"
+  - [MODIFY] `i18n/locales/zh-tw.json`:
+    - Added `current_chat` translation key in aside section: "當前會話"
+    - Added `no_chat` translation key in aside section: "暫無會話"
+  
+## [2026-01-07 16:10] Complete Globalization of useGuestJoin Hook
+- **Goal**: Internationalize all hardcoded English messages in useGuestJoin hook
+- **Changes**:
+  - [MODIFY] `hooks/chat/join/useGuestJoin.ts`:
+    - Line 182: `ElMessage.warning('Room ID is missing in URL')` → `ElMessage.warning(t('chat.room_id_missing'))`
+    - Line 188: `ElMessage.warning('Invalid Room ID format in URL')` → `ElMessage.warning(t('chat.invalid_room_id_format'))`
+    - Line 195: `ElMessage.warning('Room code mismatch')` → `ElMessage.warning(t('chat.room_code_mismatch'))`
+    - Line 202: `ElMessage.warning(t('validation.nickname_invalid') || 'Invalid Nickname')` → `ElMessage.warning(t('validation.nickname_invalid'))`
+    - Line 210: `ElMessage.error('Validation info expired, please restart')` → `ElMessage.error(t('chat.validation_info_expired'))`
+    - Line 223: `ElMessage.warning('Avatar upload failed, using default')` → `ElMessage.warning(t('chat.avatar_upload_failed'))`
+    - Line 233: `ElMessage.error('Target chat code is missing')` → `ElMessage.error(t('chat.target_chat_code_missing'))`
+    - Line 255: `ElMessage.error('Invalid validation info')` → `ElMessage.error(t('chat.invalid_validation_info'))`
+    - Line 265: `ElMessage.success(t('chat.join_success') || 'Joined successfully')` → `ElMessage.success(t('chat.join_success'))`
+  - [MODIFY] `i18n/locales/en.json`:
+    - Added `room_id_missing`: "Room ID is missing in URL"
+    - Added `invalid_room_id_format`: "Invalid Room ID format in URL"
+    - Added `room_code_mismatch`: "Room code mismatch"
+    - Added `validation_info_expired`: "Validation info expired, please restart"
+    - Added `avatar_upload_failed`: "Avatar upload failed, using default"
+    - Added `target_chat_code_missing`: "Target chat code is missing"
+    - Added `invalid_validation_info`: "Invalid validation info"
+  - [MODIFY] `i18n/locales/zh.json`:
+    - Added `room_id_missing`: "URL中缺少房间ID"
+    - Added `invalid_room_id_format`: "URL中的房间ID格式无效"
+    - Added `room_code_mismatch`: "房间代码不匹配"
+    - Added `validation_info_expired`: "验证信息已过期，请重新开始"
+    - Added `avatar_upload_failed`: "头像上传失败，使用默认头像"
+    - Added `target_chat_code_missing`: "目标聊天代码缺失"
+    - Added `invalid_validation_info`: "验证信息无效"
+  - [MODIFY] `i18n/locales/ja.json`:
+    - Added `room_id_missing`: "URLにルームIDがありません"
+    - Added `invalid_room_id_format`: "URLのルームID形式が無効です"
+    - Added `room_code_mismatch`: "ルームコードが一致しません"
+    - Added `validation_info_expired`: "検証情報の有効期限が切れました。再開してください"
+    - Added `avatar_upload_failed`: "アバターのアップロードに失敗しました。デフォルトを使用します"
+    - Added `target_chat_code_missing`: "ターゲットチャットコードがありません"
+    - Added `invalid_validation_info`: "検証情報が無効です"
+  - [MODIFY] `i18n/locales/ko.json`:
+    - Added `room_id_missing`: "URL에 룸 ID가 없습니다"
+    - Added `invalid_room_id_format`: "URL의 룸 ID 형식이 잘못되었습니다"
+    - Added `room_code_mismatch`: "룸 코드가 일치하지 않습니다"
+    - Added `validation_info_expired`: "검증 정보가 만료되었습니다. 다시 시작해 주세요"
+    - Added `avatar_upload_failed`: "아바타 업로드에 실패했습니다. 기본값을 사용합니다"
+    - Added `target_chat_code_missing`: "대상 채팅 코드가 없습니다"
+    - Added `invalid_validation_info`: "검증 정보가 유효하지 않습니다"
+  - [MODIFY] `i18n/locales/zh-tw.json`:
+    - Added `room_id_missing`: "URL中缺少房間ID"
+    - Added `invalid_room_id_format`: "URL中的房間ID格式無效"
+    - Added `room_code_mismatch`: "房間代碼不匹配"
+    - Added `validation_info_expired`: "驗證資訊已過期，請重新開始"
+    - Added `avatar_upload_failed`: "頭像上傳失敗，使用預設頭像"
+    - Added `target_chat_code_missing`: "目標聊天代碼缺失"
+    - Added `invalid_validation_info`: "驗證資訊無效"
+## [2026-01-07 17:31] Fix Typescript Error in messageStore.ts
+- **Goal**: Resolve 'Pick<Message, images>' error by decoupling image processing from strict Message union types.
+- **Changes**: Modified 'sendMessage' in messageStore.ts to iterate image array directly.
+## [2026-01-07 17:36] Refactor WebSocket Protocol
+- **Goal**: Decouple Message types and use Status Codes (1001, 3001) for clearer protocol distinction.
+- **Changes**: Updated WebSocketResult.java, ChatServiceImpl.java, WebSocketServer.java, type/index.ts, useWebsocket.ts.
+  
+## [2026-01-07 17:45] Fix TypeScript Error: Missing 'images' Property in Message Union Type
+- **Goal**: Fix TypeScript error where accessing `images` property on `Message` union type fails because some message types (RoomCreatedMessage, MemberJoinMessage) don't have this property.
+- **Changes**:
+  - [MODIFY] `type/index.ts`:
+    - Added new type `InputMessage = TextMessage | ImageMessage | MixedMessage` for input content
+    - This type only includes message types that have `images` property (even if it's `never[]`)
+  - [MODIFY] `hooks/useChatInput.ts`:
+    - Changed `inputContent` type from `Message` to `InputMessage`
+    - Updated import statement to use `InputMessage` instead of `Message`
+  - **Explanation**: The `Message` union type includes system messages (RoomCreatedMessage, MemberJoinMessage) that don't have `images` property. By creating a dedicated `InputMessage` type that only includes user-inputtable message types, we ensure type safety when accessing `inputContent.images` in the template.
+  
+## [2026-01-07 17:50] Fix TypeScript Error: Missing 'images' Property in MessageItem Component
+- **Goal**: Fix TypeScript error where accessing `images` property on `Message` union type in MessageItem component fails because some message types don't have this property.
+- **Changes**:
+  - [MODIFY] `views/chat/components/MessageItem.vue`:
+    - Added type guard function `hasImages` to check if a message has `images` property
+    - Added computed property `messageImages` that safely returns `Image[]` using the type guard
+    - Updated all usages of `props.msg.images` to use `messageImages.value` (in script) or `messageImages` (in template)
+    - Updated `openViewer` function to use `messageImages.value`
+    - Updated `watchEffect` to use `messageImages.value`
+    - Updated template to use `messageImages` instead of `msg.images`
+  - **Explanation**: The `Message` union type includes system messages (RoomCreatedMessage, MemberJoinMessage) that don't have `images` property. By using a type guard function and computed property, we safely access `images` only when it exists, ensuring type safety throughout the component.
+  
+## [2026-01-07 17:55] Move Type Guard Function to validators.ts
+- **Goal**: Move `hasImages` type guard function from MessageItem.vue to validators.ts for better code organization and reusability.
+- **Changes**:
+  - [MODIFY] `utils/validators.ts`:
+    - Added type imports: `Message`, `TextMessage`, `ImageMessage`, `MixedMessage`
+    - Added `hasImages` type guard function to check if a message has `images` property
+  - [MODIFY] `views/chat/components/MessageItem.vue`:
+    - Removed local `hasImages` function definition
+    - Added import: `import {hasImages} from '@/utils/validators'`
+    - Removed unused type imports: `TextMessage`, `ImageMessage`, `MixedMessage`
+  - **Explanation**: Moving type guard functions to a centralized validators.ts file improves code organization and makes them reusable across the codebase.
+## [2026-01-07 17:49] Fix useChatInput TS Error
+- **Goal**: Fix "Argument of type 'Image' is not assignable to parameter of type 'never'" error.
+- **Changes**: src/hooks/useChatInput.ts (Adjusted inputContent type definition to allow images array in draft state).
+## [2026-01-07 17:51] Fix MessageItem Runtime Crash
+- **Goal**: Fix "Cannot read properties of null (reading 'forEach')" error in MessageItem.vue.
+- **Changes**: src/views/chat/components/MessageItem.vue (Added strict Array.isArray check for messageImages).
+## [2026-01-07 17:57] Fix MyBatis BindingException
+- **Goal**: Resolve "Invalid bound statement" for UserMapper methods.
+- **Changes**: src/main/resources/hal/th50743/mapper/UserMapper.xml (Added XML mappings for getUserById and getUsernameByUserId).
+## [2026-01-07 18:04] Fix WebSocket Parse Error
+- **Goal**: Fix "SyntaxError: Unexpected token 'm'" when parsing ACK messages.
+- **Changes**: src/WS/useWebsocket.ts (Updated parseData to safely handle non-JSON strings).
+## [2026-01-07 18:15] Relax WebSocket Validation
+- **Goal**: Fix message loss due to overly strict type guarding in useWebsocket.ts.
+- **Changes**: 
+  - src/WS/useWebsocket.ts (Allowed loose  payload).
+  - src/stores/websocketStore.ts (Accepted  payload and cast to ).
+## [2026-01-07 18:21] Implement Runtime Validation
+- **Goal**: Move strict message validation from transport layer to business layer.
+- **Changes**:
+  - src/utils/validators.ts (Added isValidMessage type guard).
+  - src/stores/websocketStore.ts (Removed dangerous cast, passing raw data).
+  - src/stores/messageStore.ts (Implemented runtime validation using validMessage).
+## [2026-01-07 18:32] Fix Room Member Hydration Bug
+- **Goal**: Fix insufficient member list loading issue caused by partial hydration.
+- **Changes**: src/stores/roomStore.ts (Updated addRoomMember to only append to already populated lists).
+## [2026-01-07 18:39] Debug Backend Payload
+- **Goal**: Verify if  payload actually contains the  object.
+- **Changes**: backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java (Added INFO logs).
+## [2026-01-07 18:41] Debug Join Validation
+- **Goal**: Fix INVITE_URL_REQUIRED error when joining via password mode.
+- **Changes**: frontend/vue-ezchat/src/hooks/chat/join/useJoinInput.ts (Added debug logs).
+## [2026-01-07 18:43] Fix Join Validation UX
+- **Goal**: Handle raw validation errors gracefully with toast messages instead of UNKNOWN system errors.
+- **Changes**: frontend/vue-ezchat/src/hooks/chat/join/useJoinInput.ts.
+
+## [2026-01-07 18:45] Fix TS Error in useJoinInput
+- **Goal**: Resolve "Type 'string | undefined' is not assignable" error.
+- **Changes**: 
+  - `frontend/vue-ezchat/src/hooks/chat/join/useJoinInput.ts` (Refactored error handling in `validateAndGetPayload`)
+
+## [2026-01-07 19:02] Refactor Backend Service Logic
+- **Goal**: Move Chat Join business logic from `AuthService` to `ChatService`.
+- **Changes**: 
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/AuthServiceImpl.java` (Refactored `joinChat` to delegate to `chatService.join`, removed unused mappers)

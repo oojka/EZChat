@@ -1,18 +1,19 @@
 // =========================================
 // 导入依赖
 // =========================================
-import {defineStore, storeToRefs} from 'pinia'           // Pinia 状态管理
-import type {ChatRoom, Image, Message} from '@/type'    // 类型定义
-import {ref, watch} from 'vue'                          // Vue 响应式 API
-import {useRouter} from 'vue-router'                    // 路由管理
-import {getMessageListApi} from '@/api/Message.ts'      // 消息相关 API
-import {useRoomStore} from '@/stores/roomStore.ts'      // 房间状态管理
-import {useAppStore} from '@/stores/appStore.ts'        // 应用全局状态
-import {useUserStore} from '@/stores/userStore.ts'      // 用户状态管理
-import {useWebsocketStore} from '@/stores/websocketStore.ts' // WebSocket 状态管理
-import {showMessageNotification} from '@/components/notification.ts' // 消息通知组件
+import { defineStore, storeToRefs } from 'pinia'           // Pinia 状态管理
+import type { ChatRoom, Image, Message } from '@/type'    // 类型定义
+import { ref, watch } from 'vue'                          // Vue 响应式 API
+import { useRouter } from 'vue-router'                    // 路由管理
+import { getMessageListApi } from '@/api/Message.ts'      // 消息相关 API
+import { useRoomStore } from '@/stores/roomStore.ts'      // 房间状态管理
+import { useAppStore } from '@/stores/appStore.ts'        // 应用全局状态
+import { useUserStore } from '@/stores/userStore.ts'      // 用户状态管理
+import { useWebsocketStore } from '@/stores/websocketStore.ts' // WebSocket 状态管理
+import { showMessageNotification } from '@/components/notification.ts' // 消息通知组件
 import i18n from '@/i18n'                               // 国际化
 import { useImageStore } from '@/stores/imageStore'     // 图片状态管理
+import { isValidMessage } from '@/utils/validators'     // [NEW] 引入消息验证器
 
 // =========================================
 // 工具函数
@@ -66,14 +67,14 @@ export const useMessageStore = defineStore('message', () => {
   // =========================================
   // 状态定义
   // =========================================
-  
+
   /**
    * 当前房间的消息列表
    * - 按时间倒序排列（最新的在最前面）
    * - 包含发送中、已发送、错误等状态的消息
    */
   const currentMessageList = ref<Message[]>([])
-  
+
   /**
    * 聊天视图加载状态
    * - true: 显示聊天区域的加载骨架屏
@@ -81,7 +82,7 @@ export const useMessageStore = defineStore('message', () => {
    * 用途：首次进入房间或切换房间时显示加载效果
    */
   const chatViewIsLoading = ref<boolean>(false)
-  
+
   /**
    * 消息加载中状态（用于分页加载）
    * - true: 正在加载更多历史消息
@@ -89,7 +90,7 @@ export const useMessageStore = defineStore('message', () => {
    * 用途：控制上拉加载更多的加载动画
    */
   const loadingMessages = ref(false)
-  
+
   /**
    * 没有更多消息标志
    * - true: 已加载所有历史消息，无需继续加载
@@ -97,7 +98,7 @@ export const useMessageStore = defineStore('message', () => {
    * 用途：优化性能，避免不必要的分页请求
    */
   const noMoreMessages = ref(false)
-  
+
   /**
    * 通用加载状态
    * - true: 正在执行某个异步操作
@@ -109,7 +110,7 @@ export const useMessageStore = defineStore('message', () => {
   // =========================================
   // 图片处理函数
   // =========================================
-  
+
   /**
    * 为消息里的图片补齐 blobUrl / blobThumbUrl
    *
@@ -130,13 +131,16 @@ export const useMessageStore = defineStore('message', () => {
    *
    * @param {Message[]} messages - 需要处理的消息列表
    */
+  /**
+   * 为消息里的图片补齐 blobUrl / blobThumbUrl
+   */
   const processMessageImages = async (messages: Message[]) => {
     for (const msg of messages) {
-      if (!msg.images || msg.images.length === 0) continue
+      // 使用 'images' in msg 检查是否包含 images 属性
+      if (!('images' in msg) || !msg.images || msg.images.length === 0) continue
       for (const img of msg.images) {
-        // 原图 Blob 改为按需拉取（预览时再加载），这里只处理缩略图即可
         if (img.blobThumbUrl) continue
-        imageStore.ensureThumbBlobUrl(img).then(() => {})
+        imageStore.ensureThumbBlobUrl(img).then(() => { })
       }
     }
   }
@@ -161,9 +165,11 @@ export const useMessageStore = defineStore('message', () => {
    */
   const revokeAllBlobs = () => {
     currentMessageList.value.forEach(msg => {
-      msg.images?.forEach(img => {
-        imageStore.revokeImageBlobs(img)
-      })
+      if ('images' in msg && msg.images) {
+        msg.images.forEach(img => {
+          imageStore.revokeImageBlobs(img)
+        })
+      }
     })
   }
 
@@ -196,7 +202,7 @@ export const useMessageStore = defineStore('message', () => {
   // =========================================
   // 业务逻辑函数
   // =========================================
-  
+
   /**
    * 构造消息去重 Key（消息指纹）
    *
@@ -225,8 +231,8 @@ export const useMessageStore = defineStore('message', () => {
    */
   const buildMessageKey = (m: Message): string => {
     const textPart = (m.text ?? '').trim()
-    const imagePart = (m.images ?? []).map(i => i.objectName).filter(Boolean).join(',')
-    // createTime 是最核心的排序与分页游标；在此基础上叠加内容指纹，降低碰撞概率
+    const images = 'images' in m ? m.images : []
+    const imagePart = (images ?? []).map(i => i.imageName).filter(Boolean).join(',')
     return `${m.sender}_${m.createTime}_${m.type}_${textPart}_${imagePart}`
   }
 
@@ -261,39 +267,39 @@ export const useMessageStore = defineStore('message', () => {
     try {
       // 首次加载时显示加载动画，分页加载时不显示（避免UI跳动）
       if (!createTime) loadingMessages.value = true
-      
+
       // 调用 API 获取消息列表
       const result = await getMessageListApi({ chatCode: currentRoomCode.value, createTime: createTime || '' })
-      
+
       if (result) {
         const newMessages = result.data.messageList
         const newChatRoom: ChatRoom = result.data.chatRoom
-        
+
         // 更新房间信息（成员数、最后消息时间等）
         if (newChatRoom) roomStore.updateRoomInfo(newChatRoom)
-        
+
         // 处理空数据情况
         if (newMessages.length === 0) {
           if (createTime) noMoreMessages.value = true  // 分页加载时无数据，标记为已加载完
           return
         }
-        
+
         // 去重策略：使用"消息指纹"作为 key，避免分页/重连导致重复插入
         const existingKeys = new Set(currentMessageList.value.map((m) => buildMessageKey(m)))
         const uniqueMessages = newMessages.filter((m) => {
           const key = buildMessageKey(m)
           return !m.createTime || !existingKeys.has(key)
         })
-        
+
         // 去重后仍无新消息
         if (uniqueMessages.length === 0) {
           if (createTime) noMoreMessages.value = true
           return
         }
-        
+
         // 处理消息中的图片（生成缩略图 Blob URL）
         await processMessageImages(uniqueMessages)
-        
+
         // 更新消息列表：首次加载替换，分页加载追加
         if (!createTime) {
           currentMessageList.value = uniqueMessages  // 首次进入，替换整个列表
@@ -338,16 +344,16 @@ export const useMessageStore = defineStore('message', () => {
     // 检查加载条件
     if (loadingMessages.value || noMoreMessages.value) return
     if (currentMessageList.value.length === 0) return
-    
+
     // 设置加载状态
     loadingMessages.value = true
-    
+
     // 获取分页游标（最老消息的创建时间）
     const oldestMessage = currentMessageList.value[currentMessageList.value.length - 1]
-    
+
     // 加载更多消息
     await getMessageList(oldestMessage?.createTime)
-    
+
     // 清除加载状态
     loadingMessages.value = false
   }
@@ -390,19 +396,25 @@ export const useMessageStore = defineStore('message', () => {
     const userStore = useUserStore()
     const websocketStore = useWebsocketStore()
     const { currentRoomCode } = storeToRefs(roomStore)
-    
+
     // 验证发送条件
     const currentUserId = userStore.getCurrentUserId()
     if (!currentRoomCode.value || !currentUserId) return
 
     // 复制图片数组（避免直接修改传入的引用）
     const imagesCopy = [...images]
-    
+
     // 为图片预处理创建临时消息对象（processMessageImages 只需要 images 字段）
     // 异步处理图片，不阻塞消息发送流程
-    const tempMessageForProcessing: Pick<Message, 'images'> = { images: imagesCopy }
-    processMessageImages([tempMessageForProcessing as Message]).then(() => {})
-    
+    // [FIX] 不再强制构造 Message 对象，而是直接处理图片数组，避免因 Message 联合类型（如 MemberJoinMessage 无 images）导致的 createType 错误
+    if (imagesCopy.length > 0) {
+      imagesCopy.forEach(img => {
+        if (!img.blobThumbUrl) {
+          imageStore.ensureThumbBlobUrl(img).then(() => { })
+        }
+      })
+    }
+
     // 生成临时消息ID（用于服务端ACK匹配）
     const tempId = generateTempId()
 
@@ -422,21 +434,21 @@ export const useMessageStore = defineStore('message', () => {
       tempId: tempId,
       status: 'sending'  // 初始状态：发送中
     }
-    
+
     // 乐观更新：立即插入到消息列表最前面（最新消息在最前面）
     currentMessageList.value.unshift(newMessage)
-    
+
     // 发送给服务端的 WebSocket 载荷
     // 注意：服务端会根据 text/images 重新计算消息 type，这里发送的type仅供参考
-    const payload = { 
-      chatCode: currentRoomCode.value, 
-      text: text, 
-      images: imagesCopy, 
-      tempId: tempId, 
-      sender: currentUserId 
+    const payload = {
+      chatCode: currentRoomCode.value,
+      text: text,
+      images: imagesCopy,
+      tempId: tempId,
+      sender: currentUserId
     }
     websocketStore.sendData(payload)
-    
+
     // 超时兜底：防止网络波动导致 ACK 永远不到，UI 需要可见的失败态
     setTimeout(() => {
       const msg = currentMessageList.value.find(m => m.tempId === tempId)
@@ -496,41 +508,49 @@ export const useMessageStore = defineStore('message', () => {
    * - 通知管理：非当前房间的消息显示桌面通知
    * - 状态同步：及时更新房间预览信息
    *
-   * @param {Message} message - 服务端推送的消息对象（已包含 type/images）
+   *
+   * @param {any} rawMessage - 服务端推送的原始消息数据（loose type）
    */
-  const receiveMessage = async (message: Message) => {
+  const receiveMessage = async (rawMessage: any) => {
+    // 1. 运行时校验：确保消息结构合法
+    if (!isValidMessage(rawMessage)) {
+      console.warn('[MessageStore] Invalid message format received, ignored:', rawMessage)
+      return
+    }
+
+    const message = rawMessage as Message // 校验通过，安全断言
     const roomStore = useRoomStore()
     const { currentRoomCode } = storeToRefs(roomStore)
-    
+
     // 预处理消息中的图片（生成缩略图 Blob URL）
     await processMessageImages([message])
-    
+
     // 分支1：当前房间的消息
     if (message.chatCode === currentRoomCode.value) {
       const userStore = useUserStore()
-      
+
       // 排除自己发送的消息（避免重复显示）
       if (message.sender === userStore.getCurrentUserId()) return
-      
+
       // 插入到当前消息列表最前面（最新消息在最前面）
       currentMessageList.value.unshift(message)
-      
+
       // 更新房间预览信息（最后消息时间、预览内容等）
       roomStore.updateRoomPreview(message)
       return
     }
-    
+
     // 分支2：其他房间的消息
     const chat = roomStore.getRoomByCode(message.chatCode)
     const sender = chat?.chatMembers?.find((m) => m.uid === message.sender)
-    
+
     if (chat && sender) {
       // 格式化预览消息：图片消息用 [画像] 标签避免空文本
       message.text = formatPreviewMessage(message)
-      
+
       // 显示桌面通知（浏览器通知）
       showMessageNotification(message, sender, chat.chatName)
-      
+
       // 更新房间预览信息（未读消息数、最后消息等）
       roomStore.updateRoomPreview(message)
     } else {
@@ -539,53 +559,23 @@ export const useMessageStore = defineStore('message', () => {
     }
   }
 
-  /**
-   * 格式化预览消息 (国际化适配)
-   *
-   * 业务场景：
-   * - 房间列表中的消息预览显示
-   * - 桌面通知中的消息内容显示
-   * - 需要处理多种消息类型和空值情况
-   *
-   * 格式化规则：
-   * 1. 空消息或初始化阶段：返回 "[新消息]"（国际化）
-   * 2. 纯文本消息：直接返回文本内容
-   * 3. 图片消息：在文本后追加 "[画像]" 标签（国际化）
-   * 4. 混合消息：文本 + 图片标签
-   * 5. 无文本的图片消息：只显示图片标签
-   *
-   * 国际化处理：
-   * - 使用 i18n 翻译函数获取本地化文本
-   * - 支持多语言环境下的正确显示
-   *
-   * 容错处理：
-   * - 处理 null/undefined 消息
-   * - 处理空文本消息
-   * - 处理初始化阶段可能缺失的 lastMessage
-   *
-   * @param {Message | null | undefined} message - 消息对象，可能为空
-   * @returns {string} 格式化后的预览消息
-   */
   const formatPreviewMessage = (message?: Message | null): string => {
-    // 初始化阶段 chatList-only 可能没有 lastMessage，需要容错
     if (!message) return `[${t('chat.new_message')}]`
-    
+
     let result = message.text || ''
-    
+
     // 处理图片消息：追加图片标签
-    if (message.images && message.images.length > 0) {
-      // 使用翻译后的 [画像] 标签，重复次数等于图片数量
+    if ('images' in message && message.images && message.images.length > 0) {
       result += `[${t('chat.image')}]`.repeat(message.images.length)
     }
-    
-    // 最终容错：如果经过处理后仍为空，返回 "[新消息]" 占位符
+
     return result || `[${t('chat.new_message')}]`
   }
 
   // =========================================
   // 路由监听器
   // =========================================
-  
+
   /**
    * 路由参数监听器：监听聊天房间切换并自动加载消息
    *
@@ -622,37 +612,37 @@ export const useMessageStore = defineStore('message', () => {
       const appStore = useAppStore()
       const { currentRoomCode } = storeToRefs(roomStore)
       const { isAppLoading } = storeToRefs(appStore)
-      
+
       // 检查1：应用初始化期间不拉取消息
       // 避免"先拉取 → 又被 reset 清空"或 token 未就绪导致数据异常
       if (isAppInitializing) return
-      
+
       // 检查2：只监听 /chat 路由下的 chatCode 参数变化
       // 避免在 /Join/:chatCode 等路由下触发消息加载
       if (!currentPath.startsWith('/chat')) return
-      
+
       const code = (newCode as string) || ''
-      
+
       // 检查3：房间代码发生变化时才执行加载
       if (code && code !== currentRoomCode.value) {
         // 步骤1：释放旧房间的图片 Blob URL（防止内存泄漏）
         revokeAllBlobs()
-        
+
         // 步骤2：更新当前房间代码状态
         currentRoomCode.value = code
-        
+
         // 步骤3：清空当前消息列表（准备加载新房间消息）
         currentMessageList.value = []
-        
+
         // 步骤4：重置分页边界标志（允许加载历史消息）
         noMoreMessages.value = false
-        
+
         // 步骤5：显示聊天区域加载骨架屏（提升用户体验）
         if (!isAppLoading.value) chatViewIsLoading.value = true
-        
+
         // 步骤6：加载新房间的消息列表
         await getMessageList()
-        
+
         // 步骤7：短暂延迟后隐藏加载骨架屏（避免闪烁）
         await new Promise(resolve => setTimeout(resolve, 100))
         chatViewIsLoading.value = false
@@ -664,7 +654,7 @@ export const useMessageStore = defineStore('message', () => {
   // =========================================
   // 导出接口
   // =========================================
-  
+
   return {
     // 状态
     currentMessageList,     // 当前房间的消息列表（响应式）
@@ -672,19 +662,19 @@ export const useMessageStore = defineStore('message', () => {
     loadingMessages,        // 消息加载中状态（分页加载控制）
     noMoreMessages,         // 没有更多消息标志（分页边界控制）
     isLoading,              // 通用加载状态（按钮禁用控制）
-    
+
     // 消息操作
     getMessageList,         // 拉取消息列表（首次/分页）
     loadMoreHistory,        // 上拉加载更多历史消息
     sendMessage,            // 发送消息（WebSocket）
-    
+
     // WebSocket 事件处理
     handleAck,              // 处理服务端 ACK（消息发送确认）
     receiveMessage,         // 接收服务端推送的消息
-    
+
     // 工具函数
     formatPreviewMessage,   // 格式化预览消息（国际化适配）
-    
+
     // 状态管理
     resetState,             // 重置 Store 业务数据
   }

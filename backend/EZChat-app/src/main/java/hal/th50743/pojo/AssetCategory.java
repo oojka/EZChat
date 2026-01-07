@@ -6,7 +6,7 @@ package hal.th50743.pojo;
  * 用于标识对象的业务用途，对应 objects 表的 category 字段。
  * 类型安全，避免字符串拼写错误。
  */
-public enum FileCategory {
+public enum AssetCategory {
     /**
      * 用户头像
      */
@@ -29,7 +29,7 @@ public enum FileCategory {
 
     private final String value;
 
-    FileCategory(String value) {
+    AssetCategory(String value) {
         this.value = value;
     }
 
@@ -48,11 +48,11 @@ public enum FileCategory {
      * @param value 字符串值
      * @return FileCategory 枚举，如果不存在则返回 GENERAL
      */
-    public static FileCategory fromValue(String value) {
+    public static AssetCategory fromValue(String value) {
         if (value == null) {
             return GENERAL;
         }
-        for (FileCategory category : FileCategory.values()) {
+        for (AssetCategory category : AssetCategory.values()) {
             if (category.value.equals(value)) {
                 return category;
             }

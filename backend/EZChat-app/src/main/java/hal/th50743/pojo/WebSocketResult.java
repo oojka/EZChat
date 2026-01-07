@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class WebSocketResult {
 
     private Integer isSystemMessage;
+    private Integer code; // 1xxx: Message, 2xxx: System, 3xxx: Business
     private String type;
     private Object data;
 

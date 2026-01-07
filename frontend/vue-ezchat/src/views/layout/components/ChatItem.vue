@@ -63,8 +63,8 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         class="avatar"
         :size="50"
         shape="square"
-        :thumb-url="chat.avatar?.blobThumbUrl || chat.avatar?.objectThumbUrl || ''"
-        :url="chat.avatar?.blobUrl || chat.avatar?.objectUrl || ''"
+        :thumb-url="chat.avatar?.blobThumbUrl || chat.avatar?.imageThumbUrl || ''"
+        :url="chat.avatar?.blobUrl || chat.avatar?.imageUrl || ''"
         :text="chat.chatName"
       />
     </div>

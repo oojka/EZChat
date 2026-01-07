@@ -1,6 +1,7 @@
-package hal.th50743.utils;
+package hal.th50743.assembler;
 
 import hal.th50743.pojo.LoginVO;
+import hal.th50743.utils.JwtUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,12 +12,12 @@ import java.util.Map;
  * 负责封装生成 LoginVO 对象的逻辑，特别是 JWT Token 的创建。
  * 设计为工具类，所有方法均为静态。
  */
-public final class LoginVOBuilder {
+public final class LoginAssembler {
 
     /**
      * 私有构造函数，防止该工具类被实例化。
      */
-    private LoginVOBuilder() {
+    private LoginAssembler() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 

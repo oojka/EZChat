@@ -1,28 +1,24 @@
-import {ref} from 'vue'
-import {ElMessage} from 'element-plus'
-import type {Message, UserStatus, WebSocketResult} from '@/type'
+import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import type { Message, UserStatus, WebSocketResult } from '@/type'
 import i18n from '@/i18n'
 
 const { t } = i18n.global
 
 // 定义 Connect 方法需要的参数类型
 type ConnectOptions = {
-  onMessage: (data: Message) => void
+  onMessage: (data: any) => void
   onUserStatus: (uid: string, isOnline: boolean) => void
   onAck: (tempId: string) => void
   getHeartbeatPayload: () => string
   // 新增：关闭事件回调，用于处理 4001 等特殊状态码
   onClose?: (event: CloseEvent) => void
+  onChatMemberAdd?: (member: any) => void
 }
 
-const isMessagePayload = (data: unknown): data is Message => {
-  if (!data || typeof data !== 'object') return false
-  const payload = data as Record<string, unknown>
-  return (
-    typeof payload.sender === 'string'
-    && typeof payload.chatCode === 'string'
-    && typeof payload.createTime === 'string'
-  )
+// 修改：宽松的 Payload 检查，只确保是对象，具体字段校验交给业务层
+const isMessagePayload = (data: unknown): boolean => {
+  return !!data && typeof data === 'object'
 }
 
 export function useWebsocket() {
@@ -113,30 +109,67 @@ export function useWebsocket() {
 
       try {
         const result: WebSocketResult = JSON.parse(event.data)
-        const parseData = (data: unknown) => (typeof data === 'string' ? JSON.parse(data) : data)
+        const parseData = (data: unknown) => {
+          if (typeof data !== 'string') return data
+          try {
+            return JSON.parse(data)
+          } catch (e) {
+            return data
+          }
+        }
+        // 解析 payload
+        const payload = parseData(result.data)
 
+        // 优先使用 Status Code (新协议)
+        if (result.code) {
+          switch (result.code) {
+            case 1001: // MESSAGE
+              if (isMessagePayload(payload)) currentOptions?.onMessage(payload)
+              break
+            case 2001: // USER_STATUS
+              const us = payload as UserStatus
+              currentOptions?.onUserStatus(us.uid, us.online)
+              break
+            case 2002: // ACK
+              // ACK 的 data 通常是 tempId 字符串
+              const tempId = typeof result.data === 'string' ? result.data : String(result.data)
+              currentOptions?.onAck(tempId)
+              break
+            case 3001: // MEMBER_JOIN (System Broadcast)
+              // payload 是 JoinBroadcastVO，包含 { member, text, type=11, ... }
+              // 1. 独立处理成员列表更新
+              console.log('Member Join:', payload)
+              if (payload.member) {
+                console.log('Member Join:', payload.member)
+                currentOptions?.onChatMemberAdd?.(payload.member)
+              }
+              // 2. 同时作为普通消息分发，用于在 UI 显示系统提示（如 "XXX joined"）
+              // 此时 payload 被视为 MemberJoinMessage (Type 11)，TS 校验通过（因为 MemberJoinMessage 只有 text）
+              if (isMessagePayload(payload)) {
+                currentOptions?.onMessage(payload)
+              }
+              break
+          }
+          return
+        }
+
+        // [Legacy Support] 旧协议兼容 (isSystemMessage / type)
+        // ... (保留部分逻辑用于稳健性，但移除导致类型报错的 msg.member 访问)
         if (result.isSystemMessage) {
           if (result.type === 'ACK') {
-            // WebSocketResult.data 类型为 string，对于 ACK 类型直接使用（无需断言）
-            if (typeof result.data === 'string') {
-              currentOptions?.onAck(result.data)
-            } else {
-              console.warn('[WARN] [WS] ACK data is not a string, ignored.')
-            }
+            if (typeof result.data === 'string') currentOptions?.onAck(result.data)
           } else if (result.type === 'USER_STATUS') {
-            const userStatus: UserStatus = parseData(result.data)
+            const userStatus = parseData(result.data) as UserStatus
             currentOptions?.onUserStatus(userStatus.uid, userStatus.online)
           }
         } else if (result.type === 'MESSAGE') {
           const msg = parseData(result.data)
           if (isMessagePayload(msg)) {
             currentOptions?.onMessage(msg)
-          } else {
-            console.warn('[WARN] [WS] Received message with invalid shape, ignored.')
+            // [REMOVED] 移除 type===11 的特殊处理，改用 code 3001
           }
         }
       } catch (e) {
-        // 生产环境建议减少此类报错弹窗，避免刷屏，改用 console.error
         console.error('[ERROR] [WS] WebSocket Message Parse Error', e)
       }
     }

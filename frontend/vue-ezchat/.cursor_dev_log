@@ -8,3 +8,10 @@
   - `src/components/dialogs/JoinChatDialog.vue`: Updated to use new hooks and fixed double navigation.
   - `src/views/Join/index.vue`: Updated to use new hooks.
   - `src/views/index/components/LeftCard.vue`: Removed unused join logic.
+
+## [2026-01-07 07:11] Refactor ChatServiceImpl
+- **Goal**: Remove duplicate logic for Avatar processing and UnreadCountMap generation
+- **Changes**:
+  - backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java (Extracted helper methods)
+- **Changes**:
+  - backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java (Extracted isUserOnline helper)

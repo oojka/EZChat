@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -118,6 +118,11 @@ export const useUserStore = defineStore('user', () => {
     }
     return null
   }
+
+  /**
+   * 是否为正式用户 (Computed)
+   */
+  const isFormalUser = computed(() => loginUser.value.type === 'formal')
 
   // =========================
   // 1.3 其他状态
@@ -590,13 +595,13 @@ export const useUserStore = defineStore('user', () => {
   const executeGuestJoin = async (req: GuestJoinReq, currentChatCode: string): Promise<boolean> => {
     try {
       const result = await guestJoinRequest(req)
-      
+
       if (result && result.token) {
         // 初始化应用状态
         await appStore.initializeApp(result.token, 'guest')
         return true
       }
-      
+
       return false
     } catch (e) {
       if (isAppError(e)) {
@@ -702,9 +707,9 @@ export const useUserStore = defineStore('user', () => {
       } else if (whichToken === 'refresh') {
         // 更新 refreshToken：可以改变用户类型
         // 保留现有的 accessToken（如果存在）
-        const existingAccessToken = 
-          token.value.type === 'formal' || token.value.type === 'guest' 
-            ? token.value.accessToken 
+        const existingAccessToken =
+          token.value.type === 'formal' || token.value.type === 'guest'
+            ? token.value.accessToken
             : undefined
 
         const newRefreshToken = {
@@ -801,7 +806,11 @@ export const useUserStore = defineStore('user', () => {
       if (result) {
         const imageStore = useImageStore()
         const prevAvatar = loginUserInfo.value?.avatar
-        loginUserInfo.value = result.data
+        // 设置用户信息，并添加 userType 字段
+        loginUserInfo.value = {
+          ...result.data,
+          userType: type
+        }
         // Store 更新后：预取自己的头像缩略图 blob（不阻塞初始化）
         if (prevAvatar && loginUserInfo.value?.avatar) {
           imageStore.revokeUnusedBlobs([prevAvatar], [loginUserInfo.value.avatar])
@@ -830,6 +839,7 @@ export const useUserStore = defineStore('user', () => {
     userStatusList,
     validateChatJoinReq,
     validatedChatRoom,
+    isFormalUser,
 
     // =========================
     // 3.3 Token 管理

@@ -44,10 +44,10 @@ export const REGEX_USER_UID = /^[0-9]{10}$/
  * 2. 匹配任意合法域名 (Hostname)
  * 3. 路径必须以 /invite/ 结尾，随后跟着 16-24 位字符
  */
-// 开发环境
-// const REGEX_INVITE_URL = /^https?:\/\/[\w\.-]+(?::\d+)?\/invite\/([0-9A-Za-z]{16,24})$/;
-// 正式环境
-export const REGEX_INVITE_URL = /^https:\/\/ez-chat\.oojka\.com\/invite\/([0-9A-Za-z]{16,24})$/
+// 通用邀请链接正则 (支持 localhost 和 域名)
+export const REGEX_INVITE_URL = /^https?:\/\/[\w.-]+(?::\d+)?\/invite\/([0-9A-Za-z]{16,24})$/
+// 正式环境 (Backup)
+// export const REGEX_INVITE_URL = /^https:\/\/ez-chat\.oojka\.com\/invite\/([0-9A-Za-z]{16,24})$/
 
 /**
  * 房间ID规则：
@@ -79,7 +79,7 @@ export const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\
  */
 
 // 类型导入
-import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq } from '@/type'
+import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage } from '@/type'
 
 export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
@@ -292,4 +292,98 @@ export const isInviteJoinReq = (req: ValidateChatJoinReq): req is { inviteCode: 
  */
 export const isPasswordJoinReq = (req: ValidateChatJoinReq): req is { chatCode: string; password: string; inviteCode?: never } => {
   return 'chatCode' in req && typeof req.chatCode === 'string' && 'password' in req && typeof req.password === 'string';
+}
+
+/**
+ * 类型守卫：验证数据是否为 Image 类型
+ * 
+ * ## 业务逻辑
+ * - 检查对象是否包含必需的字段：imageUrl 和 imageThumbUrl
+ * - 可选字段：imageName、assetId、blobUrl、blobThumbUrl
+ * - 所有字符串字段必须为字符串类型
+ * - assetId 如果存在，必须为数字类型
+ * 
+ * ## 字段说明
+ * - imageName: 图片名称（可选）
+ * - imageUrl: 原图URL（必需）
+ * - imageThumbUrl: 缩略图URL（必需）
+ * - assetId: 对象ID，用于关联 objects 表（可选）
+ * - blobUrl: 原图 Blob URL（可选，前端持久化字段）
+ * - blobThumbUrl: 缩略图 Blob URL（可选，前端持久化字段）
+ * 
+ * @param data 待验证的数据
+ * @returns 是否为 Image 类型
+ */
+export const isImage = (data: unknown): data is Image => {
+  if (typeof data !== 'object' || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
+
+  // 必需字段：imageUrl 和 imageThumbUrl
+  const hasRequiredFields =
+    'imageUrl' in obj &&
+    'imageThumbUrl' in obj &&
+    typeof obj.imageUrl === 'string' &&
+    typeof obj.imageThumbUrl === 'string'
+
+  if (!hasRequiredFields) {
+    return false
+  }
+
+  // 可选字段验证：如果存在，必须符合类型要求
+  if ('imageName' in obj && obj.imageName !== undefined && typeof obj.imageName !== 'string') {
+    return false
+  }
+
+  if ('assetId' in obj && obj.assetId !== undefined && typeof obj.assetId !== 'number') {
+    return false
+  }
+
+  if ('blobUrl' in obj && obj.blobUrl !== undefined && typeof obj.blobUrl !== 'string') {
+    return false
+  }
+
+  if ('blobThumbUrl' in obj && obj.blobThumbUrl !== undefined && typeof obj.blobThumbUrl !== 'string') {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * 类型守卫：检查消息是否有 images 属性
+ * 
+ * ## 业务逻辑
+ * - 检查 Message 联合类型是否包含 images 属性
+ * - 只有 TextMessage、ImageMessage、MixedMessage 有 images 属性
+ * - RoomCreatedMessage 和 MemberJoinMessage 没有 images 属性
+ * 
+ * @param msg 待检查的消息
+ * @returns 是否为包含 images 属性的消息类型
+ */
+export const hasImages = (msg: Message): msg is TextMessage | ImageMessage | MixedMessage => {
+  return 'images' in msg
+}
+
+/**
+ * 类型守卫：验证数据是否为 Message 类型（宽松校验）
+ * 
+ * ## 业务逻辑
+ * - 检查对象是否包含核心字段：sender, chatCode, createTime, type
+ * - 这是一个宽松的运行时校验，用于将 WebSocket 的 any 数据转换为 Message
+ * 
+ * @param data 待验证的数据
+ * @returns 是否为 Message 结构
+ */
+export const isValidMessage = (data: any): data is Message => {
+  return (
+    !!data &&
+    typeof data === 'object' &&
+    typeof data.sender === 'string' &&
+    typeof data.chatCode === 'string' &&
+    typeof data.createTime === 'string' &&
+    typeof data.type === 'number'
+  )
 }

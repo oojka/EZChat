@@ -25,14 +25,6 @@ public interface AuthService {
      */
     LoginVO userRegister(FormalUserRegisterReq formalUserRegisterReq);
 
-    /**
-     * 访客登录
-     *
-     * @param guestReq 访客请求参数
-     * @return 登录成功后的视图对象（包含 Token）
-     */
-    LoginVO guestRegister(GuestRegisterReq guestReq);
-
 
     /**
      * 访客加入聊天室（支持头像）
