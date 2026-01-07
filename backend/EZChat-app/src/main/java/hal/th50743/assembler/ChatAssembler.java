@@ -20,8 +20,8 @@ import java.util.Map;
 /**
  * 聊天室视图对象组装器
  * <p>
- * 负责将 ChatVO、ChatMemberVO 等视图对象进行组装，
- * 包括头像 URL 构建、最后消息处理、成员在线状态统计等。
+ * 负责将 ChatVO 视图对象进行组装，包括头像 URL 构建、最后消息处理等。
+ * 成员相关的组装逻辑已抽取到 {@link ChatMemberAssembler}。
  */
 @Slf4j
 @Component
@@ -31,6 +31,7 @@ public class ChatAssembler {
     private final MinioOSSOperator minioOSSOperator;
     private final AssetService assetService;
     private final ObjectMapper objectMapper;
+    private final ChatMemberAssembler chatMemberAssembler;
 
     /**
      * 组装完整的 ChatVO（包含成员列表）
@@ -61,11 +62,11 @@ public class ChatAssembler {
             int onlineCount = 0;
 
             for (ChatMember m : members) {
-                boolean isOnline = isUserOnline(m.getUserId(), onlineUsers);
+                boolean isOnline = chatMemberAssembler.isUserOnline(m.getUserId(), onlineUsers);
                 if (isOnline) {
                     onlineCount++;
                 }
-                memberVOList.add(toChatMemberVO(m, isOnline));
+                memberVOList.add(chatMemberAssembler.toChatMemberVO(m, isOnline));
             }
 
             chatVO.setOnLineMemberCount(onlineCount);
@@ -93,64 +94,34 @@ public class ChatAssembler {
     }
 
     /**
-     * 将 ChatMember 列表转换为 ChatMemberVO 列表
+     * 清理公开返回的 ChatVO 敏感数据
+     * <p>
+     * 用于 validateChatJoin 等接口，确保不泄露 ownerUid, joinEnabled 等信息
      *
-     * @param members     成员列表
-     * @param onlineUsers 在线用户 Map
-     * @return ChatMemberVO 列表
+     * @param chatVO 聊天室视图对象
      */
-    public List<ChatMemberVO> toChatMemberVOList(List<ChatMember> members, Map<Integer, Session> onlineUsers) {
-        if (members == null || members.isEmpty()) {
-            return Collections.emptyList();
+    public void sanitizeForPublic(ChatVO chatVO) {
+        if (chatVO == null) {
+            return;
         }
-        List<ChatMemberVO> memberVOList = new ArrayList<>();
-        for (ChatMember m : members) {
-            boolean isOnline = isUserOnline(m.getUserId(), onlineUsers);
-            memberVOList.add(toChatMemberVO(m, isOnline));
-        }
-        return memberVOList;
-    }
-
-    /**
-     * 将单个 ChatMember 转换为 ChatMemberVO
-     *
-     * @param member   成员实体
-     * @param isOnline 是否在线
-     * @return ChatMemberVO
-     */
-    public ChatMemberVO toChatMemberVO(ChatMember member, boolean isOnline) {
-        ChatMemberVO vo = new ChatMemberVO();
-        vo.setUid(member.getUid());
-        vo.setChatCode(member.getChatCode());
-        vo.setNickname(member.getNickname());
-        vo.setOnline(isOnline);
-        vo.setLastSeenAt(member.getLastSeenAt());
-
-        if (member.getAvatarObjectName() != null) {
-            vo.setAvatar(ImageUtils.buildImage(member.getAvatarObjectName(), minioOSSOperator));
-        }
-
-        return vo;
-    }
-
-    /**
-     * 判断用户是否在线
-     *
-     * @param userId      用户 ID
-     * @param onlineUsers 在线用户 Map
-     * @return 是否在线
-     */
-    public boolean isUserOnline(Integer userId, Map<Integer, Session> onlineUsers) {
-        return userId != null && onlineUsers != null && onlineUsers.containsKey(userId);
+        chatVO.setOwnerUid(null);
+        chatVO.setJoinEnabled(null);
+        chatVO.setLastActiveAt(null);
+        chatVO.setCreateTime(null);
+        chatVO.setUpdateTime(null);
+        chatVO.setUnreadCount(null);
+        chatVO.setLastMessage(null);
+        chatVO.setOnLineMemberCount(null);
+        chatVO.setChatMembers(null);
     }
 
     /**
      * 处理聊天室头像
      */
     private void processChatAvatar(ChatVO chatVO) {
-        if (chatVO.getAvatarObjectName() != null) {
-            chatVO.setAvatar(ImageUtils.buildImage(chatVO.getAvatarObjectName(), minioOSSOperator));
-            chatVO.setAvatarObjectName(null);
+        if (chatVO.getAvatarAssetName() != null) {
+            chatVO.setAvatar(ImageUtils.buildImage(chatVO.getAvatarAssetName(), minioOSSOperator));
+            chatVO.setAvatarAssetName(null); // 为了安全或减少传输，清除原始 ObjectName
         }
     }
 

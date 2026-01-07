@@ -364,6 +364,7 @@
   },
   "system": {
     "room_created": "Room created",
-    "member_join": "{0} joined the group"
+    "member_joined": "{0} joined the group",
+    "guest_joined": "{0} joined the group as a guest"
   }
 }

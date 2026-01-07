@@ -32,6 +32,6 @@ public class ChatMember {
     /**
      * 临时字段：头像对象名（来自 JOIN 查询，不持久化）
      */
-    private transient String avatarObjectName;
+    private transient String avatarAssetName;
 
 }

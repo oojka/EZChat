@@ -179,6 +179,36 @@
     - Added import: `import {hasImages} from '@/utils/validators'`
     - Removed unused type imports: `TextMessage`, `ImageMessage`, `MixedMessage`
   - **Explanation**: Moving type guard functions to a centralized validators.ts file improves code organization and makes them reusable across the codebase.
+  
+## [2026-01-07 18:00] Complete Globalization of System Messages
+- **Goal**: Add missing system message translations to all language files
+- **Changes**:
+  - [MODIFY] `i18n/locales/zh.json`:
+    - Added `system` section with:
+      - `room_created`: "房间已创建"
+      - `member_joined`: "{0} 加入了群聊"
+      - `guest_joined`: "{0} 以访客身份加入了群聊"
+  - [MODIFY] `i18n/locales/en.json`:
+    - Updated `system` section with:
+      - `room_created`: "Room created"
+      - `member_joined`: "{0} joined the group"
+      - `guest_joined`: "{0} joined the group as a guest"
+  - [MODIFY] `i18n/locales/ja.json`:
+    - Added `system` section with:
+      - `room_created`: "ルームが作成されました"
+      - `member_joined`: "{0} がグループに参加しました"
+      - `guest_joined`: "{0} がゲストとしてグループに参加しました"
+  - [MODIFY] `i18n/locales/ko.json`:
+    - Added `system` section with:
+      - `room_created`: "룸이 생성되었습니다"
+      - `member_joined`: "{0} 님이 그룹에 참여했습니다"
+      - `guest_joined`: "{0} 님이 게스트로 그룹에 참여했습니다"
+  - [MODIFY] `i18n/locales/zh-tw.json`:
+    - Added `system` section with:
+      - `room_created`: "房間已建立"
+      - `member_joined`: "{0} 加入了群聊"
+      - `guest_joined`: "{0} 以訪客身份加入了群聊"
+  - **Explanation**: System messages (room creation, member join, guest join) are now fully internationalized across all supported languages.
 ## [2026-01-07 17:49] Fix useChatInput TS Error
 - **Goal**: Fix "Argument of type 'Image' is not assignable to parameter of type 'never'" error.
 - **Changes**: src/hooks/useChatInput.ts (Adjusted inputContent type definition to allow images array in draft state).
@@ -224,3 +254,102 @@
 - **Goal**: Move Chat Join business logic from `AuthService` to `ChatService`.
 - **Changes**: 
   - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/AuthServiceImpl.java` (Refactored `joinChat` to delegate to `chatService.join`, removed unused mappers)
+
+## [2026-01-07 19:18] Fix Broadcast Logic
+- **Goal**: Fix guest join broadcast not delivering.
+- **Changes**: 
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java` (Switched to `getChatMemberListByChatId` to avoid `UserId` filtering issues)
+
+## [2026-01-07 19:24] Fix Guest System Message Logic
+- **Goal**: Fix guest join system message not being persisted.
+- **Changes**: 
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java` (Refactored `isGuest` check to be more efficient, handled `assetIds` null safety)
+
+## [2026-01-07 19:29] Sync Member Avatar
+- **Goal**: Ensure new chat member avatar is fetched before adding to list.
+- **Changes**: 
+  - `frontend/vue-ezchat/src/stores/websocketStore.ts` (Modified `onChatMemberAdd` to await `imageStore.ensureThumbBlobUrl`)
+
+## [2026-01-07 19:54] Fix Avatar Pre-fetch Compatibility
+- **Goal**: Fix avatar pre-fetch skipping due to legacy field names (`objectName` vs `imageName`).
+- **Changes**: 
+  - `frontend/vue-ezchat/src/stores/websocketStore.ts` (Added compatibility check for `objectName`/`objectUrl` and normalized them before calling `ensureThumbBlobUrl`)
+
+## [2026-01-07 20:15] 为 WebSocketServer.java 添加详细中文注释
+|- **Goal**: 为 WebSocket 服务端点添加全面、详细的中文注释，提高代码可读性和维护性
+|- **Changes**:
+  - `backend/EZChat-app/src/main/java/hal/th50743/ws/WebSocketServer.java`:
+    - 添加了所有导入包的详细注释说明
+    - 扩展了类级别的详细功能描述和设计说明
+    - 为所有成员变量添加了详细的作用和生命周期说明
+    - 为每个方法添加了完整的 Javadoc 注释，包括参数说明、返回值、异常处理
+    - 在关键业务逻辑处添加了行内注释，解释复杂逻辑
+    - 详细说明了防抖机制、线程安全考虑和性能优化点
+    - 添加了异常处理策略的业务逻辑说明
+    - 统一了注释格式，符合项目编码规范
+
+## [2026-01-07 20:30] 为 ChatServiceImpl.java 添加详细中文注释
+|- **Goal**: 为聊天服务核心实现类添加全面、详细的中文注释，提高代码可读性和维护性
+|- **Changes**:
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java`:
+    - 添加了所有导入包的详细注释说明
+    - 为所有依赖注入组件添加了详细的作用说明
+    - 为缺少注释的方法添加了完整的Javadoc文档
+    - 详细说明了事务管理策略和回滚机制
+    - 添加了关键业务逻辑的行内注释和解释
+    - 完善了异常处理和安全考虑的注释说明
+    - 统一了注释格式和深度，符合项目编码规范
+## [2026-01-07 21:18] Refactor ChatServiceImpl Decoupling
+- **Goal**: Extract ChatMember logic and MinIO dependencies from ChatServiceImpl to new ChatMemberAssembler.
+- **Changes**: 
+  - Created `backend/EZChat-app/src/main/java/hal/th50743/assembler/ChatMemberAssembler.java`
+  - Modified `backend/EZChat-app/src/main/java/hal/th50743/assembler/ChatAssembler.java`
+  - Modified `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java`
+## [2026-01-07 21:20] Fix Syntax Error in GuestAside.vue
+- **Goal**: Fix missing style end tag
+- **Changes**: 
+  - GuestAside.vue (Appended </style>)
+
+## [2026-01-07 21:30] Update Documentation
+- **Goal**: Synchronize README with recent code changes (WebSocket protocol, I18n).
+- **Changes**:
+  - [MODIFY] `README.md`: Updated Features, WebSocket Protocol section, added Changelog.
+
+## [2026-01-07 21:30] Update Documentation (Debounce)
+- **Goal**: Add 'Presence Debounce' feature to README.
+- **Changes**:
+  - [MODIFY] `README.md`: Added debounce description in Features and Changelog.
+
+## [2026-01-08 06:15] Refactor UserAssembler
+- **Goal**: Reuse ImageUtils logic for image URL generation to ensure consistency and reduce duplication.
+- **Changes**:
+  - [MODIFY] `backend/EZChat-app/src/main/java/hal/th50743/assembler/UserAssembler.java`: Replaced manual MinioOSSResult handling with `ImageUtils.buildImage`. Cleaned up imports.
+
+## [2026-01-08 06:17] Refactor ChatMemberAssembler
+- **Goal**: Consolidate avatar image building logic and reuse `ImageUtils.buildImage`.
+- **Changes**:
+  - [MODIFY] `backend/EZChat-app/src/main/java/hal/th50743/assembler/ChatMemberAssembler.java`: Extracted `buildAvatar` private method. Refactored `toChatMemberVO` methods to use it.
+
+## [2026-01-08 06:33] Add Logging Configuration
+- **Goal**: Configure profile-specific logging for Dev (Console) and Prod (File).
+- **Changes**:
+  - [NEW] `backend/EZChat-app/src/main/resources/logback-spring.xml`: Configured INFO/ERROR file appenders and color console output.
+
+## [2026-01-08 06:35] Add Usage Audit Infrastructure
+- **Goal**: Create infrastructure for recording user operation logs.
+- **Changes**:
+  - [NEW] `OperationLog.java`: POJO for audit logs.
+  - [NEW] `OperationLogMapper.java`: MyBatis mapper interface.
+  - [NEW] `OperationLogMapper.xml`: XML mapping for insert operation.
+
+## [2026-01-08 06:40] Implement Audit Log AOP
+- **Goal**: Implement Aspect-oriented audit logging with async saving.
+- **Changes**:
+  - [NEW] `LogAspect.java`: Aspect to intercept methods, parse SpEL, and capture context.
+  - [NEW] `AsyncLogService.java`: Async service to insert logs.
+  - [NEW] `LogRecord.java`: Annotation definition.
+  - [MODIFY] `EzChatAppApplication.java`: Enabled Async support.
+
+## [2026-01-08 06:45] Fix LogAspect Compilation Error
+- **Goal**: Fix 'AfterReturning cannot be resolved' error in LogAspect.java
+- **Changes**: added spring-boot-starter-aop to backend/EZChat-app/pom.xml

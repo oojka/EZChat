@@ -266,8 +266,8 @@ public class AuthServiceImpl implements AuthService {
         if (chat != null && chat.getChatCode() != null) {
             log.info("Guest joined chat room successfully: uid={}, chatCode={}", user.getUid(), chat.getChatCode());
 
-            // 构建 LoginVO：访客无 username，使用 nickname 作为标识构建 Token
-            return LoginAssembler.build(user.getUid(), user.getNickname(), jwtUtils);
+            // 构建 LoginVO：访客无 username，使用 "guest" 作为标识构建 Token
+            return LoginAssembler.build(user.getUid(), "guest", jwtUtils);
         } else {
             log.error("Guest failed to join chat room (ChatService returned null)");
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to join chat room");

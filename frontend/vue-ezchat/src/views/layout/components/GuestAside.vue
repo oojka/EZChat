@@ -200,8 +200,8 @@ const customUploadRequest = async (options: any) => {
             </div>
         </div>
 
-        <!-- 升级弹窗 (Modern Style) -->
-        <el-dialog v-model="upgradeDialogVisible" width="420px" class="ez-modern-dialog upgrade-dialog-modern"
+        <!-- 升级弹窗 (Modern Style - Wide 2-Col) -->
+        <el-dialog v-model="upgradeDialogVisible" width="750px" class="ez-modern-dialog upgrade-dialog-modern"
             align-center destroy-on-close :show-close="false" :close-on-click-modal="false">
 
             <template #header>
@@ -212,16 +212,17 @@ const customUploadRequest = async (options: any) => {
                         </el-icon>
                     </button>
                 </div>
-                <div class="dialog-title-area">
-                    <h3>升级为正式账号</h3>
-                </div>
             </template>
 
-            <div class="upgrade-dialog-content">
-                <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" label-position="top"
-                    class="upgrade-form" hide-required-asterisk>
-                    <!-- 头像上传 -->
-                    <div class="avatar-upload-box">
+            <div class="dialog-layout-grid">
+                <!-- LEFT COLUMN: Avatar & Branding -->
+                <div class="dialog-left-col">
+                    <div class="dialog-title-area-left">
+                        <h3>升级正式账号</h3>
+                        <p class="subtitle">解锁完整功能体验</p>
+                    </div>
+
+                    <div class="avatar-upload-section">
                         <el-upload class="avatar-uploader-large" action="#" :http-request="customUploadRequest"
                             :show-file-list="false" :on-success="handleAvatarSuccess"
                             :before-upload="beforeAvatarUpload">
@@ -231,45 +232,65 @@ const customUploadRequest = async (options: any) => {
                                     <el-icon>
                                         <Camera />
                                     </el-icon>
-                                    <span>更改</span>
+                                    <span>更改头像</span>
                                 </div>
                             </div>
                             <div v-else class="placeholder-square-lg">
-                                <el-icon size="40">
+                                <el-icon size="48" class="plus-icon">
                                     <Plus />
                                 </el-icon>
-                                <span>上传头像</span>
+                                <span class="upload-text">上传头像</span>
                             </div>
                         </el-upload>
-                        <el-form-item prop="avatar" class="hidden-item" />
+                        <p class="avatar-tip">支持 JPG/PNG，小于 2MB</p>
                     </div>
+                </div>
 
-                    <el-form-item label="账号" prop="username">
-                        <el-input v-model="form.username" placeholder="设置登录账号" size="large" />
-                    </el-form-item>
-                    <el-form-item label="密码" prop="password">
-                        <el-input v-model="form.password" type="password" placeholder="设置登录密码" show-password
-                            size="large" />
-                    </el-form-item>
-                    <el-form-item label="确认密码" prop="confirmPassword">
-                        <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" show-password
-                            size="large" />
-                    </el-form-item>
-                    <el-form-item label="昵称" prop="nickname">
-                        <el-input v-model="form.nickname" placeholder="设置昵称" size="large" />
-                    </el-form-item>
-                    <el-form-item label="个人简介" prop="bio">
-                        <el-input v-model="form.bio" type="textarea" :rows="2" placeholder="一句话介绍自己..." resize="none"
-                            size="large" />
-                    </el-form-item>
-                </el-form>
+                <!-- RIGHT COLUMN: Form Fields -->
+                <div class="dialog-right-col">
+                    <el-form ref="formRef" :model="form" :rules="rules" label-width="0" class="upgrade-form"
+                        hide-required-asterisk status-icon>
 
-                <div class="dialog-actions">
-                    <el-button @click="upgradeDialogVisible = false" class="action-btn-half" size="large">取消</el-button>
-                    <el-button type="primary" :loading="loading" @click="submitUpgrade(formRef)" class="action-btn-half"
-                        size="large">
-                        立即升级
-                    </el-button>
+                        <!-- Hidden avatar field for validation if needed -->
+                        <el-form-item prop="avatar" class="hidden-item" />
+
+                        <div class="form-row">
+                            <el-form-item prop="username" class="form-col">
+                                <span class="input-label">账号</span>
+                                <el-input v-model="form.username" placeholder="设置登录账号" size="large" />
+                            </el-form-item>
+                            <el-form-item prop="nickname" class="form-col">
+                                <span class="input-label">昵称</span>
+                                <el-input v-model="form.nickname" placeholder="设置昵称" size="large" />
+                            </el-form-item>
+                        </div>
+
+                        <el-form-item prop="password">
+                            <span class="input-label">密码</span>
+                            <el-input v-model="form.password" type="password" placeholder="设置登录密码（6-20位）" show-password
+                                size="large" />
+                        </el-form-item>
+                        <el-form-item prop="confirmPassword">
+                            <span class="input-label">确认密码</span>
+                            <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" show-password
+                                size="large" />
+                        </el-form-item>
+
+                        <el-form-item prop="bio">
+                            <span class="input-label">个人简介</span>
+                            <el-input v-model="form.bio" type="textarea" :rows="3" placeholder="一句话介绍自己..."
+                                resize="none" size="large" />
+                        </el-form-item>
+                    </el-form>
+
+                    <div class="dialog-actions">
+                        <el-button @click="upgradeDialogVisible = false" class="action-btn cancel-btn"
+                            size="large">取消</el-button>
+                        <el-button type="primary" :loading="loading" @click="submitUpgrade(formRef)"
+                            class="action-btn submit-btn" size="large">
+                            立即升级
+                        </el-button>
+                    </div>
                 </div>
             </div>
         </el-dialog>
@@ -329,11 +350,13 @@ const customUploadRequest = async (options: any) => {
     align-items: center;
     box-shadow: var(--shadow-sm);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
 }
 
 .upgrade-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
+    border-color: var(--primary-light-5);
 }
 
 .icon-wrapper {
@@ -353,6 +376,7 @@ const customUploadRequest = async (options: any) => {
     color: var(--text-900);
     margin-bottom: 12px;
     text-align: center;
+    line-height: 1.2;
 }
 
 .benefit-list {
@@ -393,7 +417,7 @@ const customUploadRequest = async (options: any) => {
     backdrop-filter: var(--blur-glass) !important;
     -webkit-backdrop-filter: var(--blur-glass) !important;
     border: 1px solid var(--border-glass) !important;
-    border-radius: var(--radius-xl) !important;
+    border-radius: 20px !important;
     box-shadow: var(--shadow-glass) !important;
     overflow: hidden;
     transition: all 0.3s var(--ease-out-expo);
@@ -408,128 +432,119 @@ html.dark :deep(.ez-modern-dialog) {
 .upgrade-dialog-modern :deep(.el-dialog__header) {
     padding: 0 !important;
     margin: 0 !important;
+    height: 0;
 }
 
 .upgrade-dialog-modern :deep(.el-dialog__body) {
     padding: 0 !important;
 }
 
-/* Custom Header */
-.dialog-header-actions {
-    position: relative;
-    height: 0;
-}
-
-.close-btn {
-    position: absolute;
-    right: 16px;
-    top: 24px;
-    z-index: 10;
-    background: var(--bg-page);
-    border: none;
-    color: var(--text-500);
-    width: 32px;
-    height: 32px;
+/* --- Dialog Layout: 2-Column Grid --- */
+.dialog-layout-grid {
     display: flex;
+    min-height: 420px;
+}
+
+/* Left Column */
+.dialog-left-col {
+    flex: 0 0 260px;
+    background: var(--bg-fill-1);
+    /* Subtle dark/light background */
+    border-right: 1px solid var(--border-glass);
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.close-btn:hover {
-    background: var(--el-border-color-light);
-    color: var(--text-900);
-    transform: rotate(90deg);
-}
-
-.dialog-title-area {
     text-align: center;
-    margin-top: 24px;
-    padding: 0 40px;
-    margin-bottom: 8px;
-    /* Reduce bottom margin to bring Avatar closer */
 }
 
-.dialog-title-area h3 {
+.dialog-title-area-left {
+    margin-bottom: 32px;
+}
+
+.dialog-title-area-left h3 {
     font-size: 20px;
     font-weight: 800;
     color: var(--text-900);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: var(--text-500);
     margin: 0;
 }
 
-/* Content Area */
-.upgrade-dialog-content {
-    padding: 10px 32px 32px;
-    display: flex;
-    flex-direction: column;
-}
-
-.upgrade-form {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 24px;
-}
-
-:deep(.el-form-item) {
-    margin-bottom: 16px;
-}
-
-:deep(.el-form-item__label) {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-700);
-    padding-bottom: 6px !important;
-    line-height: 1 !important;
-}
-
-/* --- Avatar Upload (Match CreateChatDialog) --- */
-.avatar-upload-box {
+.avatar-upload-section {
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 16px;
-}
-
-.avatar-uploader-large {
-    display: flex;
-    justify-content: center;
+    gap: 12px;
 }
 
 .avatar-preview-lg,
 .placeholder-square-lg {
-    width: 100px;
-    height: 100px;
-    border-radius: calc(100px * var(--avatar-border-radius-ratio));
-    /* 30px */
+    width: 140px;
+    /* Larger avatar */
+    height: 140px;
+    border-radius: 24px;
+    /* Squircle */
     overflow: hidden;
     position: relative;
     cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-    /* Smaller shadow than create dialog */
-    transition: all 0.3s;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    /* Enhanced shadow */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     background: var(--bg-page);
 }
 
 .placeholder-square-lg {
-    border: 2px dashed var(--el-border-color-light);
+    border: 2px dashed var(--el-border-color);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: var(--text-400);
-    gap: 4px;
-}
-
-.placeholder-square-lg span {
-    font-size: 11px;
-    font-weight: 700;
+    gap: 8px;
 }
 
 .placeholder-square-lg:hover {
     border-color: var(--primary);
     color: var(--primary);
+    background: var(--primary-light-9);
+}
+
+.upload-text {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.avatar-tip {
+    font-size: 12px;
+    color: var(--text-400);
+    margin: 0;
+}
+
+.edit-mask-lg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    opacity: 0;
+    transition: 0.2s;
+    font-size: 13px;
+    gap: 4px;
+    font-weight: 600;
+}
+
+.avatar-preview-lg:hover .edit-mask-lg {
+    opacity: 1;
 }
 
 .avatar-img {
@@ -538,55 +553,125 @@ html.dark :deep(.ez-modern-dialog) {
     object-fit: cover;
 }
 
-.edit-mask-lg {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+/* Right Column */
+.dialog-right-col {
+    flex: 1;
+    padding: 32px 40px;
     display: flex;
     flex-direction: column;
+}
+
+/* Close Btn */
+.dialog-header-actions {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    z-index: 10;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-400);
+    width: 32px;
+    height: 32px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    opacity: 0;
-    transition: 0.3s;
-    font-size: 12px;
-    gap: 2px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.avatar-preview-lg:hover .edit-mask-lg {
-    opacity: 1;
+.close-btn:hover {
+    background: var(--bg-fill-2);
+    color: var(--text-900);
 }
 
-.hidden-item {
-    margin: 0 !important;
-    height: 0;
-    overflow: hidden;
-}
-
-/* --- Actions --- */
-.dialog-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.action-btn-half {
+/* Form Styles */
+.upgrade-form {
     flex: 1;
-    height: 48px;
-    font-size: 15px;
-    font-weight: 800;
-    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-/* Input Overrides for Dialog Context */
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.form-col {
+    flex: 1;
+}
+
+/* Custom Input Labels */
+.input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-600);
+    margin-bottom: 6px;
+}
+
+:deep(.el-form-item) {
+    margin-bottom: 12px;
+}
+
 :deep(.el-input__wrapper),
 :deep(.el-textarea__inner) {
-    background-color: var(--bg-page) !important;
-    box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
-    border-radius: var(--radius-base);
+    background-color: var(--bg-fill-0) !important;
+    /* Lighter input bg in right col */
+    box-shadow: 0 0 0 1px var(--el-border-color) inset !important;
+    border-radius: 8px;
+    transition: all 0.2s;
+    padding-left: 12px;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-textarea__inner:hover) {
+    box-shadow: 0 0 0 1px var(--text-400) inset !important;
 }
 
 :deep(.el-input__wrapper.is-focus),
 :deep(.el-textarea__inner:focus) {
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) inset !important;
+    background-color: var(--bg-page) !important;
+    box-shadow: 0 0 0 2px var(--primary) inset !important;
+}
+
+.hidden-item {
+    display: none;
+}
+
+/* Actions */
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-glass);
+}
+
+.action-btn {
+    height: 40px;
+    padding: 0 24px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.cancel-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-600);
+}
+
+.cancel-btn:hover {
+    background: var(--bg-fill-1);
+    color: var(--text-900);
+}
+
+.submit-btn {
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
 }
 </style>

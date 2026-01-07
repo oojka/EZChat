@@ -84,7 +84,7 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public void saveMessage(Integer userId, Integer chatId, String text, List<Image> images) {
         log.info("save message, userId={}, chatId={}, text={}, images={}", userId, chatId, text, images);
-        String objectIdsJson = null;
+        String assetIdsJson = null;
         // 如果有附件，则提取 objectId（直接使用 Image 对象的 objectId 字段）
         if (images != null && !images.isEmpty()) {
             List<Integer> objectIds = new ArrayList<>();
@@ -98,7 +98,7 @@ public class MessageServiceImpl implements MessageService {
             }
             if (!objectIds.isEmpty()) {
                 try {
-                    objectIdsJson = objectMapper.writeValueAsString(objectIds);
+                    assetIdsJson = objectMapper.writeValueAsString(objectIds);
                 } catch (JsonProcessingException e) {
                     log.error("序列化图片对象ID列表失败: ", e);
                     throw new BusinessException(ErrorCode.SYSTEM_ERROR,
@@ -118,7 +118,7 @@ public class MessageServiceImpl implements MessageService {
                 chatId,
                 type,
                 text,
-                objectIdsJson, // 存储 objectId 列表的 JSON 字符串
+                assetIdsJson, // 存储 assetId 列表的 JSON 字符串
                 LocalDateTime.now(),
                 LocalDateTime.now());
         // 将消息添加到数据库（useGeneratedKeys 会自动填充 msg.id）
@@ -126,12 +126,12 @@ public class MessageServiceImpl implements MessageService {
 
         // 消息保存成功后，批量激活关联的图片文件（status=1, category=MESSAGE_IMG, message_id=msg.id）
         if (images != null && !images.isEmpty()) {
-            List<String> objectNames = new ArrayList<>();
+            List<String> assetNames = new ArrayList<>();
             for (Image image : images) {
-                objectNames.add(image.getImageName());
+                assetNames.add(image.getImageName());
             }
-            assetService.activateFilesBatch(objectNames, AssetCategory.MESSAGE_IMG, msg.getId());
-            log.debug("Activated {} files for message: messageId={}", objectNames.size(), msg.getId());
+            assetService.activateFilesBatch(assetNames, AssetCategory.MESSAGE_IMG, msg.getId());
+            log.debug("Activated {} files for message: messageId={}", assetNames.size(), msg.getId());
         }
     }
 
@@ -164,32 +164,32 @@ public class MessageServiceImpl implements MessageService {
 
         // 4. 对每条消息进行后处理，主要是处理附件URL
         for (MessageVO m : messageList) {
-            String objectIdsJson = m.getAssetIds();
-            if (objectIdsJson != null && !objectIdsJson.isEmpty()) {
+            String assetIdsJson = m.getAssetIds();
+            if (assetIdsJson != null && !assetIdsJson.isEmpty()) {
                 try {
                     // 1. 反序列化为 objectId 列表
-                    List<Integer> objectIds = objectMapper.readValue(objectIdsJson, new TypeReference<List<Integer>>() {
+                    List<Integer> assetIds = objectMapper.readValue(assetIdsJson, new TypeReference<List<Integer>>() {
                     });
 
                     // 2. 根据 objectId 列表查询 objects 表，构建 Image 对象列表
                     List<Image> images = new ArrayList<>();
-                    for (Integer objectId : objectIds) {
-                        Asset objectEntity = assetService.findById(objectId);
+                    for (Integer assetId : assetIds) {
+                        Asset objectEntity = assetService.findById(assetId);
                         if (objectEntity != null) {
                             // 使用 ImageUtils.buildImage() 构建 Image 对象（包含 URL）
                             Image image = ImageUtils.buildImage(objectEntity.getAssetName(), minioOSSOperator);
-                            // 设置 objectId（buildImage 返回的 Image 可能没有 objectId）
+                            // 设置 assetId（buildImage 返回的 Image 可能没有 assetId）
                             if (image != null) {
-                                image.setAssetId(objectId);
+                                image.setAssetId(assetId);
                                 images.add(image);
                             }
                         } else {
-                            log.warn("Object not found by id: {}", objectId);
+                            log.warn("Object not found by id: {}", assetId);
                         }
                     }
                     m.setImages(images);
                 } catch (JsonProcessingException e) {
-                    log.error("反序列化图片对象ID列表失败: {}", objectIdsJson, e);
+                    log.error("反序列化图片对象ID列表失败: {}", assetIdsJson, e);
                     // 不抛出异常，避免影响整条消息的显示
                     m.setImages(Collections.emptyList());
                 }

@@ -320,5 +320,10 @@
     "no_account": "계정이 없으신가요?",
     "register": "「회원가입」",
     "validation_expired": "초대 정보가 만료되었습니다. 다시 확인해 주세요"
+  },
+  "system": {
+    "room_created": "룸이 생성되었습니다",
+    "member_joined": "{0} 님이 그룹에 참여했습니다",
+    "guest_joined": "{0} 님이 게스트로 그룹에 참여했습니다"
   }
 }

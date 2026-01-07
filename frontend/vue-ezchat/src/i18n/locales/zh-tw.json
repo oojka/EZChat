@@ -320,5 +320,10 @@
     "no_account": "沒有帳號？",
     "register": "「註冊」",
     "validation_expired": "邀請資訊已失效，請重新驗證"
+  },
+  "system": {
+    "room_created": "房間已建立",
+    "member_joined": "{0} 加入了群聊",
+    "guest_joined": "{0} 以訪客身份加入了群聊"
   }
 }

@@ -8,6 +8,7 @@ import { ElMessage } from 'element-plus'
 import router from '@/router'
 import type { Image, Message, ChatMember } from '@/type'
 import { useConfigStore } from '@/stores/configStore.ts'
+import { useImageStore } from '@/stores/imageStore.ts'
 import i18n from '@/i18n'
 
 /**
@@ -77,7 +78,18 @@ export const useWebsocketStore = defineStore('websocket', () => {
         // 系统消息：在线状态变更（USER_STATUS）
         roomStore.updateMemberStatus(uid, isOnline)
       },
-      onChatMemberAdd: (member: ChatMember) => {
+      onChatMemberAdd: async (member: ChatMember) => {
+        // [Optimization] Wait for Avatar (Thumb) to be ready before updating UI list
+        // This avoids layout shift or "blank avatar" flash
+        if (member.avatar && (member.avatar.imageName || member.avatar.imageThumbUrl || member.avatar.imageUrl)) {
+          const imageStore = useImageStore()
+          try {
+            // Note: ensureThumbBlobUrl handles fetching & caching logic
+            await imageStore.ensureThumbBlobUrl(member.avatar)
+          } catch (e) {
+            console.error('[WebSocket] Avatar pre-fetch failed', e)
+          }
+        }
         roomStore.addRoomMember(member)
       },
       onAck: (tempId: string) => {

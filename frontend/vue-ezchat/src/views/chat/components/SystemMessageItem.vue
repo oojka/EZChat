@@ -17,7 +17,10 @@ const systemText = computed(() => {
         // Type 11: Member Join (Sender is the user who joined)
         const member = props.currentChat?.chatMembers?.find(m => m.uid == props.msg.sender)
         const nickname = member ? member.nickname : (props.msg.sender || 'Unknown')
-        return t('system.member_join', [nickname])
+        if (props.msg.text?.includes('[Guest]')) {
+            return t('system.guest_joined', [nickname])
+        }
+        return t('system.member_joined', [nickname])
     }
     // Future extension for other system message types (12, 13)
     return props.msg.text || ''

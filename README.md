@@ -12,12 +12,14 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 - **认证 / Auth**：注册登录 + 访客加入（JWT）/ registered login + guest access (JWT)
 - **聊天室 / Rooms**：创建房间（可使用密码加入/邀请链接/一次性链接）、通过 chatCode 获取房间信息并进入聊天 / create rooms (join with password/invite links/one-time links), join rooms via chatCode
 - **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
+- **状态防抖 / Presence Debounce**：30s 离线缓冲，防止网络波动造成误报 / 30s offline buffer to prevent status flickering
 - **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成），统一大小限制 10MB / uploads with conditional thumbnails, unified 10MB size limit
 - **默认头像生成 / Default avatar generation**：使用 DiceBear API 自动生成默认头像（用户使用 bottts-neutral，房间使用 identicon），未上传头像时自动使用 / auto-generates default avatars via DiceBear API (bottts-neutral for users, identicon for rooms) when no avatar uploaded
 - **图片去重 / Image deduplication**：双哈希策略（前端预计算 + 后端规范化哈希）防止重复上传，节省存储空间 / dual-hash strategy (frontend pre-calculation + backend normalized hash) prevents duplicate uploads
 - **图片优化 / Image optimization**：前端预压缩（提升上传体验）+ 后端规范化（兼容/隐私）/ client-side compression + server-side normalization
 - **刷新体验优化 / Refresh UX**：refresh 时优先加载 chatList，成员/消息按需并行加载，减少黑屏与等待 / load chat list first on refresh; members & messages are lazy/parallel to reduce blank screen
-- **国际化 / i18n**：`zh/en/ja/ko/zh-tw` / multi-language UI
+- **国际化 / i18n**：`zh/en/ja/ko/zh-tw` 全面覆盖（含系统消息与错误提示） / Full coverage (incl. system messages & error toasts)
+- **类型安全 / Type Safety**：Zod 运行时校验 + TypeScript 严格模式 / Runtime validation (Zod) + TS strict mode
 - **暗黑模式 / Dark mode**：Element Plus 暗黑变量 / Element Plus dark theme vars
 
 ---
@@ -974,16 +976,24 @@ If object does not exist, `data` is `null`:
 - **心跳 / Heartbeat**：
   - Client → `PING{chatCode}`（例如 `PING20000022`）
   - Server → `PONG`
-- **消息封装 / Envelope**：服务端推送消息统一为：
+- **消息封装 / Envelope**：服务端推送消息统一使用 `code` 区分类型：
 
 ```json
-{ "isSystemMessage": 0, "type": "MESSAGE", "data": { } }
+{
+  "code": 1001,
+  "message": "MESSAGE",
+  "data": { ... }
+}
 ```
 
-- **常见 type / Common types**：
-  - `MESSAGE`：聊天消息（data 为 `MessageVO`）
-  - `ACK`：发送确认（data 为 `tempId`）
-  - `USER_STATUS`：在线状态广播（data 为 `UserStatus`）
+- **状态码定义 / Status Codes**：
+
+| Code | Type | Description | Payload (data) |
+|---|---|---|---|
+| `1001` | `MESSAGE` | 普通聊天消息 / Chat Message | `MessageVO` |
+| `2001` | `USER_STATUS` | 用户在线状态变更 / Presence Update | `UserStatus` |
+| `2002` | `ACK` | 消息发送确认 / Message Acknowledge | `tempId` (string) |
+| `3001` | `MEMBER_JOIN` | 成员加入通知（广播）/ Member Join | `JoinBroadcastVO` |
 
 - **客户端发送消息 / Client → Server (mock)**（字段来自 `MessageReq`）：
 
@@ -1003,25 +1013,20 @@ If object does not exist, `data` is `null`:
 
 ```json
 {
-  "isSystemMessage": 0,
-  "type": "MESSAGE",
+  "code": 1001,
+  "message": "MESSAGE",
   "data": {
     "sender": "20000003",
     "chatCode": "20000022",
     "type": 2,
     "text": "hello",
-    "images": [
-      {
-        "objectName": "private/messages/20000022/abc.jpg",
-        "objectUrl": "https://minio.example.com/presigned/original...",
-        "objectThumbUrl": "https://minio.example.com/presigned/thumb...",
-        "objectId": 789
-      }
-    ],
+    "images": [ ... ],
     "createTime": "2026-01-02T10:20:30"
   }
 }
 ```
+
+> **Compatible Note**: The legacy fields `isSystemMessage` and `type` (as string) are deprecated but may still exist in some responses for backward compatibility. New implementations should rely on `code`.
 
 ---
 
@@ -1336,3 +1341,21 @@ EZChat/
 - 生成 10 条 PENDING 状态的垃圾对象（48 小时前创建），用于测试 GC 功能
 
 ---
+
+## 更新日志 / Changelog
+
+### 2026-01-07
+- **Refactoring**:
+  - WebSocket Protocol refactored to use Status Codes (`1001/2001/2002/3001`) instead of string types.
+  - Decoupled `ChatService` logic: Extracted `ChatMemberAssembler` and `MsgAssembler`.
+  - Moved generic business logic from `AuthService` to `ChatService` (e.g., `joinChat`).
+- **Features**:
+  - **Complete I18n**: Added support for System Messages, Invite Flows, and Error Toasts (zh/en/ja/ko/zh-tw).
+  - **Runtime Validation**: Implemented Zod-like validators for WebSocket messages and Invite inputs.
+  - **Enhanced Guest UX**: Improved guest join flow with clear error messages for missing room IDs or invalid codes.
+  - **Presence Debounce**: Implemented 30s buffer for offline broadcasts to prevent flickering during network instability.
+- **Bug Fixes**:
+  - Fixed "Infinite Loading" on joining existing rooms.
+  - Fixed `MyBatis BindingException` in `UserMapper`.
+  - Fixed `NullPointerException` (TypeScript) in `MessageItem.vue` for system messages without images.
+  - Fixed Guest Broadcast not delivering to existing members.

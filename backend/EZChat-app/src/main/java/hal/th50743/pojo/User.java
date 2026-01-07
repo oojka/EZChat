@@ -35,6 +35,6 @@ public class User {
     /**
      * 临时字段：用于存储 JOIN 查询的 object_name（不持久化）
      */
-    private transient String avatarObjectName;
+    private transient String avatarAssetName;
 
 }

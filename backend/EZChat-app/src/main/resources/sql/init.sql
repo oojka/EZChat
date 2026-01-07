@@ -8,7 +8,7 @@
  说明：
  1. 核心资产表 `assets` (原 objects) 仅包含 30 条真实 MinIO 种子数据。
  2. 用户头像、群封面、消息图片 **全部复用** 这 30 条数据的 ID (Ref Only)。
- 3. 只有 Step 7 会生成少量 status=0 的垃圾数据用于测试 GC。
+ 3. 只有 Step 7 会生成 status=0 的垃圾数据用于测试 GC。
  4. 已更新 `chat_invites` 表结构，适应新的邀请码逻辑。
  5. 已完成 Object -> Asset 的全量重命名。
 */
@@ -23,23 +23,23 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1.1 资产表 (核心，原 objects)
 DROP TABLE IF EXISTS `assets`;
 CREATE TABLE `assets` (
-                           `id`                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                           `asset_name`             VARCHAR(255) NOT NULL COMMENT 'MinIO Object Key',
-                           `original_name`          VARCHAR(255) NOT NULL COMMENT '原始文件名',
-                           `content_type`           VARCHAR(100) DEFAULT NULL,
-                           `file_size`              BIGINT UNSIGNED DEFAULT 0,
-                           `category`               VARCHAR(32) NOT NULL DEFAULT 'GENERAL' COMMENT '主要用途标记',
-                           `message_id`             INT UNSIGNED DEFAULT NULL COMMENT '关联消息ID (复用模式下此字段可能为空)',
-                           `status`                 TINYINT DEFAULT 0 COMMENT '0=PENDING (待清理), 1=ACTIVE (有效)',
-                           `raw_asset_hash`         CHAR(64) NULL COMMENT '原始文件Hash (SHA-256)',
-                           `normalized_asset_hash`  CHAR(64) NULL COMMENT '规范化Hash (后端计算)',
-                           `create_time`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                           `update_time`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `id`                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `asset_name`             VARCHAR(255) NOT NULL COMMENT 'MinIO Object Key',
+  `original_name`          VARCHAR(255) NOT NULL COMMENT '原始文件名',
+  `content_type`           VARCHAR(100) DEFAULT NULL,
+  `file_size`              BIGINT UNSIGNED DEFAULT 0,
+  `category`               VARCHAR(32) NOT NULL DEFAULT 'GENERAL' COMMENT '主要用途标记',
+  `message_id`             INT UNSIGNED DEFAULT NULL COMMENT '关联消息ID (复用模式下此字段可能为空)',
+  `status`                 TINYINT DEFAULT 0 COMMENT '0=PENDING (待清理), 1=ACTIVE (有效)',
+  `raw_asset_hash`         CHAR(64) NULL COMMENT '原始文件Hash (SHA-256)',
+  `normalized_asset_hash`  CHAR(64) NULL COMMENT '规范化Hash (后端计算)',
+  `create_time`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-                           INDEX `idx_asset_name` (`asset_name`),
-                           INDEX `idx_gc_cleanup` (`status`, `create_time`),
-                           INDEX `idx_message_id` (`message_id`),
-                           INDEX `idx_normalized_hash` (`normalized_asset_hash`)
+  INDEX `idx_asset_name` (`asset_name`),
+  INDEX `idx_gc_cleanup` (`status`, `create_time`),
+  INDEX `idx_message_id` (`message_id`),
+  INDEX `idx_normalized_hash` (`normalized_asset_hash`)
 ) COMMENT='数字资产表' CHARSET=utf8mb4;
 
 -- (删除旧表防止混淆)
@@ -49,86 +49,105 @@ DROP TABLE IF EXISTS `files`;
 -- 1.2 用户表 (关联 asset_id)
 DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
-                         `id`           INT UNSIGNED AUTO_INCREMENT COMMENT '用户内部ID' PRIMARY KEY,
-                         `uid`          CHAR(10) NOT NULL COMMENT '对外ID',
-                         `nickname`     VARCHAR(20) NOT NULL,
-                         `asset_id`     INT UNSIGNED NULL COMMENT '头像ID (关联 assets.id)',
-                         `bio`          VARCHAR(255) NULL,
-                         `last_seen_at` DATETIME NOT NULL,
-                         `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                         `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-                         CONSTRAINT `uq_uid` UNIQUE (`uid`)
+  `id`           INT UNSIGNED AUTO_INCREMENT COMMENT '用户内部ID' PRIMARY KEY,
+  `uid`          CHAR(10) NOT NULL COMMENT '对外ID',
+  `nickname`     VARCHAR(20) NOT NULL,
+  `asset_id`     INT UNSIGNED NULL COMMENT '头像ID (关联 assets.id)',
+  `bio`          VARCHAR(255) NULL,
+  `last_seen_at` DATETIME NOT NULL,
+  `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `uq_uid` UNIQUE (`uid`)
 ) COMMENT='用户基础信息表' CHARSET=utf8mb4;
 
 -- 1.3 聊天室表 (关联 asset_id)
 DROP TABLE IF EXISTS `chats`;
 CREATE TABLE `chats` (
-                         `id`                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                         `chat_code`          CHAR(8) NOT NULL COMMENT '对外ID',
-                         `chat_name`          VARCHAR(20) DEFAULT 'New Chat' NOT NULL,
-                         `owner_id`           INT UNSIGNED NULL COMMENT '群主ID',
-                         `chat_password_hash` VARCHAR(255) NULL,
-                         `join_enabled`       TINYINT DEFAULT 1 NOT NULL,
-                         `asset_id`           INT UNSIGNED NULL COMMENT '群封面ID (关联 assets.id)',
-                         `create_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                         `update_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-                         CONSTRAINT `uq_chat_code` UNIQUE (`chat_code`)
+  `id`                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `chat_code`          CHAR(8) NOT NULL COMMENT '对外ID',
+  `chat_name`          VARCHAR(20) DEFAULT 'New Chat' NOT NULL,
+  `owner_id`           INT UNSIGNED NULL COMMENT '群主ID',
+  `chat_password_hash` VARCHAR(255) NULL,
+  `join_enabled`       TINYINT DEFAULT 1 NOT NULL,
+  `asset_id`           INT UNSIGNED NULL COMMENT '群封面ID (关联 assets.id)',
+  `create_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `update_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `uq_chat_code` UNIQUE (`chat_code`)
 ) COMMENT='聊天室/群组表' CHARSET=utf8mb4;
 
 -- 1.4 消息表 (使用 asset_ids)
 DROP TABLE IF EXISTS `messages`;
 CREATE TABLE `messages` (
-                            `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                            `chat_id`     INT UNSIGNED NOT NULL,
-                            `sender_id`   INT UNSIGNED NOT NULL,
-                            `type`        TINYINT DEFAULT 0 NOT NULL COMMENT '0:Text, 1:Img, 2:Mixed, 10:System:room_created, 11:System:member_join, 12:System:member_leave, 13:System:owner_changed',
-                            `text`        LONGTEXT NULL,
-                            `asset_ids`   VARCHAR(4096) NULL COMMENT '图片ID列表 JSON数组 [1, 2]',
-                            `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                            `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-                            INDEX `idx_chat_timeline` (`chat_id`, `create_time`)
+  `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `chat_id`     INT UNSIGNED NOT NULL,
+  `sender_id`   INT UNSIGNED NOT NULL,
+  `type`        TINYINT DEFAULT 0 NOT NULL COMMENT '0:Text, 1:Img, 2:Mixed, 10:System:room_created, 11:System:member_join, 12:System:member_leave, 13:System:owner_changed',
+  `text`        LONGTEXT NULL,
+  `asset_ids`   VARCHAR(4096) NULL COMMENT '图片ID列表 JSON数组 [1, 2]',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_chat_timeline` (`chat_id`, `create_time`)
 ) COMMENT='消息表' CHARSET=utf8mb4;
 
 -- 1.5 其他辅助表
 DROP TABLE IF EXISTS `chat_members`;
 CREATE TABLE `chat_members` (
-                                `chat_id`      INT UNSIGNED NOT NULL,
-                                `user_id`      INT UNSIGNED NOT NULL,
-                                `last_seen_at` DATETIME NOT NULL,
-                                `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                                `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-                                PRIMARY KEY (`chat_id`, `user_id`),
-                                INDEX `idx_user_chats` (`user_id`)
+  `chat_id`      INT UNSIGNED NOT NULL,
+  `user_id`      INT UNSIGNED NOT NULL,
+  `last_seen_at` DATETIME NOT NULL,
+  `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`chat_id`, `user_id`),
+  INDEX `idx_user_chats` (`user_id`)
 ) COMMENT='群成员关联表' CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS `chat_invites`;
 CREATE TABLE `chat_invites` (
-                                `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                                `chat_id`     INT UNSIGNED NOT NULL COMMENT '关联chats表主键',
-                                `code_hash`   CHAR(64) NOT NULL,
-                                `expires_at`  DATETIME NOT NULL,
-                                `max_uses`    INT UNSIGNED DEFAULT 0 NOT NULL,
-                                `used_count`  INT UNSIGNED DEFAULT 0 NOT NULL,
-                                `revoked`     TINYINT DEFAULT 0 NOT NULL,
-                                `created_by`  INT UNSIGNED NULL,
-                                `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                                `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-                                CONSTRAINT `uq_invite_code` UNIQUE (`code_hash`),
-                                INDEX `idx_chat_id` (`chat_id`),
-                                INDEX `idx_expire` (`expires_at`)
+  `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `chat_id`     INT UNSIGNED NOT NULL COMMENT '关联chats表主键',
+  `code_hash`   CHAR(64) NOT NULL,
+  `expires_at`  DATETIME NOT NULL,
+  `max_uses`    INT UNSIGNED DEFAULT 0 NOT NULL,
+  `used_count`  INT UNSIGNED DEFAULT 0 NOT NULL,
+  `revoked`     TINYINT DEFAULT 0 NOT NULL,
+  `created_by`  INT UNSIGNED NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `uq_invite_code` UNIQUE (`code_hash`),
+  INDEX `idx_chat_id` (`chat_id`),
+  INDEX `idx_expire` (`expires_at`)
 ) COMMENT='邀请码/短链接表' CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS `formal_users`;
 CREATE TABLE `formal_users` (
-                                `user_id`         INT UNSIGNED NOT NULL PRIMARY KEY,
-                                `username`        VARCHAR(50) NOT NULL,
-                                `password_hash`   VARCHAR(255) NOT NULL,
-                                `token`           VARCHAR(255) NULL,
-                                `last_login_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                                `create_time`     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                                `update_time`     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-                                CONSTRAINT `uq_username` UNIQUE (`username`)
+  `user_id`         INT UNSIGNED NOT NULL PRIMARY KEY,
+  `username`        VARCHAR(50) NOT NULL,
+  `password_hash`   VARCHAR(255) NOT NULL,
+  `token`           VARCHAR(255) NULL,
+  `last_login_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `create_time`     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `update_time`     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `uq_username` UNIQUE (`username`)
 ) COMMENT='正式用户认证表' CHARSET=utf8mb4;
+
+-- =============================================
+-- 1.6 业务审计日志表 (新增)
+-- =============================================
+DROP TABLE IF EXISTS `operation_logs`;
+CREATE TABLE `operation_logs` (
+  `id`             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id`        INT UNSIGNED NULL COMMENT '操作人ID (可能为空，如未登录尝试)',
+  `module`         VARCHAR(50) NOT NULL COMMENT '功能模块 (如: Chat, User, System)',
+  `type`           VARCHAR(50) NOT NULL COMMENT '操作类型 (如: KICK, LOGIN, UPDATE_PWD)',
+  `content`        VARCHAR(1024) DEFAULT NULL COMMENT '详细描述 (支持SpEL解析后的内容)',
+  `ip_address`     VARCHAR(50) DEFAULT NULL COMMENT '操作IP',
+  `status`         TINYINT DEFAULT 1 COMMENT '1=成功, 0=失败',
+  `execution_time` INT DEFAULT 0 COMMENT '耗时(毫秒)',
+  `create_time`    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  
+  INDEX `idx_user_time` (`user_id`, `create_time`),
+  INDEX `idx_module_type` (`module`, `type`)
+) COMMENT='业务操作审计日志表' CHARSET=utf8mb4;
 
 -- =============================================
 -- 2. 存储过程：生成全链路测试数据 (纯引用模式)
@@ -167,7 +186,7 @@ BEGIN
     TRUNCATE TABLE chats;
     TRUNCATE TABLE formal_users;
     TRUNCATE TABLE users;
-    TRUNCATE TABLE assets; -- 原 objects
+    TRUNCATE TABLE assets; 
 
     -- =============================================
     -- Step 1: 插入 30 条真实种子数据 (Seed Data, ID 1-30)
@@ -211,21 +230,21 @@ BEGIN
     -- =============================================
     SET i = 1;
     WHILE i <= 100 DO
-            -- 随机选取一个种子对象 (ID 1-30)
-            SET v_seed_id = FLOOR(1 + RAND() * 30);
+        -- 随机选取一个种子对象 (ID 1-30)
+        SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-            INSERT INTO users (id, uid, nickname, asset_id, bio, last_seen_at, create_time)
-            VALUES (
-                       i,
-                       CONCAT('1000', LPAD(i, 6, '0')),
-                       CONCAT('User_', LPAD(i, 3, '0')),
-                       v_seed_id,
-                       'Hello World!',
-                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE),
-                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
-                   );
-            SET i = i + 1;
-        END WHILE;
+        INSERT INTO users (id, uid, nickname, asset_id, bio, last_seen_at, create_time)
+        VALUES (
+           i,
+           CONCAT('1000', LPAD(i, 6, '0')),
+           CONCAT('User_', LPAD(i, 3, '0')),
+           v_seed_id,
+           'Hello World!',
+           DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE),
+           DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
+        );
+        SET i = i + 1;
+    END WHILE;
     COMMIT;
 
     -- =============================================
@@ -233,10 +252,10 @@ BEGIN
     -- =============================================
     SET i = 1;
     WHILE i <= 100 DO
-            INSERT INTO formal_users (user_id, username, password_hash)
-            VALUES (i, CONCAT('test', LPAD(i, 3, '0')), password_hash);
-            SET i = i + 1;
-        END WHILE;
+        INSERT INTO formal_users (user_id, username, password_hash)
+        VALUES (i, CONCAT('test', LPAD(i, 3, '0')), password_hash);
+        SET i = i + 1;
+    END WHILE;
     COMMIT;
 
     -- =============================================
@@ -244,23 +263,23 @@ BEGIN
     -- =============================================
     SET i = 1;
     WHILE i <= 20 DO
-            SET chat_owner = FLOOR(1 + RAND() * 100);
+        SET chat_owner = FLOOR(1 + RAND() * 100);
 
-            -- 随机选取一个种子对象 (ID 1-30) 作为群封面
-            SET v_seed_id = FLOOR(1 + RAND() * 30);
+        -- 随机选取一个种子对象 (ID 1-30) 作为群封面
+        SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-            INSERT INTO chats (id, chat_code, chat_name, owner_id, join_enabled, asset_id, create_time)
-            VALUES (
-                       i,
-                       CAST(20000000 + i AS CHAR),
-                       CONCAT('Group ', i),
-                       chat_owner,
-                       1,
-                       v_seed_id, -- 直接引用，不新增 asset
-                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
-                   );
-            SET i = i + 1;
-        END WHILE;
+        INSERT INTO chats (id, chat_code, chat_name, owner_id, join_enabled, asset_id, create_time)
+        VALUES (
+           i,
+           CAST(20000000 + i AS CHAR),
+           CONCAT('Group ', i),
+           chat_owner,
+           1,
+           v_seed_id, -- 直接引用，不新增 asset
+           DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
+        );
+        SET i = i + 1;
+    END WHILE;
     COMMIT;
 
     -- =============================================
@@ -271,14 +290,14 @@ BEGIN
 
     SET i = 1;
     WHILE i <= 20 DO
-            SET j = 1;
-            WHILE j <= 100 DO
-                    INSERT IGNORE INTO chat_members (chat_id, user_id, last_seen_at)
-                    VALUES (i, j, NOW());
-                    SET j = j + 1;
-                END WHILE;
-            SET i = i + 1;
+        SET j = 1;
+        WHILE j <= 100 DO
+            INSERT IGNORE INTO chat_members (chat_id, user_id, last_seen_at)
+            VALUES (i, j, NOW());
+            SET j = j + 1;
         END WHILE;
+        SET i = i + 1;
+    END WHILE;
     COMMIT;
 
     -- =============================================
@@ -286,29 +305,29 @@ BEGIN
     -- =============================================
     SET i = 1;
     WHILE i <= 20 DO
-            SET j = 1;
-            WHILE j <= 50 DO
-                    SELECT user_id INTO rand_user_id FROM chat_members WHERE chat_id = i ORDER BY RAND() LIMIT 1;
+        SET j = 1;
+        WHILE j <= 50 DO
+            SELECT user_id INTO rand_user_id FROM chat_members WHERE chat_id = i ORDER BY RAND() LIMIT 1;
 
-                    -- 20% 概率发送图片
-                    SET msg_type = CASE WHEN RAND() < 0.2 THEN 1 ELSE 0 END;
+            -- 20% 概率发送图片
+            SET msg_type = CASE WHEN RAND() < 0.2 THEN 1 ELSE 0 END;
 
-                    IF msg_type = 0 THEN
-                        INSERT INTO messages (sender_id, chat_id, type, text, create_time)
-                        VALUES (rand_user_id, i, 0, 'Hello, this is a test message.', DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1000) MINUTE));
-                    ELSE
-                        -- 随机选取一个种子对象 (ID 1-30) 作为消息图片
-                        SET v_seed_id = FLOOR(1 + RAND() * 30);
+            IF msg_type = 0 THEN
+                INSERT INTO messages (sender_id, chat_id, type, text, create_time)
+                VALUES (rand_user_id, i, 0, 'Hello, this is a test message.', DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1000) MINUTE));
+            ELSE
+                -- 随机选取一个种子对象 (ID 1-30) 作为消息图片
+                SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-                        -- 直接将该 ID 写入 JSON 数组，不新增 asset
-                        INSERT INTO messages (sender_id, chat_id, type, asset_ids, create_time)
-                        VALUES (rand_user_id, i, 1, CONCAT('[', v_seed_id, ']'), DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1000) MINUTE));
-                    END IF;
+                -- 直接将该 ID 写入 JSON 数组，不新增 asset
+                INSERT INTO messages (sender_id, chat_id, type, asset_ids, create_time)
+                VALUES (rand_user_id, i, 1, CONCAT('[', v_seed_id, ']'), DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1000) MINUTE));
+            END IF;
 
-                    SET j = j + 1;
-                END WHILE;
-            SET i = i + 1;
+            SET j = j + 1;
         END WHILE;
+        SET i = i + 1;
+    END WHILE;
     COMMIT;
 
     -- =============================================
@@ -316,17 +335,17 @@ BEGIN
     -- =============================================
     SET i = 1;
     WHILE i <= 1000 DO
-            INSERT INTO assets (asset_name, original_name, content_type, category, status, create_time)
-            VALUES (
-                       CONCAT('temp/orphan_', UUID(), '.jpg'),
-                       'deleted_soon.jpg',
-                       'image/jpeg',
-                       'GENERAL',
-                       0, -- Status 0 = PENDING
-                       DATE_SUB(NOW(), INTERVAL 48 HOUR) -- 48小时前，理应被GC
-                   );
-            SET i = i + 1;
-        END WHILE;
+        INSERT INTO assets (asset_name, original_name, content_type, category, status, create_time)
+        VALUES (
+           CONCAT('temp/orphan_', UUID(), '.jpg'),
+           'deleted_soon.jpg',
+           'image/jpeg',
+           'GENERAL',
+           0, -- Status 0 = PENDING
+           DATE_SUB(NOW(), INTERVAL 48 HOUR) -- 48小时前，理应被GC
+        );
+        SET i = i + 1;
+    END WHILE;
     COMMIT;
 
     -- 恢复环境
@@ -336,7 +355,8 @@ BEGIN
 
     SELECT 'Data Generation Complete (Asset Mode).' AS result;
     SELECT CONCAT('Total Assets: ', (SELECT COUNT(*) FROM assets)) AS Total_Assets;
-    SELECT 'Assets count should be roughly 40 (30 seeds + 10 garbage).' AS Expected;
+    -- 修正此处的文本提示以匹配代码逻辑：30个种子 + 1000个垃圾 = 1030
+    SELECT 'Assets count should be roughly 1030 (30 seeds + 1000 garbage).' AS Expected;
     SELECT CONCAT('Users Count: ', (SELECT COUNT(*) FROM users)) AS Users;
     SELECT CONCAT('Chats Count: ', (SELECT COUNT(*) FROM chats)) AS Chats;
     SELECT CONCAT('Messages Count: ', (SELECT COUNT(*) FROM messages)) AS Messages;

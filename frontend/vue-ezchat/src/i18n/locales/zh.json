@@ -364,6 +364,7 @@
   },
   "system": {
     "room_created": "房间已创建",
-    "member_join": "{0} 加入了群聊"
+    "member_joined": "{0} 加入了群聊",
+    "guest_joined": "{0} 以访客身份加入了群聊"
   }
 }

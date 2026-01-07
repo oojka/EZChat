@@ -56,5 +56,5 @@ public class ChatVO {
      * <p>
      * 业务说明：通过 LEFT JOIN objects 表获取头像对象名，用于构建 Image 对象
      */
-    private transient String avatarObjectName;
+    private transient String avatarAssetName;
 }

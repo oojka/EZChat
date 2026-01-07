@@ -5,6 +5,7 @@ import hal.th50743.pojo.Image;
 import hal.th50743.pojo.User;
 import hal.th50743.pojo.UserVO;
 import hal.th50743.service.AssetService;
+import hal.th50743.utils.ImageUtils;
 import io.minio.MinioOSSOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,11 +36,11 @@ public class UserAssembler {
         }
 
         Image avatar = null;
-        String avatarObjectName = user.getAvatarObjectName();
+        String avatarAssetName = user.getAvatarAssetName();
 
         // 1. 尝试使用 JOIN 查询的头像名
-        if (avatarObjectName != null) {
-            avatar = buildImage(avatarObjectName, user.getAssetId());
+        if (avatarAssetName != null) {
+            avatar = buildImage(avatarAssetName, user.getAssetId());
         }
         // 2. 如果只有 objectId 但没有 objectName (很少见，防御性逻辑)
         else if (user.getAssetId() != null) {
@@ -63,29 +64,29 @@ public class UserAssembler {
      * <p>
      * 用于更新用户信息时，根据传入的 objectName 查找对应的 objectId。
      *
-     * @param avatarObjectName 头像对象名称
+     * @param avatarAssetName 头像对象名称
      * @return objectId 如果找到，否则返回 null
      */
-    public Integer resolveAvatarId(String avatarObjectName) {
-        if (avatarObjectName == null || avatarObjectName.isBlank()) {
+    public Integer resolveAvatarId(String avatarAssetName) {
+        if (avatarAssetName == null || avatarAssetName.isBlank()) {
             return null;
         }
-        Asset objectEntity = assetService.findByObjectName(avatarObjectName);
-        if (objectEntity != null) {
+        Asset asset = assetService.findByObjectName(avatarAssetName);
+        if (asset != null) {
             // 激活文件
-            assetService.activateAvatarFile(avatarObjectName);
-            return objectEntity.getId();
+            assetService.activateAvatarFile(avatarAssetName);
+            return asset.getId();
         } else {
-            log.warn("Avatar object not found: {}", avatarObjectName);
+            log.warn("Avatar object not found: {}", avatarAssetName);
             return null;
         }
     }
 
-    private Image buildImage(String objectName, Integer objectId) {
-        return new Image(
-                objectName,
-                minioOSSOperator.toUrl(objectName),
-                minioOSSOperator.toThumbUrl(objectName),
-                objectId);
+    private Image buildImage(String assetName, Integer assetId) {
+        Image image = ImageUtils.buildImage(assetName, minioOSSOperator);
+        if (image != null) {
+            image.setAssetId(assetId);
+        }
+        return image;
     }
 }
