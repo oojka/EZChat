@@ -2,6 +2,7 @@ package hal.th50743.service;
 
 import hal.th50743.pojo.Image;
 import hal.th50743.pojo.MessageReq;
+import hal.th50743.pojo.MessageVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -41,7 +42,17 @@ public interface MessageService {
      * @param timeStamp 时间戳（可选）
      * @return 包含消息列表和聊天室信息的 Map
      */
-    Map<String, Object> getMessagesByChatCode(Integer userID, String chatCode, String timeStamp);
+    Map<String, Object> getMessagesByChatCode(Integer userID, String chatCode, Long cursorSeqId);
+
+    /**
+     * 同步消息（拉取指定序列号之后的消息）
+     *
+     * @param userId    当前用户ID
+     * @param chatCode  聊天室代码
+     * @param lastSeqId 上次同步的最后序列号
+     * @return 消息列表
+     */
+    List<MessageVO> syncMessages(Integer userId, String chatCode, Long lastSeqId);
 
     /**
      * 上传文件

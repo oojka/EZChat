@@ -5,11 +5,20 @@
 <mapper namespace="hal.th50743.mapper.MessageMapper">
 
     <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO messages (sender_id, chat_id, type, text, create_time, update_time, asset_ids)
+        INSERT INTO messages (sender_id, chat_id, seq_id, type, text, create_time, update_time, asset_ids)
         VALUES
-            (#{senderId}, #{chatId}, #{type}, #{text},
+            (#{senderId}, #{chatId}, #{seqId}, #{type}, #{text},
              #{createTime}, #{updateTime}, #{assetIds})
     </insert>
+
+    <update id="updateChatSequence">
+        INSERT INTO chat_sequences (chat_id, current_seq) VALUES (#{chatId}, 1)
+        ON DUPLICATE KEY UPDATE current_seq = current_seq + 1
+    </update>
+
+    <select id="selectCurrentSequence" resultType="java.lang.Long">
+        SELECT current_seq FROM chat_sequences WHERE chat_id = #{chatId}
+    </select>
 
     <select id="selectUnreadCountMapByUserId" resultType="java.util.Map">
         SELECT
@@ -40,6 +49,7 @@
     <select id="selectLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                ciM.chat_code AS chatCode,
+               m.seq_id AS seqId,
                m.type AS type,
                m.text,
                m.asset_ids AS assetIds,
@@ -58,6 +68,7 @@
     <select id="selectLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
+               m.seq_id AS seqId,
                m.type AS type,
                m.text,
                m.asset_ids AS assetIds,
@@ -71,9 +82,10 @@
     </select>
 
 
-    <select id="selectMessageListByChatIdAndTimeStamp" resultType="hal.th50743.pojo.MessageVO">
+    <select id="selectMessageListByChatIdAndCursor" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
+               m.seq_id AS seqId,
                m.type AS type,
                m.text,
                m.asset_ids AS assetIds,
@@ -82,11 +94,27 @@
         JOIN chats c ON m.chat_id = c.id
         JOIN users u ON m.sender_id = u.id
         WHERE m.chat_id = #{chatId}
-        <if test="timeStamp != null">
-            AND m.create_time &gt; #{timeStamp}
+        <if test="cursorSeqId != null">
+            AND m.seq_id &lt; #{cursorSeqId}
         </if>
-        ORDER BY m.create_time DESC
-        LIMIT 50
+        ORDER BY m.seq_id DESC
+        LIMIT 30
+    </select>
+
+    <select id="selectMessagesAfterSeqId" resultType="hal.th50743.pojo.MessageVO">
+        SELECT u.uid AS sender,
+               c.chat_code AS chatCode,
+               m.seq_id AS seqId,
+               m.type AS type,
+               m.text,
+               m.asset_ids AS assetIds,
+               m.create_time AS createTime
+        FROM messages m
+        JOIN chats c ON m.chat_id = c.id
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.chat_id = #{chatId}
+          AND m.seq_id &gt; #{lastSeqId}
+        ORDER BY m.seq_id DESC
     </select>
 
 </mapper>

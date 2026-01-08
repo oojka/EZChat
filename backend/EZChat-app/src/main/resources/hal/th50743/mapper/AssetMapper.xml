@@ -19,10 +19,10 @@
     </select>
 
     <!-- 根据 assetName 查询文件记录（使用 idx_asset_name 索引） -->
-    <select id="selectByObjectName" resultType="hal.th50743.pojo.Asset">
+    <select id="selectByAssetName" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
-        WHERE asset_name = #{objectName}
+        WHERE asset_name = #{assetName}
         LIMIT 1
     </select>
 
@@ -41,7 +41,7 @@
             message_id = #{messageId},
             update_time = NOW()
         WHERE asset_name IN
-        <foreach collection="objectNames" item="name" open="(" separator="," close=")">
+        <foreach collection="assetNames" item="name" open="(" separator="," close=")">
             #{name}
         </foreach>
     </update>
@@ -54,7 +54,7 @@
             category = #{category},
             </if>
             update_time = NOW()
-        WHERE asset_name = #{objectName}
+        WHERE asset_name = #{assetName}
     </update>
 
     <!-- 更新单个文件的状态 -->
@@ -62,7 +62,7 @@
         UPDATE assets
         SET status = #{status},
             update_time = NOW()
-        WHERE asset_name = #{objectName}
+        WHERE asset_name = #{assetName}
     </update>
 
     <!-- 分页查询待清理的 PENDING 文件（用于 GC，使用 idx_gc_cleanup 索引） -->

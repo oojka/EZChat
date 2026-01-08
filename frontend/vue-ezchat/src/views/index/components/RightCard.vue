@@ -208,7 +208,7 @@ const handleRegister = async () => {
       // 注册失败：保持在步骤3，不跳转到结果页
       registrationResult.value = { success: false, message: t('auth.register_fail_msg') }
       // 不设置 registerStep = 4，保持在步骤3
-      ElMessage.error(t('auth.register_fail_msg'))
+
     }
   } catch (e: any) {
     // 捕获异常（头像上传失败、API 错误或网络错误）：保持在步骤3

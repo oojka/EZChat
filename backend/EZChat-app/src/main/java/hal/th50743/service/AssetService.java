@@ -58,7 +58,7 @@ public interface AssetService {
      *
      * @param objectNameOrUrl 对象名或 URL
      */
-    void deleteObject(String objectNameOrUrl);
+    void deleteAsset(String objectNameOrUrl);
 
     // ==================== URL 获取相关 ====================
 
@@ -83,7 +83,7 @@ public interface AssetService {
      * @param objectName MinIO 对象名（建议为原图 objectName）
      * @return Image 对象（包含最新的 URL 和 objectId）
      */
-    Image getImageUrlWithObjectId(String objectName);
+    Image getImageUrlWithAssetId(String objectName);
 
     /**
      * 检查对象是否已存在（基于原始哈希）
@@ -102,7 +102,7 @@ public interface AssetService {
      * @param rawHash 原始对象哈希（SHA-256 hex，64 字符）
      * @return Image 对象（如果存在）或 null（如果不存在）
      */
-    Image checkObjectExists(String rawHash);
+    Image checkAssetExists(String rawHash);
 
     // ==================== 数据库记录管理 ====================
 
@@ -121,7 +121,7 @@ public interface AssetService {
      * @return 文件实体（包含自增 ID）
      */
     Asset saveFile(String objectName, String originalName, String contentType, Long fileSize,
-                   AssetCategory category, String rawObjectHash, String normalizedObjectHash);
+            AssetCategory category, String rawObjectHash, String normalizedObjectHash);
 
     /**
      * 批量激活文件（用于消息图片）
@@ -175,7 +175,7 @@ public interface AssetService {
      * @param rawHash 原始对象哈希（SHA-256 hex）
      * @return 对象实体，不存在返回 null
      */
-    Asset findActiveObjectByRawHash(String rawHash);
+    Asset findActiveAssetByRawHash(String rawHash);
 
     /**
      * 根据规范化对象哈希查询已激活的对象（用于后端最终去重）
@@ -183,7 +183,7 @@ public interface AssetService {
      * @param normalizedHash 规范化对象哈希（SHA-256 hex）
      * @return 对象实体，不存在返回 null
      */
-    Asset findActiveObjectByNormalizedHash(String normalizedHash);
+    Asset findActiveAssetByNormalizedHash(String normalizedHash);
 
     /**
      * 根据 ID 查询对象实体
@@ -199,7 +199,7 @@ public interface AssetService {
      * @param objectName MinIO 对象名
      * @return 对象实体，不存在返回 null
      */
-    Asset findByObjectName(String objectName);
+    Asset findByAssetName(String objectName);
 
     // ==================== DTO ====================
 

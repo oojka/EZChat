@@ -171,6 +171,7 @@ export type ValidateChatJoinReq =
 interface BaseMessage {
   sender: string
   chatCode: string
+  seqId?: number // 群内消息序号 (可选，本地临时消息无此字段)
   createTime: string
   tempId: string | null
   status: 'sending' | 'sent' | 'error' | null

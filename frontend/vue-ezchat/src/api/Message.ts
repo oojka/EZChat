@@ -1,24 +1,24 @@
-import type {ChatRoom, Message, Result, Image} from '@/type'
+import type { ChatRoom, Message, Result, Image } from '@/type'
 import request from '@/utils/request.ts'
 
 export type GetMessageListApiReq = {
   chatCode: string
-  createTime: string
+  cursorSeqId?: number // 游标序列号 (为空=查最新)
 }
 
 /**
- * 拉取消息列表（支持时间戳分页）
+ * 拉取消息列表（支持序列号分页）
  *
- * - 后端接口：GET `/message?chatCode=...&timeStamp=...`
+ * - 后端接口：GET `/message?chatCode=...&cursorSeqId=...`
  * - 业务目的：首次进入房间/上拉加载历史时获取消息
  */
 export const getMessageListApi = (
   data: GetMessageListApiReq
 ): Promise<Result<{
-  chatRoom : ChatRoom
-  messageList : Message[]
+  chatRoom: ChatRoom
+  messageList: Message[]
 }>> =>
-  request.get('/message?chatCode=' + data.chatCode + '&timeStamp=' + data.createTime)
+  request.get('/message?chatCode=' + data.chatCode + (data.cursorSeqId ? '&cursorSeqId=' + data.cursorSeqId : ''))
 
 /**
  * 上传消息附件（如图片）
@@ -37,7 +37,7 @@ export const uploadMessageImageApi = (
 ): Promise<Result<Image>> => {
   const formData = new FormData()
   formData.append('file', file)
-  
+
   return request.post('/message/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -54,5 +54,5 @@ export const uploadMessageImageApi = (
  *
  * 注意：当前后端 Controller 未看到该接口实现，若返回 404 说明后端暂未提供。
  */
-export const deleteImageApi = (objectName : string): Promise<null> =>
+export const deleteImageApi = (objectName: string): Promise<null> =>
   request.delete('/message/image?objectName=' + objectName)

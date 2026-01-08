@@ -122,21 +122,21 @@ public class AssetServiceImpl implements AssetService {
             }
 
             // 3) 查询是否存在相同哈希的对象（status=1）
-            Asset existingObject = findActiveObjectByNormalizedHash(hashForDedup);
+            Asset existingAsset = findActiveAssetByNormalizedHash(hashForDedup);
 
-            if (existingObject != null) {
+            if (existingAsset != null) {
                 // 对象已存在，复用已存在的对象（不重复上传到 MinIO）
-                log.debug("Object already exists in uploadFile, reusing: objectName={}, hash={}",
-                        existingObject.getAssetName(), hashForDedup);
+                log.debug("Asset already exists in uploadFile, reusing: assetName={}, hash={}",
+                        existingAsset.getAssetName(), hashForDedup);
 
                 // 重新生成 URL（避免预签名过期）
-                String url = getImageUrl(existingObject.getAssetName());
+                String url = getImageUrl(existingAsset.getAssetName());
                 MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                        existingObject.getAssetName(),
+                        existingAsset.getAssetName(),
                         DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
                         TimeUnit.MINUTES);
 
-                return new StoredObject(existingObject.getAssetName(), url, urls.getThumbUrl(), contentType);
+                return new StoredObject(existingAsset.getAssetName(), url, urls.getThumbUrl(), contentType);
             }
 
             // 4) 对象不存在，继续正常上传流程
@@ -180,9 +180,9 @@ public class AssetServiceImpl implements AssetService {
      * {@inheritDoc}
      */
     @Override
-    public void deleteObject(String objectNameOrUrl) {
+    public void deleteAsset(String assetNameOrUrl) {
         // 删除逻辑由 MinioOSSOperator 统一处理：会同时尝试删除对应缩略图
-        minioOSSOperator.delete(objectNameOrUrl);
+        minioOSSOperator.delete(assetNameOrUrl);
     }
 
     // ==================== URL 获取相关 ====================
@@ -191,43 +191,43 @@ public class AssetServiceImpl implements AssetService {
      * 获取对象访问 URL（按需刷新预签名链接）
      * <p>
      * 业务目的：
-     * - 前端预览原图时，只携带 objectName 向后端请求最新 URL
+     * - 前端预览原图时，只携带 assetName 向后端请求最新 URL
      * - 避免"预签名过期导致图片打不开"的问题，同时降低消息列表接口返回体积
      *
-     * @param objectName MinIO 对象名（建议为原图 objectName）
+     * @param assetName MinIO 对象名（建议为原图 assetName）
      * @return 可访问 URL（public 为永久链接，private 为预签名链接）
      */
     @Override
-    public String getImageUrl(String objectName) {
-        if (objectName == null || objectName.isBlank()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "objectName 不能为空");
+    public String getImageUrl(String assetName) {
+        if (assetName == null || assetName.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "assetName 不能为空");
         }
         // 限制前缀：只允许 public/private 目录，避免任意对象名被探测
-        String lower = objectName.toLowerCase();
+        String lower = assetName.toLowerCase();
         if (!lower.startsWith("public/") && !lower.startsWith("private/")) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "非法的 objectName");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "非法的 assetName");
         }
         // 统一走 getImageUrls：内部会处理 public/private 分流
-        return minioOSSOperator.getImageUrls(objectName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES, TimeUnit.MINUTES).getUrl();
+        return minioOSSOperator.getImageUrls(assetName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES, TimeUnit.MINUTES).getUrl();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Image getImageUrlWithObjectId(String objectName) {
+    public Image getImageUrlWithAssetId(String assetName) {
         // 1. 查询 objects 表获取 objectId
-        Asset asset = findByObjectName(objectName);
+        Asset asset = findByAssetName(assetName);
 
         // 2. 获取最新的 URL（刷新预签名）
-        String url = getImageUrl(objectName);
+        String url = getImageUrl(assetName);
         MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                objectName,
+                assetName,
                 DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
                 TimeUnit.MINUTES);
 
         // 3. 构建 Image 对象（包含 objectId）
-        return new Image(objectName, url, urls.getThumbUrl(),
+        return new Image(assetName, url, urls.getThumbUrl(),
                 asset != null ? asset.getId() : null);
     }
 
@@ -235,31 +235,31 @@ public class AssetServiceImpl implements AssetService {
      * {@inheritDoc}
      */
     @Override
-    public Image checkObjectExists(String rawHash) {
+    public Image checkAssetExists(String rawHash) {
         // 1. 先查询原始对象哈希
-        Asset existingObject = findActiveObjectByRawHash(rawHash);
+        Asset existingAsset = findActiveAssetByRawHash(rawHash);
 
-        if (existingObject != null) {
+        if (existingAsset != null) {
             // 对象已存在，重新生成 URL（避免预签名过期）
-            String url = getImageUrl(existingObject.getAssetName());
+            String url = getImageUrl(existingAsset.getAssetName());
             MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                    existingObject.getAssetName(),
+                    existingAsset.getAssetName(),
                     DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
                     TimeUnit.MINUTES);
 
-            return new Image(existingObject.getAssetName(), url, urls.getThumbUrl(), existingObject.getId());
+            return new Image(existingAsset.getAssetName(), url, urls.getThumbUrl(), existingAsset.getId());
         }
 
         // 2. 如果原始哈希不存在，再尝试规范化哈希（兼容性：如果前端规范化与后端一致）
-        existingObject = findActiveObjectByNormalizedHash(rawHash);
-        if (existingObject != null) {
-            String url = getImageUrl(existingObject.getAssetName());
+        existingAsset = findActiveAssetByNormalizedHash(rawHash);
+        if (existingAsset != null) {
+            String url = getImageUrl(existingAsset.getAssetName());
             MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                    existingObject.getAssetName(),
+                    existingAsset.getAssetName(),
                     DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
                     TimeUnit.MINUTES);
 
-            return new Image(existingObject.getAssetName(), url, urls.getThumbUrl(), existingObject.getId());
+            return new Image(existingAsset.getAssetName(), url, urls.getThumbUrl(), existingAsset.getId());
         }
 
         // 3. 对象不存在，返回 null（前端继续上传）
@@ -271,87 +271,87 @@ public class AssetServiceImpl implements AssetService {
     /**
      * 保存文件记录（默认 status=0, PENDING）
      *
-     * @param objectName           MinIO 对象名
-     * @param originalName         原始文件名
-     * @param contentType          文件 MIME 类型
-     * @param fileSize             文件大小（字节）
-     * @param category             文件分类
-     * @param rawObjectHash        原始对象哈希（SHA-256 hex），可为 null
-     * @param normalizedObjectHash 规范化对象哈希（SHA-256 hex），可为 null
+     * @param assetName           MinIO 对象名
+     * @param originalName        原始文件名
+     * @param contentType         文件 MIME 类型
+     * @param fileSize            文件大小（字节）
+     * @param category            文件分类
+     * @param rawAssetHash        原始对象哈希（SHA-256 hex），可为 null
+     * @param normalizedAssetHash 规范化对象哈希（SHA-256 hex），可为 null
      * @return 文件实体（包含自增 ID）
      */
     @Override
-    public Asset saveFile(String objectName, String originalName, String contentType, Long fileSize,
-            AssetCategory category, String rawObjectHash, String normalizedObjectHash) {
+    public Asset saveFile(String assetName, String originalName, String contentType, Long fileSize,
+            AssetCategory category, String rawAssetHash, String normalizedAssetHash) {
         Asset file = new Asset();
-        file.setAssetName(objectName);
+        file.setAssetName(assetName);
         file.setOriginalName(originalName);
         file.setContentType(contentType);
         file.setFileSize(fileSize);
         file.setCategory(category.getValue());
         file.setMessageId(null); // 初始状态不关联消息
         file.setStatus(0); // PENDING
-        file.setRawAssetHash(rawObjectHash); // 原始对象哈希
-        file.setNormalizedAssetHash(normalizedObjectHash); // 规范化对象哈希
+        file.setRawAssetHash(rawAssetHash); // 原始对象哈希
+        file.setNormalizedAssetHash(normalizedAssetHash); // 规范化对象哈希
         file.setCreateTime(LocalDateTime.now());
         file.setUpdateTime(LocalDateTime.now());
 
         assetMapper.insertAsset(file);
-        log.debug("Saved file record: objectName={}, category={}, status=PENDING, rawHash={}, normalizedHash={}",
-                objectName, category, rawObjectHash, normalizedObjectHash);
+        log.debug("Saved file record: assetName={}, category={}, status=PENDING, rawHash={}, normalizedHash={}",
+                assetName, category, rawAssetHash, normalizedAssetHash);
         return file;
     }
 
     /**
      * 批量激活文件（用于消息图片）
      *
-     * @param objectNames objectName 列表
-     * @param category    文件分类（通常为 MESSAGE_IMG）
-     * @param messageId   关联的消息 ID
+     * @param assetNames objectName 列表
+     * @param category   文件分类（通常为 MESSAGE_IMG）
+     * @param messageId  关联的消息 ID
      */
     @Override
-    public void activateFilesBatch(List<String> objectNames, AssetCategory category, Integer messageId) {
-        if (objectNames == null || objectNames.isEmpty()) {
+    public void activateFilesBatch(List<String> assetNames, AssetCategory category, Integer messageId) {
+        if (assetNames == null || assetNames.isEmpty()) {
             return;
         }
-        int updated = assetMapper.updateStatusBatch(objectNames, 1, category.getValue(), messageId);
+        int updated = assetMapper.updateStatusBatch(assetNames, 1, category.getValue(), messageId);
         log.debug("Activated {} files batch: category={}, messageId={}", updated, category, messageId);
     }
 
     /**
      * 激活单个文件（用于头像/封面）
      *
-     * @param objectName MinIO 对象名
-     * @param category   文件分类
+     * @param assetName MinIO 对象名
+     * @param category  文件分类
      */
     @Override
-    public void activateFile(String objectName, AssetCategory category) {
-        int updated = assetMapper.updateStatusAndCategory(objectName, 1, category.getValue());
+    public void activateFile(String assetName, AssetCategory category) {
+        int updated = assetMapper.updateStatusAndCategory(assetName, 1, category.getValue());
         if (updated > 0) {
-            log.debug("Activated file: objectName={}, category={}", objectName, category);
+            log.debug("Activated file: assetName={}, category={}", assetName, category);
         } else {
-            log.warn("File not found for activation: objectName={}", objectName);
+            log.warn("File not found for activation: assetName={}", assetName);
         }
     }
 
     /**
      * 激活头像文件（便捷方法）
      *
-     * @param objectName MinIO 对象名
+     * @param assetName MinIO 对象名
      */
     @Override
-    public void activateAvatarFile(String objectName) {
-        activateFile(objectName, AssetCategory.USER_AVATAR);
+    public void activateAvatarFile(String assetName) {
+        activateFile(assetName, AssetCategory.USER_AVATAR);
     }
 
     /**
      * 激活群头像文件（便捷方法）
      *
-     * @param objectName MinIO 对象名
+     * @param assetName MinIO 对象名
      */
     @Override
-    public void activateChatCoverFile(String objectName) {
-        activateFile(objectName, AssetCategory.CHAT_COVER);
+    public void activateChatCoverFile(String assetName) {
+        activateFile(assetName, AssetCategory.CHAT_COVER);
     }
 
     /**
@@ -375,7 +375,7 @@ public class AssetServiceImpl implements AssetService {
      * @return 对象实体，不存在返回 null
      */
     @Override
-    public Asset findActiveObjectByRawHash(String rawHash) {
+    public Asset findActiveAssetByRawHash(String rawHash) {
         return assetMapper.selectByRawHashAndActive(rawHash);
     }
 
@@ -386,7 +386,7 @@ public class AssetServiceImpl implements AssetService {
      * @return 对象实体，不存在返回 null
      */
     @Override
-    public Asset findActiveObjectByNormalizedHash(String normalizedHash) {
+    public Asset findActiveAssetByNormalizedHash(String normalizedHash) {
         return assetMapper.selectByNormalizedHashAndActive(normalizedHash);
     }
 
@@ -402,14 +402,14 @@ public class AssetServiceImpl implements AssetService {
     }
 
     /**
-     * 根据 objectName 查询对象实体
+     * 根据 assetName 查询对象实体
      *
-     * @param objectName MinIO 对象名
+     * @param assetName MinIO 对象名
      * @return 对象实体，不存在返回 null
      */
     @Override
-    public Asset findByObjectName(String objectName) {
-        return assetMapper.selectByObjectName(objectName);
+    public Asset findByAssetName(String assetName) {
+        return assetMapper.selectByAssetName(assetName);
     }
 
     // ==================== 内部实现方法 ====================
@@ -417,17 +417,17 @@ public class AssetServiceImpl implements AssetService {
     /**
      * 上传图片的内部实现
      *
-     * @param file          上传文件
-     * @param isPublic      是否公开访问
-     * @param maxW          缩略图最大宽度
-     * @param maxH          缩略图最大高度
-     * @param category      文件分类
-     * @param rawObjectHash 原始对象哈希（前端计算，可为 null）
+     * @param file         上传文件
+     * @param isPublic     是否公开访问
+     * @param maxW         缩略图最大宽度
+     * @param maxH         缩略图最大高度
+     * @param category     文件分类
+     * @param rawAssetHash 原始对象哈希（前端计算，可为 null）
      * @return Image
      */
     @Transactional(rollbackFor = Exception.class)
     private Image uploadImageInternal(MultipartFile file, boolean isPublic, int maxW, int maxH, AssetCategory category,
-            String rawObjectHash) {
+            String rawAssetHash) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.FILE_EMPTY);
         }
@@ -462,21 +462,21 @@ public class AssetServiceImpl implements AssetService {
             }
 
             // 3) 查询是否存在相同哈希的对象（status=1）
-            Asset existingObject = findActiveObjectByNormalizedHash(hashForDedup);
+            Asset existingAsset = findActiveAssetByNormalizedHash(hashForDedup);
 
-            if (existingObject != null) {
+            if (existingAsset != null) {
                 // 对象已存在，复用已存在的对象（不重复上传到 MinIO）
-                log.debug("Object already exists, reusing: objectName={}, hash={}",
-                        existingObject.getAssetName(), hashForDedup);
+                log.debug("Asset already exists, reusing: assetName={}, hash={}",
+                        existingAsset.getAssetName(), hashForDedup);
 
                 // 重新生成 URL（避免预签名过期）
-                String url = getImageUrl(existingObject.getAssetName());
+                String url = getImageUrl(existingAsset.getAssetName());
                 MinioOSSResult urls = minioOSSOperator.getImageUrls(
-                        existingObject.getAssetName(),
+                        existingAsset.getAssetName(),
                         DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
                         TimeUnit.MINUTES);
 
-                return new Image(existingObject.getAssetName(), url, urls.getThumbUrl(), existingObject.getId());
+                return new Image(existingAsset.getAssetName(), url, urls.getThumbUrl(), existingAsset.getId());
             }
 
             // 4) 对象不存在，继续正常上传流程
@@ -495,8 +495,8 @@ public class AssetServiceImpl implements AssetService {
                     maxW,
                     maxH);
 
-            // 6) 如果前端未提供 rawObjectHash，设置为 null（向后兼容）
-            String finalRawObjectHash = rawObjectHash;
+            // 6) 如果前端未提供 rawAssetHash，设置为 null（向后兼容）
+            String finalRawObjectHash = rawAssetHash;
             if (finalRawObjectHash == null || finalRawObjectHash.isBlank()) {
                 finalRawObjectHash = null;
             }

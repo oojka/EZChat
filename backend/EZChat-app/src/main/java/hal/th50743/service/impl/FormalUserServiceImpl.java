@@ -32,6 +32,9 @@ public class FormalUserServiceImpl implements FormalUserService {
      */
     @Override
     public void add(FormalUser formalUserReq) {
+        if (formalUserReq.getUsername() != null) {
+            formalUserReq.setUsername(formalUserReq.getUsername().toLowerCase());
+        }
         userMapper.insertFormalUser(formalUserReq);
     }
 
@@ -93,9 +96,11 @@ public class FormalUserServiceImpl implements FormalUserService {
     @Override
     public User login(LoginReq loginReq) {
         // 1. 根据用户名查询正式用户信息（包含密码哈希）
-        FormalUser formalUser = userMapper.selectFormalUserByUsername(loginReq.getUsername());
+        // 统一转为小写匹配
+        String username = loginReq.getUsername() != null ? loginReq.getUsername().toLowerCase() : null;
+        FormalUser formalUser = userMapper.selectFormalUserByUsername(username);
         if (formalUser == null) {
-            log.warn("登录失败: 用户名不存在 - {}", loginReq.getUsername());
+            log.warn("登录失败: 用户名不存在 - {}", username);
             return null;
         }
 
@@ -107,9 +112,9 @@ public class FormalUserServiceImpl implements FormalUserService {
         }
 
         // 3. 密码验证通过，查询并返回用户信息
-        User user = userMapper.selectUserByUsername(loginReq.getUsername());
+        User user = userMapper.selectUserByUsername(username);
         if (user == null) {
-            log.error("登录异常: 用户名存在但用户信息缺失 - {}", loginReq.getUsername());
+            log.error("登录异常: 用户名存在但用户信息缺失 - {}", username);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "User data inconsistency");
         }
 

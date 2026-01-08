@@ -71,7 +71,7 @@ public class UserAssembler {
         if (avatarAssetName == null || avatarAssetName.isBlank()) {
             return null;
         }
-        Asset asset = assetService.findByObjectName(avatarAssetName);
+        Asset asset = assetService.findByAssetName(avatarAssetName);
         if (asset != null) {
             // 激活文件
             assetService.activateAvatarFile(avatarAssetName);

@@ -114,8 +114,8 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
           :rules="joinChatCredentialsFormRules">
           <div class="tab-section">
             <el-radio-group v-model="joinChatCredentialsForm.joinMode" class="modern-tabs-small" size="small">
-              <el-radio-button label="roomId/password">ID</el-radio-button>
-              <el-radio-button label="inviteUrl">URL</el-radio-button>
+              <el-radio-button value="roomId/password">ID</el-radio-button>
+              <el-radio-button value="inviteUrl">URL</el-radio-button>
             </el-radio-group>
           </div>
           <div class="input-section">
@@ -142,7 +142,7 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
               :disabled="(!joinChatCredentialsForm.chatCode && !joinChatCredentialsForm.inviteUrl) || isValidating">{{
                 t('guest.join_submit') }}</el-button>
             <el-button @click="onUnflip" class="join-cancel-btn" :disabled="isValidating">{{ t('common.cancel')
-            }}</el-button>
+              }}</el-button>
           </div>
         </el-form>
       </div>

@@ -29,6 +29,11 @@ public class MessageVO {
     private String chatCode;
 
     /**
+     * 群内消息序号
+     */
+    private Long seqId;
+
+    /**
      * 消息类型
      * <p>
      * 业务规则：

@@ -151,7 +151,7 @@ request.interceptors.request.use(
 
       // localStorage 中存在登录信息，但内存中没有 token 时，尝试恢复
       if (!userStore.hasToken()) {
-         userStore.restoreLoginUserFromStorage() || userStore.restoreLoginGuestFromStorage();
+        userStore.restoreLoginUserFromStorage() || userStore.restoreLoginGuestFromStorage();
       }
 
       // 每次请求都获取最新的 token（响应式，自动获取最新值）
@@ -309,10 +309,13 @@ request.interceptors.response.use(
             // 数据库冲突：数据库中已存在相同的记录
             ElMessage.error(message.split("'")[1].trim() + t('api.is_already_exist'));
             return false;
+          default:
+            break;
         }
       }
 
       throw createAppError(
+
         ErrorType.UNKNOWN,
         errorMsg,
         {

@@ -220,16 +220,6 @@ const handleImageError = async (img: Image, idx: number) => {
       <div class="nickname" v-if="!isMe">{{ senderInfo?.nickname || 'Unknown' }}</div>
 
       <div class="bubble-wrapper">
-        <!-- 自己消息的发送状态：仅在 sending/error 时渲染，避免空占位导致“图片与头像间距异常” -->
-        <div v-if="isMe && (msg.status === 'sending' || msg.status === 'error')" class="status-indicator">
-          <el-icon v-if="msg.status === 'sending'" class="is-loading status-icon">
-            <Loading />
-          </el-icon>
-          <el-icon v-if="msg.status === 'error'" class="status-icon error">
-            <WarningFilled />
-          </el-icon>
-        </div>
-
         <div class="message-stack">
           <!-- 文字气泡：type=0(Text) 或 type=2(Mixed) -->
           <div v-if="msg.type !== 1 && msg.text" class="message-text-bubble">
@@ -258,6 +248,16 @@ const handleImageError = async (img: Image, idx: number) => {
               </template>
             </el-image>
           </div>
+        </div>
+
+        <!-- 自己消息的发送状态：仅在 sending/error 时渲染，避免空占位导致“图片与头像间距异常” -->
+        <div v-if="isMe && (msg.status === 'sending' || msg.status === 'error')" class="status-indicator">
+          <el-icon v-if="msg.status === 'sending'" class="is-loading status-icon">
+            <Loading />
+          </el-icon>
+          <el-icon v-if="msg.status === 'error'" class="status-icon error">
+            <WarningFilled />
+          </el-icon>
         </div>
       </div>
 

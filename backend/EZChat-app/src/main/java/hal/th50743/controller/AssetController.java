@@ -39,7 +39,7 @@ public class AssetController {
      */
     @GetMapping("/url")
     public Result<Image> getImageUrl(@RequestParam String objectName) {
-        Image image = assetService.getImageUrlWithObjectId(objectName);
+        Image image = assetService.getImageUrlWithAssetId(objectName);
         return Result.success(image);
     }
 
@@ -63,7 +63,7 @@ public class AssetController {
     @GetMapping("/check")
     public Result<Image> checkObjectExists(
             @RequestParam @Pattern(regexp = "^[a-fA-F0-9]{64}$", message = "Invalid hash format") String rawHash) {
-        Image image = assetService.checkObjectExists(rawHash);
+        Image image = assetService.checkAssetExists(rawHash);
         return Result.success(image);
     }
 }

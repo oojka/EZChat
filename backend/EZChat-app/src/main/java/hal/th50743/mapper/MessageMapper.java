@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +23,21 @@ public interface MessageMapper {
      * @param message 消息对象
      */
     void insertMessage(Message message);
+
+    /**
+     * 更新聊天室的消息序列号（自增）
+     *
+     * @param chatId 聊天室ID
+     */
+    void updateChatSequence(@Param("chatId") Integer chatId);
+
+    /**
+     * 获取聊天室当前的消息序列号
+     *
+     * @param chatId 聊天室ID
+     * @return 当前序列号
+     */
+    Long selectCurrentSequence(@Param("chatId") Integer chatId);
 
     /**
      * 获取用户所有聊天室的未读消息数
@@ -67,7 +81,16 @@ public interface MessageMapper {
      * @param timeStamp 时间戳（可选）
      * @return 消息视图对象列表
      */
-    List<MessageVO> selectMessageListByChatIdAndTimeStamp(@Param("chatId") Integer chatId,
-            @Param("timeStamp") LocalDateTime timeStamp);
+    List<MessageVO> selectMessageListByChatIdAndCursor(@Param("chatId") Integer chatId,
+            @Param("cursorSeqId") Long cursorSeqId);
+
+    /**
+     * 获取指定聊天室中，序列号大于 lastSeqId 的消息列表（用于同步）
+     *
+     * @param chatId    聊天室ID
+     * @param lastSeqId 上次同步的最后序列号
+     * @return 消息列表
+     */
+    List<MessageVO> selectMessagesAfterSeqId(@Param("chatId") Integer chatId, @Param("lastSeqId") Long lastSeqId);
 
 }

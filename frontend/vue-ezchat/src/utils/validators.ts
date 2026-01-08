@@ -16,11 +16,11 @@
 
 /**
  * 用户名规则：
- * 1. 必须以字母开头 ^[a-zA-Z]
- * 2. 允许包含字母、数字、点(.)、下划线(_)、短横线(-) [a-zA-Z0-9._-]
+ * 1. 必须以小写字母开头 ^[a-z]
+ * 2. 允许包含小写字母、数字、点(.)、下划线(_)、短横线(-) [a-z0-9._-]
  * 3. 长度限制为 2-20 位 {1,19}$
  */
-export const REGEX_USERNAME = /^[a-zA-Z][a-zA-Z0-9._-]{1,19}$/
+export const REGEX_USERNAME = /^[a-z][a-z0-9._-]{1,19}$/
 
 /** 昵称规则：2-20 个字符，允许中英文、数字、下划线、短横线、全角符号
  * 
@@ -384,6 +384,7 @@ export const isValidMessage = (data: any): data is Message => {
     typeof data.sender === 'string' &&
     typeof data.chatCode === 'string' &&
     typeof data.createTime === 'string' &&
-    typeof data.type === 'number'
+    typeof data.type === 'number' &&
+    (data.seqId === undefined || typeof data.seqId === 'number') // Optional check
   )
 }

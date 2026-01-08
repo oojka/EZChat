@@ -15,3 +15,6 @@
   - backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java (Extracted helper methods)
 - **Changes**:
   - backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java (Extracted isUserOnline helper)
+## [2026-01-08 11:08] Fix Element Plus Deprecation Warning
+- **Goal**: Eliminate [el-radio] deprecation warnings in the frontend.
+- **Changes**: Replaced `label` with `value` in `LeftCard.vue` for `el-radio-button` components.

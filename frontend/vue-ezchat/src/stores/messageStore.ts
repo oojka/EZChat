@@ -237,6 +237,34 @@ export const useMessageStore = defineStore('message', () => {
   }
 
   /**
+   * 消息列表排序函数
+   *
+   * 排序规则（倒序，Index 0 为最新）：
+   * 1. 都有 seqId：按 seqId 倒序（大号在前）
+   * 2. 一个有 seqId 一个没有：没有 seqId 的（本地 pending 消息）排在前面（视为更新）
+   * 3. 都没有 seqId：按 createTime 倒序
+   *
+   * @param list 待排序的消息列表
+   */
+  const sortMessages = (list: Message[]): Message[] => {
+    return list.sort((a, b) => {
+      // 1. 都有 seqId：按 seqId 倒序
+      if (a.seqId !== undefined && b.seqId !== undefined) {
+        return b.seqId - a.seqId
+      }
+      // 2. 一个有 seqId 一个没有
+      // 本地发送的消息（status='sending'/'error'）通常没有 seqId，应该排在已有 seqId 消息（历史消息）的前面
+      if (a.seqId === undefined && b.seqId !== undefined) return -1 // a 排在 b 前面
+      if (a.seqId !== undefined && b.seqId === undefined) return 1  // b 排在 a 前面
+
+      // 3. 都没有 seqId：按 createTime 倒序
+      const timeA = new Date(a.createTime).getTime()
+      const timeB = new Date(b.createTime).getTime()
+      return timeB - timeA
+    })
+  }
+
+  /**
    * 拉取消息列表（首次进入 / 分页加载）
    *
    * 业务场景：
@@ -256,20 +284,21 @@ export const useMessageStore = defineStore('message', () => {
    * - 网络错误：抛出异常，由调用方处理
    * - 空数据：设置 noMoreMessages 标志，避免重复请求
    *
-   * @param {string} [createTime] - 可选：用最老消息的 createTime 做分页游标
+   * @param {number} [cursorSeqId] - 可选：用最老消息的 seqId 做分页游标，为空则查最新
    * @throws {Error} 加载失败时抛出错误
    */
-  const getMessageList = async (createTime?: string) => {
+  const getMessageList = async (cursorSeqId?: number) => {
     const roomStore = useRoomStore()
     const { currentRoomCode } = storeToRefs(roomStore)
     if (!currentRoomCode.value) return
 
     try {
       // 首次加载时显示加载动画，分页加载时不显示（避免UI跳动）
-      if (!createTime) loadingMessages.value = true
+      if (!cursorSeqId) loadingMessages.value = true
 
       // 调用 API 获取消息列表
-      const result = await getMessageListApi({ chatCode: currentRoomCode.value, createTime: createTime || '' })
+      // cursorSeqId: 空=最新消息; 非空=加载该 ID 之前的历史消息
+      const result = await getMessageListApi({ chatCode: currentRoomCode.value, cursorSeqId })
 
       if (result) {
         const newMessages = result.data.messageList
@@ -280,7 +309,7 @@ export const useMessageStore = defineStore('message', () => {
 
         // 处理空数据情况
         if (newMessages.length === 0) {
-          if (createTime) noMoreMessages.value = true  // 分页加载时无数据，标记为已加载完
+          if (cursorSeqId) noMoreMessages.value = true  // 分页加载时无数据，标记为已加载完
           return
         }
 
@@ -288,12 +317,13 @@ export const useMessageStore = defineStore('message', () => {
         const existingKeys = new Set(currentMessageList.value.map((m) => buildMessageKey(m)))
         const uniqueMessages = newMessages.filter((m) => {
           const key = buildMessageKey(m)
-          return !m.createTime || !existingKeys.has(key)
+          // 只有当消息是新的（无 createTime 是异常, 但这里重点是不重复）或是历史消息时
+          return !existingKeys.has(key)
         })
 
         // 去重后仍无新消息
         if (uniqueMessages.length === 0) {
-          if (createTime) noMoreMessages.value = true
+          if (cursorSeqId) noMoreMessages.value = true
           return
         }
 
@@ -301,10 +331,13 @@ export const useMessageStore = defineStore('message', () => {
         await processMessageImages(uniqueMessages)
 
         // 更新消息列表：首次加载替换，分页加载追加
-        if (!createTime) {
-          currentMessageList.value = uniqueMessages  // 首次进入，替换整个列表
+        if (!cursorSeqId) {
+          currentMessageList.value = sortMessages(uniqueMessages)  // 首次进入，替换整个列表并排序
         } else {
-          currentMessageList.value = [...currentMessageList.value, ...uniqueMessages]  // 分页加载，追加到末尾
+          // 分页加载，追加到末尾（历史消息），由于是追加更旧的消息，
+          // 理论上 uniqueMessages 都是更旧的，但为了保险，合并后整体重排
+          const merged = [...currentMessageList.value, ...uniqueMessages]
+          currentMessageList.value = sortMessages(merged)
         }
       }
     } catch (e) {
@@ -348,11 +381,17 @@ export const useMessageStore = defineStore('message', () => {
     // 设置加载状态
     loadingMessages.value = true
 
-    // 获取分页游标（最老消息的创建时间）
+    // 获取分页游标（最老消息的 seqId）
+    // currentMessageList 是倒序（新->旧），所以最后一项是最老的
     const oldestMessage = currentMessageList.value[currentMessageList.value.length - 1]
 
-    // 加载更多消息
-    await getMessageList(oldestMessage?.createTime)
+    if (oldestMessage && oldestMessage.seqId) {
+      // 加载更多消息
+      await getMessageList(oldestMessage.seqId)
+    } else {
+      console.warn('loadMoreHistory: Oldest message has no seqId', oldestMessage)
+      noMoreMessages.value = true // 无法继续加载，标记为结束
+    }
 
     // 清除加载状态
     loadingMessages.value = false
@@ -533,7 +572,9 @@ export const useMessageStore = defineStore('message', () => {
       if (message.sender === userStore.getCurrentUserId()) return
 
       // 插入到当前消息列表最前面（最新消息在最前面）
-      currentMessageList.value.unshift(message)
+      // 使用 sortMessages 重新排序，确保顺序正确（防止 WebSocket 乱序或 seqId 补齐后的位置调整）
+      const newList = [message, ...currentMessageList.value]
+      currentMessageList.value = sortMessages(newList)
 
       // 更新房间预览信息（最后消息时间、预览内容等）
       roomStore.updateRoomPreview(message)

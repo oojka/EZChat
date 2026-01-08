@@ -31,12 +31,12 @@ public interface AssetMapper {
     Asset selectById(Integer id);
 
     /**
-     * 根据 objectName 查询文件记录
+     * 根据 assetName 查询文件记录
      *
-     * @param objectName MinIO 对象名
+     * @param assetName MinIO 对象名
      * @return 文件实体，不存在返回 null
      */
-    Asset selectByObjectName(String objectName);
+    Asset selectByAssetName(String assetName);
 
     /**
      * 根据 messageId 查询关联的文件列表
@@ -51,32 +51,32 @@ public interface AssetMapper {
      * <p>
      * 业务目的：一条消息可能包含多张图片，使用批量更新避免循环调用，提升性能。
      *
-     * @param objectNames objectName 列表
-     * @param status      状态值（0=PENDING, 1=ACTIVE）
-     * @param category    文件分类
-     * @param messageId   关联的消息 ID（可为 null）
+     * @param assetNames assetName 列表
+     * @param status     状态值（0=PENDING, 1=ACTIVE）
+     * @param category   文件分类
+     * @param messageId  关联的消息 ID（可为 null）
      * @return 影响行数
      */
-    int updateStatusBatch(List<String> objectNames, Integer status, String category, Integer messageId);
+    int updateStatusBatch(List<String> assetNames, Integer status, String category, Integer messageId);
 
     /**
      * 更新单个文件的状态和分类（用于头像/封面激活）
      *
-     * @param objectName objectName
-     * @param status     状态值（0=PENDING, 1=ACTIVE）
-     * @param category   文件分类（可选，传入 null 则不更新 category）
+     * @param assetName assetName
+     * @param status    状态值（0=PENDING, 1=ACTIVE）
+     * @param category  文件分类（可选，传入 null 则不更新 category）
      * @return 影响行数
      */
-    int updateStatusAndCategory(String objectName, Integer status, String category);
+    int updateStatusAndCategory(String assetName, Integer status, String category);
 
     /**
      * 更新单个文件的状态
      *
-     * @param objectName objectName
-     * @param status     状态值（0=PENDING, 1=ACTIVE）
+     * @param assetName assetName
+     * @param status    状态值（0=PENDING, 1=ACTIVE）
      * @return 影响行数
      */
-    int updateStatus(String objectName, Integer status);
+    int updateStatus(String assetName, Integer status);
 
     /**
      * 分页查询待清理的 PENDING 文件（用于 GC）

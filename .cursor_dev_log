@@ -462,3 +462,60 @@
   - ServiceImpl：约 50 处调用全部更新
   - LogAspect：更新 Pointcut (create/add/save/update/remove/delete)
 
+
+## [2026-01-08 11:35] Fix WebSocket EOFException
+- **Goal**: Handle `java.io.EOFException` explicitly to prevent error logs when clients disconnect abruptly.
+- **Changes**: `WebSocketServer.java` (Added `@OnError` handler).
+
+## [2026-01-08 11:42] Fix Password Warning
+- **Goal**: Suppress `passwordConfirm` validation warnings in console.
+- **Changes**: `ErrorHandler.ts` (Added field to suppression list).
+## [2026-01-08 12:44] Update Message Sequence Logic (Backend)
+- **Goal**: Implement `seq_id` logic for messages to support ordered chat history as per schema changes.
+- **Changes**:
+  - `Message.java`, `MessageVO.java`: Added `seqId` field.
+  - `MessageMapper.java`: Added `updateChatSequence` and `getCurrentSequence`.
+  - `MessageMapper.xml`: Implemented sequence handling SQL and updated queries.
+  - `MessageServiceImpl.java`: Updated `addMessage` to generating sequence ID using transaction.
+  - `WebSocketServer.java`: Fixed `MessageVO` constructor call (seqId set to null for now).
+## [2026-01-08 12:52] Update Frontend Message Types
+- **Goal**: Support `seqId` field in frontend to align with backend schema.
+- **Changes**:
+  - `src/type/index.ts`: Added `seqId?: number` to `BaseMessage`.
+  - `src/utils/validators.ts`: Updated `isValidMessage` to allow checking `seqId`.
+## [2026-01-08 13:03] Implement Frontend Message Sorting by seqId
+- **Goal**: Ensure reliable message ordering using the new `seqId` field.
+- **Changes**:
+  - `src/stores/messageStore.ts`: Added `sortMessages` helper.
+  - `getMessageList`: Applied sorting after fetching/merging messages.
+  - `receiveMessage`: Applied sorting after receiving new messages to handle potential out-of-order delivery.
+## [2026-01-08 13:05] Optimize Message List Key
+- **Goal**: Optimize Vue rendering performance and stability by using `seqId`.
+- **Changes**:
+  - `src/views/chat/layout/MessageArea.vue`: Updated `v-for` key to `:key="msg.tempId || msg.seqId || ..." `.
+## [2026-01-08 13:08] Fix SQL Test Data Order
+- **Goal**: Align `create_time` with `seq_id` in `init.sql` test data.
+- **Changes**:
+  - `backend/EZChat-app/src/main/resources/sql/init.sql`: Updated `generate_test_data` to use `DATE_SUB(NOW(), INTERVAL (50 - j) MINUTE)` instead of random time.
+## [2026-01-08 13:13] UI Fix: Message Loading Spinner
+- **Goal**: Move loading spinner to the left of the message bubble (for self-sent messages).
+- **Changes**:
+  - `src/views/chat/components/MessageItem.vue`: Swapped DOM order of `status-indicator` and `message-stack`.
+## [2026-01-08 13:22] Implement Sync Messages API
+- **Goal**: Provide an API for frontend to fetch missing messages based on `lastSeqId`.
+- **Changes**:
+  - Created `MessageAssembler.java` to encapsulate message enrichment (asset URLs).
+  - `MessageMapper`: Added `selectMessagesAfterSeqId`.
+  - `MessageService`: Added `syncMessages` and refactored `getMessagesByChatCode` to use assembler.
+  - `MessageController`: Added `GET /message/sync`.
+## [2026-01-08 13:35] Refactor Message Paging to SeqId
+- **Goal**: Replace timestamp-based pagination with stable seqId-based pagination.
+- **Backend Changes**:
+  - Refactored `getMessagesByChatCode` to accept `cursorSeqId`.
+  - Updated Mapper to query `seq_id < cursor`.
+- **Frontend Changes**:
+  - Updated `getMessageListApi` to support `cursorSeqId`.
+  - Updated `messageStore.ts` to perform pagination using `oldestMessage.seqId`.
+## [2026-01-08 13:36] Complete SeqId Pagination Refactor
+- **Status**: Completed.
+- **Fixes**: Corrected `messageStore.ts` update issues ensuring `getMessageList` accepts `cursorSeqId`.

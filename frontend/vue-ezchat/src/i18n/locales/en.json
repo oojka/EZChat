@@ -93,7 +93,7 @@
     "nickname_length": "Display name must be between 2 and 20 characters.",
     "username_required": "Username is required.",
     "username_length": "Username must be between 2 and 20 characters.",
-    "username_format": "Must start with a letter; use alphanumeric, dots (.), underscores (_), or hyphens (-).",
+    "username_format": "Must start with a lowercase letter; use lowercase letters, numbers, dots (.), underscores (_), or hyphens (-).",
     "password_required": "Password is required.",
     "password_length": "Password must be between 8 and 20 characters.",
     "password_format": "Only half-width alphanumeric characters and symbols are allowed.",
@@ -158,7 +158,8 @@
       "42010": "Invalid invite code.",
       "42011": "Invite code has expired.",
       "42012": "Invite code has been revoked.",
-      "42013": "Invite code usage limit reached."
+      "42013": "Invite code usage limit reached.",
+      "50001": "Database error. Please try again later."
     }
   },
   "error_pages": {

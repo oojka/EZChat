@@ -835,7 +835,7 @@ public class ChatServiceImpl implements ChatService {
             }
             // 3.2 其次使用 imageName（兼容旧版本或直接指定文件名）
             else if (chatReq.getAvatar().getImageName() != null) {
-                Asset existingObject = assetService.findByObjectName(chatReq.getAvatar().getImageName());
+                Asset existingObject = assetService.findByAssetName(chatReq.getAvatar().getImageName());
                 if (existingObject != null) {
                     objectId = existingObject.getId();
                 } else {
@@ -924,7 +924,8 @@ public class ChatServiceImpl implements ChatService {
         sysMsg.setUpdateTime(now); // 更新时间
         messageMapper.insertMessage(sysMsg); // 插入数据库
 
-        // ========== 步骤9: 返回创建结果 ==========
+        // ========== 步骤9: 记录成功日志并返回 ==========
+        log.info("Chat room created successfully: userId={}, chatId={}, chatCode={}", userId, chatId, chatCode);
         return new CreateChatVO(chatCode, inviteCode);
     }
 
@@ -1095,6 +1096,7 @@ public class ChatServiceImpl implements ChatService {
         // 1.1 根据聊天室代码查找聊天室ID
         Integer chatId = chatMapper.selectChatIdByChatCode(chatCode);
         if (chatId == null) {
+            log.warn("[Password Join] Chat room not found: chatCode={}", chatCode);
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
         }
 
@@ -1109,6 +1111,7 @@ public class ChatServiceImpl implements ChatService {
         String storedHash = info.getChatPasswordHash();
         if (storedHash == null || storedHash.isBlank()) {
             // 业务规则：如果房间未设置密码哈希，则禁止通过密码模式加入（仅允许邀请）
+            log.warn("[Password Join] Password login not enabled: chatCode={}", chatCode);
             throw new BusinessException(ErrorCode.FORBIDDEN, "Password login is not enabled for this room");
         }
 
@@ -1121,6 +1124,7 @@ public class ChatServiceImpl implements ChatService {
         // ========== 步骤4: 验证密码正确性 ==========
         // 4.1 使用 BCrypt 验证密码哈希
         if (!PasswordUtils.matches(password, storedHash)) {
+            log.warn("[Password Join] Incorrect password attempt: chatCode={}", chatCode);
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Incorrect password");
         }
 
@@ -1184,20 +1188,26 @@ public class ChatServiceImpl implements ChatService {
         // ========== 步骤2: 基础校验 ==========
         // 2.1 邀请码是否存在
         if (invite == null) {
+            log.warn("[Invite Join] Invalid invite code: hash={}", hash);
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid invite code");
         }
         // 2.2 邀请码是否被撤销（revoked == 1）
         if (Integer.valueOf(1).equals(invite.getRevoked())) {
+            log.warn("[Invite Join] Invite code revoked: chatId={}", invite.getChatId());
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Invite code has been revoked");
         }
         // 2.3 邀请码是否过期
         if (invite.getExpiresAt() != null && invite.getExpiresAt().isBefore(LocalDateTime.now())) {
+            log.warn("[Invite Join] Invite code expired: chatId={}, expiresAt={}", invite.getChatId(),
+                    invite.getExpiresAt());
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Invite code has expired");
         }
 
         // ========== 步骤3: 剩余次数校验 ==========
         // 规则：如果 maxUses > 0 (即为 1)，且 usedCount 已经 >= maxUses，则耗尽
         if (invite.getMaxUses() > 0 && invite.getUsedCount() >= invite.getMaxUses()) {
+            log.warn("[Invite Join] Invite code usage limit exceeded: chatId={}, usedCount={}, maxUses={}",
+                    invite.getChatId(), invite.getUsedCount(), invite.getMaxUses());
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Invite code usage limit exceeded");
         }
 
@@ -1217,6 +1227,8 @@ public class ChatServiceImpl implements ChatService {
         // 5.2 检查更新结果
         if (rows <= 0) {
             // 更新失败：可能原因包括并发冲突、邀请码已被删除等
+            log.warn("[Invite Join] CAS consume failed (concurrent conflict): chatId={}, hash={}", invite.getChatId(),
+                    hash);
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Invite code invalid or concurrent conflict");
         }
 

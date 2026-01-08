@@ -116,6 +116,11 @@ export function setupGlobalErrorHandler(app: App) {
       'render'
     )
 
+    // 忽略无意义的 [object Object] 错误（通常来自组件事件处理）
+    if (appError.message === '[object Object]') {
+      return
+    }
+
     // 记录错误信息
     console.error('[Vue Error]', {
       error: appError,
@@ -187,5 +192,23 @@ export function setupGlobalErrorHandler(app: App) {
 
     // 可以选择阻止默认行为（但通常保留，以便调试）
     // event.preventDefault()
+  }
+
+  // 4️⃣ 拦截 console.warn，屏蔽 Element Plus 把验证错误对象直接打印出来的干扰信息
+  const originalWarn = console.warn
+  console.warn = (...args) => {
+    if (args.length > 0 && typeof args[0] === 'object' && args[0] !== null) {
+      const err = args[0]
+      // 检查是否为 async-validator 的验证错误对象 (键为表单字段且值为数组)
+      // 用户反馈的结构示例: {nickname: Array(1)}
+      const commonFields = ['nickname', 'username', 'password', 'confirmPassword', 'passwordConfirm', 'avatar']
+      const keys = Object.keys(err)
+
+      // 如果对象的所有键都是我们要屏蔽的字段，且值都是数组，则屏蔽
+      if (keys.length > 0 && keys.every(key => commonFields.includes(key) && Array.isArray(err[key]))) {
+        return
+      }
+    }
+    originalWarn.apply(console, args)
   }
 }

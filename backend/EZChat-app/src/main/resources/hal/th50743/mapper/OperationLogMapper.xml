@@ -5,19 +5,33 @@
 <mapper namespace="hal.th50743.mapper.OperationLogMapper">
 
     <insert id="insertLog" parameterType="hal.th50743.pojo.OperationLog" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO operation_log (
+        INSERT INTO operation_logs (
             user_id,
             module,
             type,
             content,
-            ip,
+            ip_address,
+            status,
+            execution_time,
+            request_path,
+            request_method,
+            user_agent,
+            target_id,
+            error_message,
             create_time
         ) VALUES (
             #{userId},
             #{module},
             #{type},
             #{content},
-            #{ip},
+            #{ipAddress},
+            #{status},
+            #{executionTime},
+            #{requestPath},
+            #{requestMethod},
+            #{userAgent},
+            #{targetId},
+            #{errorMessage},
             #{createTime}
         )
     </insert>

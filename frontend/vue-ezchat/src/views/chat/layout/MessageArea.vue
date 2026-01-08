@@ -74,7 +74,7 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
 <template>
   <div class="message-area">
     <ul class="list" ref="listRef">
-      <template v-for="msg in currentMessageList" :key="msg.tempId || `${msg.sender}_${msg.createTime}`">
+      <template v-for="msg in currentMessageList" :key="msg.tempId || msg.seqId || `${msg.sender}_${msg.createTime}`">
         <SystemMessageItem v-if="msg.type >= 10" :msg="msg" :current-chat="currentRoom" />
         <MessageItem v-else :msg="msg" :current-chat="currentRoom" />
       </template>

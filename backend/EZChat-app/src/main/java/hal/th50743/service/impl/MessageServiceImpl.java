@@ -1,7 +1,6 @@
 package hal.th50743.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
@@ -12,8 +11,6 @@ import hal.th50743.pojo.*;
 import hal.th50743.service.ChatService;
 import hal.th50743.service.AssetService;
 import hal.th50743.service.MessageService;
-import hal.th50743.utils.ImageUtils;
-import io.minio.MinioOSSOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -36,8 +33,8 @@ public class MessageServiceImpl implements MessageService {
     private final ChatMapper chatMapper;
     private final ChatMemberMapper chatMemberMapper;
     private final MessageMapper messageMapper;
-    private final MinioOSSOperator minioOSSOperator;
     private final AssetService assetService;
+    private final hal.th50743.assembler.MessageAssembler messageAssembler;
 
     // ObjectMapper是线程安全的，可以作为成员变量
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -82,6 +79,7 @@ public class MessageServiceImpl implements MessageService {
      * @param images 从客户端传来的对象存储URL数组
      */
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void addMessage(Integer userId, Integer chatId, String text, List<Image> images) {
         log.info("add message, userId={}, chatId={}, text={}, images={}", userId, chatId, text, images);
         String assetIdsJson = null;
@@ -111,11 +109,18 @@ public class MessageServiceImpl implements MessageService {
         boolean hasImages = images != null && !images.isEmpty();
         int type = hasText && hasImages ? 2 : (hasImages ? 1 : 0);
 
+        // 1. 更新当前群的消息序列号 (Atomic increment)
+        messageMapper.updateChatSequence(chatId);
+
+        // 2. 获取更新后的序列号
+        Long currentSeq = messageMapper.selectCurrentSequence(chatId);
+
         // 创建消息对象
         Message msg = new Message(
                 null,
                 userId,
                 chatId,
+                currentSeq, // 设置 seqId
                 type,
                 text,
                 assetIdsJson, // 存储 assetId 列表的 JSON 字符串
@@ -144,59 +149,19 @@ public class MessageServiceImpl implements MessageService {
      * @return 经过处理的消息视图对象列表
      */
     @Override
-    public Map<String, Object> getMessagesByChatCode(Integer userId, String chatCode, String timeStamp) {
-        // 1. 解析时间戳（如果存在）
-        LocalDateTime createTime = null;
-        if (timeStamp != null && !timeStamp.isEmpty()) {
-            try {
-                createTime = LocalDateTime.parse(timeStamp);
-            } catch (Exception e) {
-                log.warn("'非法的timeStamp'来自用户：{} 的非法的请求 chatCode:：{} 时间戳: {}", userId, chatCode, timeStamp);
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "Invalid request: Incorrect timestamp format");
-            }
-        }
-
+    public Map<String, Object> getMessagesByChatCode(Integer userId, String chatCode, Long cursorSeqId) {
         Integer chatId = chatService.getChatId(userId, chatCode);
 
-        List<MessageVO> messageList = messageMapper.selectMessageListByChatIdAndTimeStamp(chatId, createTime);
+        // 使用 cursorSeqId 进行分页查询
+        List<MessageVO> messageList = messageMapper.selectMessageListByChatIdAndCursor(chatId, cursorSeqId);
         log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
-        // 4. 对每条消息进行后处理，主要是处理附件URL
-        for (MessageVO m : messageList) {
-            String assetIdsJson = m.getAssetIds();
-            if (assetIdsJson != null && !assetIdsJson.isEmpty()) {
-                try {
-                    // 1. 反序列化为 objectId 列表
-                    List<Integer> assetIds = objectMapper.readValue(assetIdsJson, new TypeReference<List<Integer>>() {
-                    });
+        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
+        chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
-                    // 2. 根据 objectId 列表查询 objects 表，构建 Image 对象列表
-                    List<Image> images = new ArrayList<>();
-                    for (Integer assetId : assetIds) {
-                        Asset objectEntity = assetService.findById(assetId);
-                        if (objectEntity != null) {
-                            // 使用 ImageUtils.buildImage() 构建 Image 对象（包含 URL）
-                            Image image = ImageUtils.buildImage(objectEntity.getAssetName(), minioOSSOperator);
-                            // 设置 assetId（buildImage 返回的 Image 可能没有 assetId）
-                            if (image != null) {
-                                image.setAssetId(assetId);
-                                images.add(image);
-                            }
-                        } else {
-                            log.warn("Object not found by id: {}", assetId);
-                        }
-                    }
-                    m.setImages(images);
-                } catch (JsonProcessingException e) {
-                    log.error("反序列化图片对象ID列表失败: {}", assetIdsJson, e);
-                    // 不抛出异常，避免影响整条消息的显示
-                    m.setImages(Collections.emptyList());
-                }
-                // 清理掉原始的JSON字符串，不需要返回给前端
-                m.setAssetIds(null);
-            }
-        }
+        // 4. 使用 Assembler 填充附件信息
+        messageAssembler.fillMessageAssets(messageList);
 
         // 调用 ChatService 获取完整的 ChatVO (包含头像转换、成员列表等)
         ChatVO chatVO = chatService.getChat(userId, chatCode);
@@ -205,6 +170,28 @@ public class MessageServiceImpl implements MessageService {
         result.put("messageList", messageList);
         result.put("chatRoom", chatVO);
         return result;
+    }
+
+    /**
+     * 同步消息（拉取指定序列号之后的消息）
+     *
+     * @param userId    当前用户ID
+     * @param chatCode  聊天室代码
+     * @param lastSeqId 上次同步的最后序列号
+     * @return 消息列表
+     */
+    @Override
+    public List<MessageVO> syncMessages(Integer userId, String chatCode, Long lastSeqId) {
+        // 1. 获取 ChatId
+        Integer chatId = chatService.getChatId(userId, chatCode);
+
+        // 2. 查询消息
+        List<MessageVO> messageList = messageMapper.selectMessagesAfterSeqId(chatId, lastSeqId);
+
+        // 3. 填充附件信息
+        messageAssembler.fillMessageAssets(messageList);
+
+        return messageList;
     }
 
     /**
