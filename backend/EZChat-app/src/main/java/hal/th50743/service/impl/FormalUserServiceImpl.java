@@ -32,7 +32,7 @@ public class FormalUserServiceImpl implements FormalUserService {
      */
     @Override
     public void add(FormalUser formalUserReq) {
-        userMapper.addFormalUser(formalUserReq);
+        userMapper.insertFormalUser(formalUserReq);
     }
 
     /**
@@ -46,7 +46,7 @@ public class FormalUserServiceImpl implements FormalUserService {
         if (userId == null) {
             return null;
         }
-        return userMapper.getUsernameByUserId(userId);
+        return userMapper.selectUsernameByUserId(userId);
     }
 
     /**

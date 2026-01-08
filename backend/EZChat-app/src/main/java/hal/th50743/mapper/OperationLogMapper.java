@@ -16,5 +16,5 @@ public interface OperationLogMapper {
      *
      * @param log 操作日志对象
      */
-    void insert(OperationLog log);
+    void insertLog(OperationLog log);
 }

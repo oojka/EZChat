@@ -19,11 +19,11 @@ import java.util.Map;
 public interface MessageMapper {
 
     /**
-     * 添加消息
+     * 插入消息
      *
      * @param message 消息对象
      */
-    void addMessage(Message message);
+    void insertMessage(Message message);
 
     /**
      * 获取用户所有聊天室的未读消息数
@@ -32,7 +32,7 @@ public interface MessageMapper {
      * @return 包含 chatCode 和 unreadCount 的 Map 列表
      */
     @MapKey("chatCode")
-    List<Map<String, Object>> getUnreadCountMapByUserId(Integer userId);
+    List<Map<String, Object>> selectUnreadCountMapByUserId(Integer userId);
 
     /**
      * 获取用户在指定聊天室的未读消息数
@@ -41,7 +41,7 @@ public interface MessageMapper {
      * @param chatId 聊天室ID
      * @return 未读消息数
      */
-    Integer getUnreadCountMapByUserIdAndChatId(Integer userId, Integer chatId);
+    Integer selectUnreadCountMapByUserIdAndChatId(Integer userId, Integer chatId);
 
     /**
      * 获取用户所有聊天室的最后一条消息
@@ -50,7 +50,7 @@ public interface MessageMapper {
      * @return 键为 chatCode，值为 MessageVO 的 Map
      */
     @MapKey("chatCode")
-    Map<String, MessageVO> getLastMessageListByUserId(Integer userId);
+    Map<String, MessageVO> selectLastMessageListByUserId(Integer userId);
 
     /**
      * 获取指定聊天室的最后一条消息
@@ -58,7 +58,7 @@ public interface MessageMapper {
      * @param chatId 聊天室ID
      * @return 消息视图对象
      */
-    MessageVO getLastMessageByChatId(Integer chatId);
+    MessageVO selectLastMessageByChatId(Integer chatId);
 
     /**
      * 获取指定聊天室的消息列表（支持时间戳分页）
@@ -67,7 +67,7 @@ public interface MessageMapper {
      * @param timeStamp 时间戳（可选）
      * @return 消息视图对象列表
      */
-    List<MessageVO> getMessageListByChatIdAndTimeStamp(@Param("chatId") Integer chatId,
-                                                       @Param("timeStamp") LocalDateTime timeStamp);
+    List<MessageVO> selectMessageListByChatIdAndTimeStamp(@Param("chatId") Integer chatId,
+            @Param("timeStamp") LocalDateTime timeStamp);
 
 }

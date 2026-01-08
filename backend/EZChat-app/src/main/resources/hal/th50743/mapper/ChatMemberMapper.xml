@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.ChatMemberMapper">
-    <insert id="add">
+    <insert id="insertChatMember">
         INSERT INTO chat_members
         (chat_id, user_id, last_seen_at, create_time, update_time)
         VALUES (#{chatId}, #{userId}, #{now}, #{now}, #{now})
@@ -16,7 +16,7 @@
         AND chat_id = #{chatId}
     </update>
 
-    <select id="getChatMembersById" resultType="java.lang.Integer">
+    <select id="selectChatMembersById" resultType="java.lang.Integer">
         SELECT DISTINCT u.id
         FROM users u
         JOIN chat_members m ON u.id = m.user_id
@@ -26,7 +26,7 @@
         WHERE user_id = #{Id} )
     </select>
 
-    <select id="getChatMembersByUserIdAndChatId" resultType="java.lang.Integer">
+    <select id="selectChatMembersByUserIdAndChatId" resultType="java.lang.Integer">
         SELECT user_id
         FROM chat_members
         WHERE chat_id = #{chatId}
@@ -38,7 +38,7 @@
         );
     </select>
 
-    <select id="getChatMemberListByUserId" resultType="hal.th50743.pojo.ChatMember">
+    <select id="selectChatMemberListByUserId" resultType="hal.th50743.pojo.ChatMember">
         SELECT m.chat_id,
                c.chat_code,
                m.user_id,
@@ -55,7 +55,7 @@
         FROM chat_members cm WHERE cm.user_id = #{userId})
     </select>
 
-    <select id="getChatMemberLiteListByUserId" resultType="hal.th50743.pojo.ChatMemberLite">
+    <select id="selectChatMemberLiteListByUserId" resultType="hal.th50743.pojo.ChatMemberLite">
         SELECT c.chat_code  AS chatCode,
                m.user_id    AS userId,
                u.uid        AS uid,
@@ -70,7 +70,7 @@
         )
     </select>
 
-    <select id="getChatMemberListByChatId" resultType="hal.th50743.pojo.ChatMember">
+    <select id="selectChatMemberListByChatId" resultType="hal.th50743.pojo.ChatMember">
         SELECT m.chat_id,
                c.chat_code,
                m.user_id,

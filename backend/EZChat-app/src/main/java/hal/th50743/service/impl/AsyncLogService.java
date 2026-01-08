@@ -20,17 +20,17 @@ public class AsyncLogService {
     private final OperationLogMapper operationLogMapper;
 
     /**
-     * 异步保存操作日志
+     * 异步添加操作日志
      *
      * @param log 操作日志对象
      */
     @Async
-    public void saveLog(OperationLog log) {
+    public void addLog(OperationLog log) {
         try {
-            operationLogMapper.insert(log);
+            operationLogMapper.insertLog(log);
         } catch (Exception e) {
             // 日志入库失败不应影响主业务，仅记录错误日志
-            hal.th50743.service.impl.AsyncLogService.log.error("Failed to save operation log: {}", log, e);
+            hal.th50743.service.impl.AsyncLogService.log.error("Failed to add operation log: {}", log, e);
         }
     }
 }

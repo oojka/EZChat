@@ -15,18 +15,18 @@ import java.time.LocalDateTime;
 public interface UserMapper {
 
     /**
-     * 添加用户
+     * 插入用户
      *
      * @param user 用户对象
      */
-    void add(User user);
+    void insertUser(User user);
 
     /**
-     * 添加正式用户
+     * 插入正式用户
      *
      * @param formalUser 正式用户对象
      */
-    void addFormalUser(FormalUser formalUser);
+    void insertFormalUser(FormalUser formalUser);
 
     /**
      * 根据用户名查询正式用户信息（包含密码哈希）
@@ -58,7 +58,7 @@ public interface UserMapper {
      * @param uid 用户唯一标识
      * @return 用户 ID
      */
-    Integer getIdByUid(String uid);
+    Integer selectIdByUid(String uid);
 
     /**
      * 更新用户信息
@@ -68,12 +68,12 @@ public interface UserMapper {
     void update(User u);
 
     /**
-     * 根据 ID 获取用户视图对象（已废弃，建议使用 getUserByUid）
+     * 根据 ID 获取用户视图对象（已废弃，建议使用 selectUserByUid）
      *
      * @param id 用户 ID
      * @return 用户对象
      */
-    User getUserVOById(Integer id);
+    User selectUserVOById(Integer id);
 
     /**
      * 更新用户最后活跃时间
@@ -89,7 +89,7 @@ public interface UserMapper {
      * @param uid 用户唯一标识
      * @return 用户对象
      */
-    User getUserByUid(String uid);
+    User selectUserByUid(String uid);
 
     /**
      * 根据 UID 查询用户信息（包含头像 object_name）
@@ -97,7 +97,7 @@ public interface UserMapper {
      * @param uid 用户 UID
      * @return 用户实体（包含 avatarObjectName 临时字段）
      */
-    User findByUidWithAvatar(String uid);
+    User selectByUidWithAvatar(String uid);
 
     /**
      * 根据 ID 查询用户信息（包含头像 object_name）
@@ -105,7 +105,7 @@ public interface UserMapper {
      * @param id 用户 ID
      * @return 用户实体（包含 avatarObjectName 临时字段）
      */
-    User findByIdWithAvatar(Integer id);
+    User selectByIdWithAvatar(Integer id);
 
     /**
      * 根据用户ID获取用户名
@@ -113,7 +113,7 @@ public interface UserMapper {
      * @param userId 用户ID
      * @return 用户名（正式用户）或 null（访客用户）
      */
-    String getUsernameByUserId(Integer userId);
+    String selectUsernameByUserId(Integer userId);
 
     /**
      * 根据用户ID获取用户信息
@@ -121,5 +121,5 @@ public interface UserMapper {
      * @param userId 用户ID
      * @return 用户对象
      */
-    User getUserById(Integer userId);
+    User selectUserById(Integer userId);
 }

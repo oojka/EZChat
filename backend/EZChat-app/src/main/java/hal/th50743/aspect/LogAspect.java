@@ -1,6 +1,5 @@
 package hal.th50743.aspect;
 
-import hal.th50743.annotation.LogRecord;
 import hal.th50743.pojo.OperationLog;
 import hal.th50743.service.impl.AsyncLogService;
 import hal.th50743.utils.CurrentHolder;
@@ -10,23 +9,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.Expression;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 
 /**
  * 操作日志切面
  * <p>
- * 拦截带有 @LogRecord 注解的方法，记录操作日志。
+ * 自动拦截 Service 层的 add/update/delete 方法，记录操作日志。
  */
 @Slf4j
 @Aspect
@@ -35,81 +30,110 @@ import java.time.LocalDateTime;
 public class LogAspect {
 
     private final AsyncLogService asyncLogService;
-    private final SpelExpressionParser spelParser = new SpelExpressionParser();
-    private final DefaultParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
 
     /**
-     * 在方法成功返回后执行
+     * 定义切入点：匹配 ServiceImpl 层的 CUD 方法
+     * <p>
+     * Service 层命名规范：
+     * - CREATE: create* / add* / save*
+     * - UPDATE: update*
+     * - DELETE: remove* / delete*
+     */
+    @Pointcut("execution(* hal.th50743.service.impl.*ServiceImpl.create*(..)) || " +
+            "execution(* hal.th50743.service.impl.*ServiceImpl.add*(..)) || " +
+            "execution(* hal.th50743.service.impl.*ServiceImpl.save*(..)) || " +
+            "execution(* hal.th50743.service.impl.*ServiceImpl.update*(..)) || " +
+            "execution(* hal.th50743.service.impl.*ServiceImpl.remove*(..)) || " +
+            "execution(* hal.th50743.service.impl.*ServiceImpl.delete*(..))")
+    public void cudOperations() {
+    }
+
+    /**
+     * 在方法成功返回后记录日志
      *
      * @param joinPoint 切入点
-     * @param logRecord 注解对象
+     * @param result    方法返回值
      */
-    @AfterReturning(pointcut = "@annotation(logRecord)", returning = "result")
-    public void recordLog(JoinPoint joinPoint, LogRecord logRecord, Object result) {
+    @AfterReturning(pointcut = "cudOperations()", returning = "result")
+    public void recordLog(JoinPoint joinPoint, Object result) {
         try {
-            // 1. 获取上下文信息 (userId, IP) - 必须在当前线程获取，因为异步线程无法访问 ThreadLocal 和 RequestContext
+            // 1. 获取上下文信息
             Integer userId = CurrentHolder.getCurrentId();
             String ip = getIpAddress();
             LocalDateTime now = LocalDateTime.now();
 
-            // 2. 解析 SpEL 表达式获取动态内容
-            String content = parseSpel(logRecord.content(), joinPoint, result);
+            MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+            String methodName = signature.getMethod().getName();
+            String className = signature.getDeclaringType().getSimpleName();
 
-            // 3. 构建日志对象
-            OperationLog log = new OperationLog();
-            log.setUserId(userId);
-            log.setModule(logRecord.module());
-            log.setType(logRecord.type());
-            log.setContent(content);
-            log.setIp(ip);
-            log.setCreateTime(now);
+            // 2. 从类名提取模块名（去掉 ServiceImpl 后缀）
+            String module = className.replace("ServiceImpl", "");
 
-            // 4. 异步保存
-            asyncLogService.saveLog(log);
+            // 3. 从方法名提取操作类型
+            String type = extractOperationType(methodName);
+
+            // 4. 构建内容描述
+            String content = buildContent(methodName, joinPoint.getArgs());
+
+            // 5. 构建日志对象
+            OperationLog operationLog = new OperationLog();
+            operationLog.setUserId(userId);
+            operationLog.setModule(module);
+            operationLog.setType(type);
+            operationLog.setContent(content);
+            operationLog.setIp(ip);
+            operationLog.setCreateTime(now);
+
+            // 6. 异步保存
+            asyncLogService.addLog(operationLog);
 
         } catch (Exception e) {
-            hal.th50743.aspect.LogAspect.log.error("Error recording operation log", e);
+            log.error("Error recording operation log", e);
         }
     }
 
     /**
-     * 解析 SpEL 表达式
+     * 从方法名提取操作类型
+     *
+     * @param methodName 方法名
+     * @return 操作类型：CREATE/UPDATE/DELETE/UNKNOWN
      */
-    private String parseSpel(String expressionStr, JoinPoint joinPoint, Object result) {
-        // 如果不包含 SpEL 表达式特征，直接返回
-        if (!expressionStr.contains("#")) {
-            return expressionStr;
+    private String extractOperationType(String methodName) {
+        if (methodName.startsWith("add")) {
+            return "CREATE";
+        } else if (methodName.startsWith("update")) {
+            return "UPDATE";
+        } else if (methodName.startsWith("delete")) {
+            return "DELETE";
         }
+        return "UNKNOWN";
+    }
 
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        Object[] args = joinPoint.getArgs();
-        String[] paramNames = parameterNameDiscoverer.getParameterNames(method);
-
-        EvaluationContext context = new StandardEvaluationContext();
-
-        // 绑定参数名和参数值到 Context
-        if (paramNames != null) {
-            for (int i = 0; i < paramNames.length; i++) {
-                context.setVariable(paramNames[i], args[i]);
-            }
+    /**
+     * 构建日志内容
+     *
+     * @param methodName 方法名
+     * @param args       方法参数
+     * @return 日志内容
+     */
+    private String buildContent(String methodName, Object[] args) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(methodName);
+        if (args != null && args.length > 0) {
+            sb.append("(");
+            sb.append(Arrays.stream(args)
+                    .map(arg -> arg == null ? "null" : arg.getClass().getSimpleName())
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse(""));
+            sb.append(")");
         }
-        // 增加 args 别名支持 #{args[0]}
-        context.setVariable("args", args);
-        // 增加 result 别名支持 (可选，如果以后需要在日志里记录返回值)
-        context.setVariable("result", result);
-
-        try {
-            Expression expression = spelParser.parseExpression(expressionStr);
-            return expression.getValue(context, String.class);
-        } catch (Exception e) {
-            hal.th50743.aspect.LogAspect.log.warn("Failed to parse SpEL expression: {}", expressionStr, e);
-            return expressionStr; // 解析失败则保存原字符串
-        }
+        return sb.toString();
     }
 
     /**
      * 获取 IP 地址
+     *
+     * @return IP 地址
      */
     private String getIpAddress() {
         try {

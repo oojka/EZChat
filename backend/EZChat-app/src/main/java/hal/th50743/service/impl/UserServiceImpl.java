@@ -50,7 +50,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserVO getUserInfoByUid(String uid) {
         // 使用 JOIN 查询，获取头像 object_name
-        User user = userMapper.findByUidWithAvatar(uid);
+        User user = userMapper.selectByUidWithAvatar(uid);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
@@ -89,7 +89,7 @@ public class UserServiceImpl implements UserService {
             user.setUid(randomUid);
 
             try {
-                userMapper.add(user);
+                userMapper.insertUser(user);
                 log.info("用户注册成功: uid={}, internalId={}", user.getUid(), user.getId());
                 return user; // 插入成功，直接返回结果，结束方法
             } catch (DuplicateKeyException e) {
@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public Integer getIdByUid(String uid) {
-        return userMapper.getIdByUid(uid);
+        return userMapper.selectIdByUid(uid);
     }
 
     /**
@@ -166,7 +166,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateLastSeenAt(Integer userId, String currentChatCode, LocalDateTime now) {
-        Integer chatId = chatMapper.getChatIdByChatCode(currentChatCode);
+        Integer chatId = chatMapper.selectChatIdByChatCode(currentChatCode);
         if (chatId != null) {
             chatMemberMapper.updateLastSeenAt(userId, chatId, now);
         }
@@ -200,6 +200,6 @@ public class UserServiceImpl implements UserService {
         if (userId == null) {
             return null;
         }
-        return userMapper.getUserById(userId);
+        return userMapper.selectUserById(userId);
     }
 }

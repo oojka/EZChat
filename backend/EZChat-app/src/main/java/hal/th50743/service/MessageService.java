@@ -15,14 +15,14 @@ import java.util.Map;
 public interface MessageService {
 
     /**
-     * 保存消息到数据库
+     * 添加消息到数据库
      *
      * @param userId 发送用户ID
      * @param chatId 聊天ID
      * @param text   文本内容
      * @param images 图片列表
      */
-    void saveMessage(Integer userId, Integer chatId, String text, List<Image> images);
+    void addMessage(Integer userId, Integer chatId, String text, List<Image> images);
 
     /**
      * 处理 WebSocket 传入的新消息

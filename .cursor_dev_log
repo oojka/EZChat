@@ -442,3 +442,23 @@
 ## [2026-01-08 09:20] Refactor GuestAside Validation
 - **Goal**: Use standardized validators from `validators.ts`.
 - **Changes**: `GuestAside.vue` (Updated rules for username, password, nickname).
+## [2026-01-08 09:33] Unify CUD Naming & Auto-Log via LogAspect
+ CUD 命名规范，改用 Pointcut 自动拦截日志- **Goal**: 统一 Service/Mapper 
+- **Changes**:
+  - `ChatMapper.insertChat` → `addChat`
+  - `AssetMapper.insert` → `add`
+  - `ChatInviteMapper.insert` → `add`
+  - `OperationLogMapper.insert` → `add`
+  - `MessageService.saveMessage` → `addMessage`
+  - `AsyncLogService.saveLog` → `addLog`
+  - `LogAspect`: 改用 Pointcut 自动拦截 `*ServiceImpl.add*/update*/delete*`
+  - 删除 `@LogRecord` 注解
+
+## [2026-01-08 09:55] Tiered Method Naming Refactoring
+- **Goal**: 统一 Mapper/Service 层方法命名规范
+- **Changes**:
+  - Mapper 层：37 方法重命名 (add→insert, get/find→select)
+  - 7 个 XML Mapper：全部更新
+  - ServiceImpl：约 50 处调用全部更新
+  - LogAspect：更新 Pointcut (create/add/save/update/remove/delete)
+

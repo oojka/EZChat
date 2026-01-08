@@ -4,11 +4,11 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.ChatMapper">
 
-    <select id="getChatIdByChatCode" resultType="java.lang.Integer">
+    <select id="selectChatIdByChatCode" resultType="java.lang.Integer">
         SELECT id FROM chats WHERE chat_code = #{chatCode}
     </select>
 
-    <select id="getChatVOListByUserId" resultType="hal.th50743.pojo.ChatVO">
+    <select id="selectChatVOListByUserId" resultType="hal.th50743.pojo.ChatVO">
         SELECT c.chat_code,
                c.chat_name,
                u.uid owner_uid,
@@ -31,7 +31,7 @@
         FROM chat_members
         WHERE chat_id = #{chatId} AND user_id = #{userId}
     </select>
-    <select id="getChatVOByChatId" resultType="hal.th50743.pojo.ChatVO">
+    <select id="selectChatVOByChatId" resultType="hal.th50743.pojo.ChatVO">
         SELECT c.chat_code,
                c.chat_name,
                u.uid owner_uid,
@@ -46,7 +46,7 @@
         WHERE c.id = #{chatId}
     </select>
 
-    <select id="getJoinInfoByChatId" resultType="hal.th50743.pojo.ChatJoinInfo">
+    <select id="selectJoinInfoByChatId" resultType="hal.th50743.pojo.ChatJoinInfo">
         SELECT id chatId,
                chat_code,
                chat_name,
@@ -55,7 +55,7 @@
         FROM chats
         WHERE id = #{chatId}
     </select>
-    <select id="getChatIdByInviteCodeHash" resultType="java.lang.Integer">
+    <select id="selectChatIdByInviteCodeHash" resultType="java.lang.Integer">
         SELECT i.chat_id
         FROM chat_invites i
          JOIN chats c ON i.chat_id = c.id

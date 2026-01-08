@@ -4,7 +4,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.ChatInviteMapper">
 
-    <insert id="insert" parameterType="hal.th50743.pojo.ChatInvite" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertChatInvite" parameterType="hal.th50743.pojo.ChatInvite" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chat_invites
         (chat_id, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time)
         VALUES
@@ -23,7 +23,7 @@
           AND (max_uses = 0 OR used_count &lt; max_uses)
     </update>
 
-    <select id="findByCodeHash" resultType="hal.th50743.pojo.ChatInvite">
+    <select id="selectByCodeHash" resultType="hal.th50743.pojo.ChatInvite">
         SELECT id, chat_id, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
         FROM chat_invites
         WHERE code_hash = #{codeHash}
@@ -35,5 +35,3 @@
     </delete>
 
 </mapper>
-
-

@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.UserMapper">
-    <insert id="add"
+    <insert id="insertUser"
             parameterType="hal.th50743.pojo.User"
             useGeneratedKeys="true"
             keyProperty="id"
@@ -12,7 +12,7 @@
         VALUES (#{uid}, #{nickname}, #{assetId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
     </insert>
 
-    <insert id="addFormalUser">
+    <insert id="insertFormalUser">
         INSERT INTO formal_users (user_id, username, password_hash, create_time, update_time, last_login_time)
         VALUES (#{userId}, #{username}, #{passwordHash}, #{createTime}, #{updateTime}, #{lastLoginTime})
     </insert>
@@ -72,11 +72,11 @@
         WHERE uid = #{userUid}
     </select>
 
-    <select id="getIdByUid" resultType="java.lang.Integer">
+    <select id="selectIdByUid" resultType="java.lang.Integer">
         SELECT id FROM users WHERE uid = #{uid}
     </select>
 
-    <select id="getUserVOById" resultType="hal.th50743.pojo.User">
+    <select id="selectUserVOById" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
                u.nickname,
@@ -91,7 +91,7 @@
 
     </select>
 
-    <select id="getUserByUid" resultType="hal.th50743.pojo.User">
+    <select id="selectUserByUid" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
                u.nickname,
@@ -107,7 +107,7 @@
     </select>
 
     <!-- 根据 UID 查询用户信息（JOIN assets 表获取头像 asset_name） -->
-    <select id="findByUidWithAvatar" resultType="hal.th50743.pojo.User">
+    <select id="selectByUidWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
             u.id, u.uid, u.nickname, u.asset_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
             a.asset_name as avatarObjectName
@@ -118,7 +118,7 @@
     </select>
 
     <!-- 根据 ID 查询用户信息（JOIN assets 表） -->
-    <select id="findByIdWithAvatar" resultType="hal.th50743.pojo.User">
+    <select id="selectByIdWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
             u.id, u.uid, u.nickname, u.asset_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
             a.asset_name as avatarObjectName
@@ -128,13 +128,13 @@
         LIMIT 1
     </select>
 
-    <select id="getUsernameByUserId" resultType="java.lang.String">
+    <select id="selectUsernameByUserId" resultType="java.lang.String">
         SELECT username
         FROM formal_users
         WHERE user_id = #{userId}
     </select>
 
-    <select id="getUserById" resultType="hal.th50743.pojo.User">
+    <select id="selectUserById" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
                u.nickname,

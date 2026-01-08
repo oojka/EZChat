@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.OperationLogMapper">
 
-    <insert id="insert" parameterType="hal.th50743.pojo.OperationLog" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertLog" parameterType="hal.th50743.pojo.OperationLog" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO operation_log (
             user_id,
             module,

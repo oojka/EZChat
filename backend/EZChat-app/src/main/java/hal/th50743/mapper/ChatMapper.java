@@ -21,7 +21,7 @@ public interface ChatMapper {
      * @param chatCode 聊天室代码
      * @return 聊天室ID
      */
-    Integer getChatIdByChatCode(String chatCode);
+    Integer selectChatIdByChatCode(String chatCode);
 
     /**
      * 获取用户加入的聊天室列表
@@ -29,7 +29,7 @@ public interface ChatMapper {
      * @param userId 用户ID
      * @return 聊天室视图对象列表
      */
-    List<ChatVO> getChatVOListByUserId(Integer userId);
+    List<ChatVO> selectChatVOListByUserId(Integer userId);
 
     /**
      * 验证用户是否是聊天室成员
@@ -46,19 +46,18 @@ public interface ChatMapper {
      * @param chatId 聊天室ID
      * @return 聊天室视图对象
      */
-    ChatVO getChatVOByChatId(Integer chatId);
+    ChatVO selectChatVOByChatId(Integer chatId);
 
     /**
-     * 获取“加入校验”所需的最小信息（根据聊天室 ID）
+     * 获取"加入校验"所需的最小信息（根据聊天室 ID）
      *
      * @param chatId 聊天内部 ID
      * @return ChatJoinInfo（包含 joinEnabled / chatPasswordHash / chatId）
      */
-    ChatJoinInfo getJoinInfoByChatId(Integer chatId);
-
+    ChatJoinInfo selectJoinInfoByChatId(Integer chatId);
 
     /**
-     * 新增聊天室
+     * 插入聊天室
      * <p>
      * 注意：本工程不使用物理外键，owner_id 关联关系由业务逻辑保证。
      *
@@ -66,6 +65,11 @@ public interface ChatMapper {
      */
     void insertChat(ChatCreate chat);
 
-
-    Integer getChatIdByInviteCodeHash(String codeHash);
+    /**
+     * 根据邀请码哈希获取聊天室ID
+     *
+     * @param codeHash 邀请码哈希
+     * @return 聊天室ID
+     */
+    Integer selectChatIdByInviteCodeHash(String codeHash);
 }

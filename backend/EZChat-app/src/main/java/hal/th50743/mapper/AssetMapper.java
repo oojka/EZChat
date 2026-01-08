@@ -20,7 +20,7 @@ public interface AssetMapper {
      * @param file 文件实体
      * @return 影响行数
      */
-    int insert(Asset file);
+    int insertAsset(Asset file);
 
     /**
      * 根据 ID 查询文件记录
@@ -28,7 +28,7 @@ public interface AssetMapper {
      * @param id 文件 ID
      * @return 文件实体，不存在返回 null
      */
-    Asset findById(Integer id);
+    Asset selectById(Integer id);
 
     /**
      * 根据 objectName 查询文件记录
@@ -36,7 +36,7 @@ public interface AssetMapper {
      * @param objectName MinIO 对象名
      * @return 文件实体，不存在返回 null
      */
-    Asset findByObjectName(String objectName);
+    Asset selectByObjectName(String objectName);
 
     /**
      * 根据 messageId 查询关联的文件列表
@@ -44,7 +44,7 @@ public interface AssetMapper {
      * @param messageId 消息 ID
      * @return 文件列表
      */
-    List<Asset> findByMessageId(Integer messageId);
+    List<Asset> selectByMessageId(Integer messageId);
 
     /**
      * 批量更新文件状态（用于消息图片激活）
@@ -88,7 +88,7 @@ public interface AssetMapper {
      * @param offset     偏移量
      * @return 文件列表（最多 limit 条）
      */
-    List<Asset> findPendingFilesBefore(LocalDateTime beforeTime, int limit, int offset);
+    List<Asset> selectPendingFilesBefore(LocalDateTime beforeTime, int limit, int offset);
 
     /**
      * 根据 ID 删除文件记录
@@ -112,7 +112,7 @@ public interface AssetMapper {
      * @param rawHash 原始对象哈希（SHA-256 hex）
      * @return 对象实体，不存在返回 null
      */
-    Asset findByRawHashAndActive(String rawHash);
+    Asset selectByRawHashAndActive(String rawHash);
 
     /**
      * 根据规范化对象哈希查询已激活的对象（用于后端最终去重）
@@ -120,6 +120,5 @@ public interface AssetMapper {
      * @param normalizedHash 规范化对象哈希（SHA-256 hex）
      * @return 对象实体，不存在返回 null
      */
-    Asset findByNormalizedHashAndActive(String normalizedHash);
+    Asset selectByNormalizedHashAndActive(String normalizedHash);
 }
-

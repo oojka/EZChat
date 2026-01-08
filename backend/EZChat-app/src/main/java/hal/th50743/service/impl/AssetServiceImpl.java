@@ -282,7 +282,7 @@ public class AssetServiceImpl implements AssetService {
      */
     @Override
     public Asset saveFile(String objectName, String originalName, String contentType, Long fileSize,
-                          AssetCategory category, String rawObjectHash, String normalizedObjectHash) {
+            AssetCategory category, String rawObjectHash, String normalizedObjectHash) {
         Asset file = new Asset();
         file.setAssetName(objectName);
         file.setOriginalName(originalName);
@@ -296,7 +296,7 @@ public class AssetServiceImpl implements AssetService {
         file.setCreateTime(LocalDateTime.now());
         file.setUpdateTime(LocalDateTime.now());
 
-        assetMapper.insert(file);
+        assetMapper.insertAsset(file);
         log.debug("Saved file record: objectName={}, category={}, status=PENDING, rawHash={}, normalizedHash={}",
                 objectName, category, rawObjectHash, normalizedObjectHash);
         return file;
@@ -365,7 +365,7 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public List<Asset> findPendingFilesForGC(int hoursOld, int batchSize, int offset) {
         LocalDateTime beforeTime = LocalDateTime.now().minusHours(hoursOld);
-        return assetMapper.findPendingFilesBefore(beforeTime, batchSize, offset);
+        return assetMapper.selectPendingFilesBefore(beforeTime, batchSize, offset);
     }
 
     /**
@@ -376,7 +376,7 @@ public class AssetServiceImpl implements AssetService {
      */
     @Override
     public Asset findActiveObjectByRawHash(String rawHash) {
-        return assetMapper.findByRawHashAndActive(rawHash);
+        return assetMapper.selectByRawHashAndActive(rawHash);
     }
 
     /**
@@ -387,7 +387,7 @@ public class AssetServiceImpl implements AssetService {
      */
     @Override
     public Asset findActiveObjectByNormalizedHash(String normalizedHash) {
-        return assetMapper.findByNormalizedHashAndActive(normalizedHash);
+        return assetMapper.selectByNormalizedHashAndActive(normalizedHash);
     }
 
     /**
@@ -398,7 +398,7 @@ public class AssetServiceImpl implements AssetService {
      */
     @Override
     public Asset findById(Integer id) {
-        return assetMapper.findById(id);
+        return assetMapper.selectById(id);
     }
 
     /**
@@ -409,7 +409,7 @@ public class AssetServiceImpl implements AssetService {
      */
     @Override
     public Asset findByObjectName(String objectName) {
-        return assetMapper.findByObjectName(objectName);
+        return assetMapper.selectByObjectName(objectName);
     }
 
     // ==================== 内部实现方法 ====================

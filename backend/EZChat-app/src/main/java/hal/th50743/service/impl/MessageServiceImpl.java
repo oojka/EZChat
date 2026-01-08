@@ -55,26 +55,26 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public List<Integer> handleWSMessage(Integer userId, MessageReq messageReq) {
         // 1. 通过聊天代码获取内部chatId
-        Integer chatId = chatMapper.getChatIdByChatCode(messageReq.getChatCode());
+        Integer chatId = chatMapper.selectChatIdByChatCode(messageReq.getChatCode());
         if (chatId == null) {
             log.warn("handleWSMessage: 收到未知聊天室的消息, chatCode={}", messageReq.getChatCode());
             return Collections.emptyList(); // 如果聊天不存在，返回空列表
         }
         // 2. 验证用户是否是该聊天室成员，并获取所有成员列表用于消息推送
-        List<Integer> senList = chatMemberMapper.getChatMembersByUserIdAndChatId(userId, chatId);
+        List<Integer> senList = chatMemberMapper.selectChatMembersByUserIdAndChatId(userId, chatId);
         if (senList == null || senList.isEmpty()) {
             log.warn("handleWSMessage: 用户 {} 不是聊天室 {} 的成员，拒绝发送消息", userId, chatId);
             return Collections.emptyList();
         }
 
         // 3. 保存消息到数据库
-        saveMessage(userId, chatId, messageReq.getText(), messageReq.getImages());
+        addMessage(userId, chatId, messageReq.getText(), messageReq.getImages());
         // 4. 返回需要接收消息的用户ID列表
         return senList;
     }
 
     /**
-     * 保存消息到数据库
+     * 添加消息到数据库
      * 
      * @param userId 发送用户ID
      * @param chatId 聊天ID
@@ -82,8 +82,8 @@ public class MessageServiceImpl implements MessageService {
      * @param images 从客户端传来的对象存储URL数组
      */
     @Override
-    public void saveMessage(Integer userId, Integer chatId, String text, List<Image> images) {
-        log.info("save message, userId={}, chatId={}, text={}, images={}", userId, chatId, text, images);
+    public void addMessage(Integer userId, Integer chatId, String text, List<Image> images) {
+        log.info("add message, userId={}, chatId={}, text={}, images={}", userId, chatId, text, images);
         String assetIdsJson = null;
         // 如果有附件，则提取 objectId（直接使用 Image 对象的 objectId 字段）
         if (images != null && !images.isEmpty()) {
@@ -122,7 +122,7 @@ public class MessageServiceImpl implements MessageService {
                 LocalDateTime.now(),
                 LocalDateTime.now());
         // 将消息添加到数据库（useGeneratedKeys 会自动填充 msg.id）
-        messageMapper.addMessage(msg);
+        messageMapper.insertMessage(msg);
 
         // 消息保存成功后，批量激活关联的图片文件（status=1, category=MESSAGE_IMG, message_id=msg.id）
         if (images != null && !images.isEmpty()) {
@@ -158,7 +158,7 @@ public class MessageServiceImpl implements MessageService {
 
         Integer chatId = chatService.getChatId(userId, chatCode);
 
-        List<MessageVO> messageList = messageMapper.getMessageListByChatIdAndTimeStamp(chatId, createTime);
+        List<MessageVO> messageList = messageMapper.selectMessageListByChatIdAndTimeStamp(chatId, createTime);
         log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 

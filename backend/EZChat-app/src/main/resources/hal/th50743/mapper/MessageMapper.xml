@@ -4,14 +4,14 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.MessageMapper">
 
-    <insert id="addMessage" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO messages (sender_id, chat_id, type, text, create_time, update_time, asset_ids)
         VALUES
             (#{senderId}, #{chatId}, #{type}, #{text},
              #{createTime}, #{updateTime}, #{assetIds})
     </insert>
 
-    <select id="getUnreadCountMapByUserId" resultType="java.util.Map">
+    <select id="selectUnreadCountMapByUserId" resultType="java.util.Map">
         SELECT
             c.chat_code AS chatCode,
             COUNT(m.id) AS unreadCount
@@ -25,7 +25,7 @@
         GROUP BY c.chat_code
     </select>
 
-    <select id="getUnreadCountMapByUserIdAndChatId" resultType="java.lang.Integer">
+    <select id="selectUnreadCountMapByUserIdAndChatId" resultType="java.lang.Integer">
         SELECT
             COUNT(m.id)
         FROM chat_members cm
@@ -37,7 +37,7 @@
     </select>
 
 
-    <select id="getLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
+    <select id="selectLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                ciM.chat_code AS chatCode,
                m.type AS type,
@@ -55,7 +55,7 @@
             ON m.chat_id = ciM.chat_id AND m.create_time = ciM.max_create_time
     </select>
 
-    <select id="getLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
+    <select id="selectLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
                m.type AS type,
@@ -71,7 +71,7 @@
     </select>
 
 
-    <select id="getMessageListByChatIdAndTimeStamp" resultType="hal.th50743.pojo.MessageVO">
+    <select id="selectMessageListByChatIdAndTimeStamp" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
                m.type AS type,

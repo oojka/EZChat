@@ -22,7 +22,7 @@ public interface ChatMemberMapper {
      * @param id 用户ID
      * @return 成员ID列表
      */
-    List<Integer> getChatMembersById(Integer id);
+    List<Integer> selectChatMembersById(Integer id);
 
     /**
      * 获取指定聊天室的所有成员ID列表
@@ -31,7 +31,7 @@ public interface ChatMemberMapper {
      * @param chatId 聊天室ID
      * @return 成员ID列表
      */
-    List<Integer> getChatMembersByUserIdAndChatId(Integer userId, Integer chatId);
+    List<Integer> selectChatMembersByUserIdAndChatId(Integer userId, Integer chatId);
 
     /**
      * 获取用户加入的所有聊天室的成员详情列表
@@ -39,10 +39,10 @@ public interface ChatMemberMapper {
      * @param userId 用户ID
      * @return 成员详情列表
      */
-    List<ChatMember> getChatMemberListByUserId(Integer userId);
+    List<ChatMember> selectChatMemberListByUserId(Integer userId);
 
     /**
-     * 获取“轻量成员列表”（用于初始化聚合在线状态/在线人数）
+     * 获取"轻量成员列表"（用于初始化聚合在线状态/在线人数）
      *
      * 业务目的：
      * - refresh 初始化阶段只需要 userId/uid/lastSeenAt 与 chatCode
@@ -51,7 +51,7 @@ public interface ChatMemberMapper {
      * @param userId 当前用户内部 ID（users.id）
      * @return 轻量成员列表
      */
-    List<ChatMemberLite> getChatMemberLiteListByUserId(Integer userId);
+    List<ChatMemberLite> selectChatMemberLiteListByUserId(Integer userId);
 
     /**
      * 获取指定聊天室的所有成员详情列表
@@ -59,7 +59,7 @@ public interface ChatMemberMapper {
      * @param chatId 聊天室ID
      * @return 成员详情列表
      */
-    List<ChatMember> getChatMemberListByChatId(Integer chatId);
+    List<ChatMember> selectChatMemberListByChatId(Integer chatId);
 
     /**
      * 验证用户是否有权获取目标用户的信息（是否是好友或群友）
@@ -80,7 +80,7 @@ public interface ChatMemberMapper {
     void updateLastSeenAt(Integer userId, Integer chatId, LocalDateTime now);
 
     /**
-     * 新增聊天室成员关系（若已存在则忽略）
+     * 插入聊天室成员关系（若已存在则忽略）
      *
      * 业务目的：
      * - join / guest join / invite join 都需要写 chat_members
@@ -91,5 +91,6 @@ public interface ChatMemberMapper {
      * @param now    当前时间（用于 last_seen_at/create_time/update_time）
      * @return 影响行数（插入成功=1；已存在=0）
      */
-    void add(@Param("chatId") Integer chatId, @Param("userId") Integer userId, @Param("now") LocalDateTime now);
+    void insertChatMember(@Param("chatId") Integer chatId, @Param("userId") Integer userId,
+            @Param("now") LocalDateTime now);
 }

@@ -155,7 +155,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public AppInitVO getChatVOListAndMemberStatusListLite(Integer userId) {
         // 1. 获取用户加入的所有聊天室列表
-        List<ChatVO> chatVOList = chatMapper.getChatVOListByUserId(userId);
+        List<ChatVO> chatVOList = chatMapper.selectChatVOListByUserId(userId);
         if (chatVOList == null || chatVOList.isEmpty()) {
             // 返回空列表而不是null，保持接口一致性
             return new AppInitVO(Collections.emptyList(), Collections.emptyList());
@@ -165,7 +165,7 @@ public class ChatServiceImpl implements ChatService {
         Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
 
         // 3. 获取轻量级成员信息（只包含必要字段）
-        List<ChatMemberLite> liteMembers = chatMemberMapper.getChatMemberLiteListByUserId(userId);
+        List<ChatMemberLite> liteMembers = chatMemberMapper.selectChatMemberLiteListByUserId(userId);
 
         // 4. 统计每个聊天室的在线成员数量
         Map<String, Integer> onlineCountMap = new HashMap<>();
@@ -184,7 +184,7 @@ public class ChatServiceImpl implements ChatService {
         Map<String, Integer> unreadCountMap = getUnreadCountMap(userId);
 
         // 6. 获取最后一条消息映射
-        Map<String, MessageVO> lastMessageMap = messageMapper.getLastMessageListByUserId(userId);
+        Map<String, MessageVO> lastMessageMap = messageMapper.selectLastMessageListByUserId(userId);
 
         // 7. 为每个聊天室组装轻量数据
         for (ChatVO c : chatVOList) {
@@ -238,14 +238,14 @@ public class ChatServiceImpl implements ChatService {
         Integer chatId = getChatId(userId, chatCode);
 
         // 2. 获取聊天室基本信息
-        ChatVO chatVO = chatMapper.getChatVOByChatId(chatId);
+        ChatVO chatVO = chatMapper.selectChatVOByChatId(chatId);
 
         // 3. 如果聊天室存在，组装完整数据
         if (chatVO != null) {
             Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
-            List<ChatMember> members = chatMemberMapper.getChatMemberListByChatId(chatId);
-            MessageVO lastMsg = messageMapper.getLastMessageByChatId(chatId);
-            Integer unreadCount = messageMapper.getUnreadCountMapByUserIdAndChatId(userId, chatId);
+            List<ChatMember> members = chatMemberMapper.selectChatMemberListByChatId(chatId);
+            MessageVO lastMsg = messageMapper.selectLastMessageByChatId(chatId);
+            Integer unreadCount = messageMapper.selectUnreadCountMapByUserIdAndChatId(userId, chatId);
 
             // 4. 使用ChatAssembler组装完整数据
             chatAssembler.assemble(chatVO, onlineUsers, lastMsg, unreadCount, members);
@@ -295,7 +295,7 @@ public class ChatServiceImpl implements ChatService {
         Map<Integer, Session> onlineUsers = WebSocketServer.getOnLineUserList();
 
         // 3. 获取聊天室成员列表
-        List<ChatMember> members = chatMemberMapper.getChatMemberListByChatId(chatId);
+        List<ChatMember> members = chatMemberMapper.selectChatMemberListByChatId(chatId);
 
         // 4. 转换为包含在线状态的VO对象
         return chatMemberAssembler.toChatMemberVOList(members, onlineUsers);
@@ -336,7 +336,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public Integer getChatId(Integer userId, String chatCode) {
         // 1. 根据聊天室代码查找聊天室ID
-        Integer chatId = chatMapper.getChatIdByChatCode(chatCode);
+        Integer chatId = chatMapper.selectChatIdByChatCode(chatCode);
 
         // 2. 验证聊天室是否存在
         if (chatId == null) {
@@ -386,7 +386,7 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public ChatJoinInfo getJoinInfo(Integer chatId) {
-        return chatMapper.getJoinInfoByChatId(chatId);
+        return chatMapper.selectJoinInfoByChatId(chatId);
     }
 
     /**
@@ -435,7 +435,7 @@ public class ChatServiceImpl implements ChatService {
         if (req.getInviteCode() != null && !req.getInviteCode().isBlank()) {
             // 获取邀请码对应的聊天室信息
             String hash = InviteCodeUtils.sha256Hex(req.getInviteCode());
-            ChatInvite chatInvite = chatInviteMapper.findByCodeHash(hash);
+            ChatInvite chatInvite = chatInviteMapper.selectByCodeHash(hash);
 
             if (chatInvite == null) {
                 throw new BusinessException(ErrorCode.INVITE_CODE_INVALID);
@@ -469,7 +469,7 @@ public class ChatServiceImpl implements ChatService {
                 throw new BusinessException(ErrorCode.PASSWORD_REQUIRED,
                         "Password is required when chatCode is provided");
             }
-            chatId = chatMapper.getChatIdByChatCode(req.getChatCode());
+            chatId = chatMapper.selectChatIdByChatCode(req.getChatCode());
         } else {
             // 两种模式都未提供
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Either inviteCode or chatCode must be provided");
@@ -480,7 +480,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         // 3. 获取聊天室加入配置信息
-        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
+        ChatJoinInfo info = chatMapper.selectJoinInfoByChatId(chatId);
         if (info == null || info.getChatId() == null) {
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
         }
@@ -501,7 +501,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         // 6. 获取聊天室基本信息
-        ChatVO chatMapperChatVO = chatMapper.getChatVOByChatId(info.getChatId());
+        ChatVO chatMapperChatVO = chatMapper.selectChatVOByChatId(info.getChatId());
         if (chatMapperChatVO == null) {
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
         }
@@ -553,7 +553,7 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public List<Integer> getChatMembers(Integer userId) {
-        return chatMemberMapper.getChatMembersById(userId);
+        return chatMemberMapper.selectChatMembersById(userId);
     }
 
     /**
@@ -642,11 +642,11 @@ public class ChatServiceImpl implements ChatService {
         // ========== 步骤4: 执行加入操作 ==========
         LocalDateTime now = LocalDateTime.now();
         // 4.1 添加成员关系到数据库
-        chatMemberMapper.add(chatInfo.getChatId(), joinChatReq.getUserId(), now);
+        chatMemberMapper.insertChatMember(chatInfo.getChatId(), joinChatReq.getUserId(), now);
 
         // ========== 步骤4.1: 插入系统消息 ==========
         // 查询用户信息，用于区分正式用户和访客用户
-        User user = userMapper.getUserById(joinChatReq.getUserId());
+        User user = userMapper.selectUserById(joinChatReq.getUserId());
         Message sysMsg = null;
         String displayName = "Unknown User"; // 默认显示名称
 
@@ -672,14 +672,14 @@ public class ChatServiceImpl implements ChatService {
             sysMsg.setAssetIds(""); // 确保不为null，数据库安全性
             sysMsg.setCreateTime(now); // 创建时间
             sysMsg.setUpdateTime(now); // 更新时间
-            messageMapper.addMessage(sysMsg); // 持久化到数据库
+            messageMapper.insertMessage(sysMsg); // 持久化到数据库
             log.info("System message persisted for join: msgId={}, text={}", sysMsg.getId(), displayName);
         }
 
         // ========== 步骤4.2: WebSocket 广播通知 ==========
         // 4.2.1 获取聊天室所有成员ID列表（包括新加入的用户）
         // 重要：显式查询确保不会漏掉任何人，特别是当发送者是访客时
-        List<Integer> memberIds = chatMemberMapper.getChatMemberListByChatId(chatInfo.getChatId())
+        List<Integer> memberIds = chatMemberMapper.selectChatMemberListByChatId(chatInfo.getChatId())
                 .stream()
                 .map(ChatMember::getUserId)
                 .collect(Collectors.toList());
@@ -880,7 +880,7 @@ public class ChatServiceImpl implements ChatService {
 
         // ========== 步骤6: 创建者自动加入聊天室 ==========
         LocalDateTime now = LocalDateTime.now();
-        chatMemberMapper.add(chatId, userId, now); // 添加创建者为第一个成员
+        chatMemberMapper.insertChatMember(chatId, userId, now); // 添加创建者为第一个成员
 
         // ========== 步骤7: 生成邀请码 ==========
         // 7.1 计算邀请码有效期（默认7天：10080分钟）
@@ -910,7 +910,7 @@ public class ChatServiceImpl implements ChatService {
                 null, // 创建时间（数据库默认值）
                 null); // 更新时间（数据库默认值）
 
-        chatInviteMapper.insert(invite); // 插入数据库
+        chatInviteMapper.insertChatInvite(invite); // 插入数据库
 
         // ========== 步骤8: 插入系统消息 ==========
         // 8.1 创建房间创建系统消息（Type 10）
@@ -922,7 +922,7 @@ public class ChatServiceImpl implements ChatService {
         sysMsg.setAssetIds(null); // 资源文件ID（无）
         sysMsg.setCreateTime(now); // 创建时间
         sysMsg.setUpdateTime(now); // 更新时间
-        messageMapper.addMessage(sysMsg); // 插入数据库
+        messageMapper.insertMessage(sysMsg); // 插入数据库
 
         // ========== 步骤9: 返回创建结果 ==========
         return new CreateChatVO(chatCode, inviteCode);
@@ -965,11 +965,10 @@ public class ChatServiceImpl implements ChatService {
      * 
      * @param userId 用户ID，不能为null
      * @return Map<String, Integer> 未读数映射表，Key为聊天室代码，Value为未读数量
-     * 
-     * @see MessageMapper#getUnreadCountMapByUserId(Integer) 未读数查询方法
+     *
      */
     private Map<String, Integer> getUnreadCountMap(Integer userId) {
-        return messageMapper.getUnreadCountMapByUserId(userId).stream()
+        return messageMapper.selectUnreadCountMapByUserId(userId).stream()
                 .collect(Collectors.toMap(
                         row -> (String) row.get("chatCode"), // Key: 聊天室代码
                         row -> ((Number) row.get("unreadCount")).intValue(), // Value: 未读数量
@@ -1090,19 +1089,17 @@ public class ChatServiceImpl implements ChatService {
      * @throws BusinessException 各种验证失败异常
      * 
      * @see PasswordUtils#matches(String, String) 密码验证工具
-     * @see ChatMapper#getChatIdByChatCode(String) 聊天室代码查询
-     * @see ChatMapper#getJoinInfoByChatId(Integer) 加入信息查询
      */
     private ChatJoinInfo handlePasswordJoin(String chatCode, String password) {
         // ========== 步骤1: 验证聊天室代码有效性 ==========
         // 1.1 根据聊天室代码查找聊天室ID
-        Integer chatId = chatMapper.getChatIdByChatCode(chatCode);
+        Integer chatId = chatMapper.selectChatIdByChatCode(chatCode);
         if (chatId == null) {
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
         }
 
         // 1.2 获取聊天室加入配置信息
-        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(chatId);
+        ChatJoinInfo info = chatMapper.selectJoinInfoByChatId(chatId);
         if (info == null || info.getChatId() == null) {
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
         }
@@ -1174,7 +1171,6 @@ public class ChatServiceImpl implements ChatService {
      * @throws BusinessException 各种验证失败异常
      * 
      * @see InviteCodeUtils#sha256Hex(String) 邀请码哈希计算
-     * @see ChatInviteMapper#findByCodeHash(String) 邀请码查询
      * @see ChatInviteMapper#consume(Integer, String) 邀请码消费
      * @see ChatInviteMapper#deleteByCodeHash(String) 邀请码删除
      */
@@ -1183,7 +1179,7 @@ public class ChatServiceImpl implements ChatService {
         // 1.1 计算 SHA256 哈希值（安全存储，不存储明文）
         String hash = InviteCodeUtils.sha256Hex(inviteCode);
         // 1.2 根据哈希值查询邀请码记录
-        ChatInvite invite = chatInviteMapper.findByCodeHash(hash);
+        ChatInvite invite = chatInviteMapper.selectByCodeHash(hash);
 
         // ========== 步骤2: 基础校验 ==========
         // 2.1 邀请码是否存在
@@ -1207,7 +1203,7 @@ public class ChatServiceImpl implements ChatService {
 
         // ========== 步骤4: 预先获取房间信息 ==========
         // 重要：防止邀请码有效但房间已经被删除的情况
-        ChatJoinInfo info = chatMapper.getJoinInfoByChatId(invite.getChatId());
+        ChatJoinInfo info = chatMapper.selectJoinInfoByChatId(invite.getChatId());
         if (info == null) {
             throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
         }

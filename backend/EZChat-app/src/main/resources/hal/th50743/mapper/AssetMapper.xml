@@ -5,13 +5,13 @@
 <mapper namespace="hal.th50743.mapper.AssetMapper">
 
     <!-- 插入文件记录 -->
-    <insert id="insert" parameterType="hal.th50743.pojo.Asset" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertAsset" parameterType="hal.th50743.pojo.Asset" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO assets (asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time)
         VALUES (#{assetName}, #{originalName}, #{contentType}, #{fileSize}, #{category}, #{messageId}, #{status}, #{rawAssetHash}, #{normalizedAssetHash}, NOW(), NOW())
     </insert>
 
     <!-- 根据 ID 查询文件记录（使用主键索引） -->
-    <select id="findById" resultType="hal.th50743.pojo.Asset">
+    <select id="selectById" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE id = #{id}
@@ -19,7 +19,7 @@
     </select>
 
     <!-- 根据 assetName 查询文件记录（使用 idx_asset_name 索引） -->
-    <select id="findByObjectName" resultType="hal.th50743.pojo.Asset">
+    <select id="selectByObjectName" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE asset_name = #{objectName}
@@ -27,7 +27,7 @@
     </select>
 
     <!-- 根据 messageId 查询关联的文件列表（使用 idx_message_id 索引） -->
-    <select id="findByMessageId" resultType="hal.th50743.pojo.Asset">
+    <select id="selectByMessageId" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE message_id = #{messageId}
@@ -66,7 +66,7 @@
     </update>
 
     <!-- 分页查询待清理的 PENDING 文件（用于 GC，使用 idx_gc_cleanup 索引） -->
-    <select id="findPendingFilesBefore" resultType="hal.th50743.pojo.Asset">
+    <select id="selectPendingFilesBefore" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE status = 0 AND create_time &lt; #{beforeTime}
@@ -88,7 +88,7 @@
     </delete>
 
     <!-- 根据原始对象哈希查询已激活的对象（用于前端轻量级比对，使用 idx_raw_asset_hash 索引） -->
-    <select id="findByRawHashAndActive" resultType="hal.th50743.pojo.Asset">
+    <select id="selectByRawHashAndActive" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE raw_asset_hash = #{rawHash} AND status = 1
@@ -96,7 +96,7 @@
     </select>
 
     <!-- 根据规范化对象哈希查询已激活的对象（用于后端最终去重，使用 idx_normalized_asset_hash 索引） -->
-    <select id="findByNormalizedHashAndActive" resultType="hal.th50743.pojo.Asset">
+    <select id="selectByNormalizedHashAndActive" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE normalized_asset_hash = #{normalizedHash} AND status = 1
