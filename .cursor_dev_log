@@ -353,3 +353,92 @@
 ## [2026-01-08 06:45] Fix LogAspect Compilation Error
 - **Goal**: Fix 'AfterReturning cannot be resolved' error in LogAspect.java
 - **Changes**: added spring-boot-starter-aop to backend/EZChat-app/pom.xml
+## [2026-01-08 08:21] Refactor GuestAside Layout
+- **Goal**: Move Nickname and Bio inputs to the left side (Profile Section) and keep only Auth fields on the right.
+- **Changes**: `GuestAside.vue` (Moved fields, updated form structure).
+## [2026-01-08 08:25] Refactor GuestAside Layout (Polish)
+- **Goal**: Address cramped UI by widening dialog and increasing spacing.
+- **Changes**: `GuestAside.vue` (Dialog width 750px->850px, Left Col 260px->320px, Increased gaps).
+## [2026-01-08 08:26] Refactor GuestAside Layout (Title & Labels)
+- **Goal**: Improve layout logic by moving title to context area (right) and clearer labels on left.
+- **Changes**: `GuestAside.vue` (Moved title to right col, added labels to nick/bio).
+## [2026-01-08 08:30] Unify Dialog Close Button Style
+- **Goal**: Standardize close button appearance and hover effects across all dialogs for consistency.
+- **Changes**: 
+  - `GuestAside.vue` (Added hover rotation).
+  - `JoinChatDialog.vue` (Simplified positioning logic).
+  - `CreateChatDialog.vue` (Unified structure/styles).
+## [2026-01-08 08:34] Globalize Dialog Close Button
+- **Goal**: Move close button styles to specific global CSS `ez-dialog.css` to remove duplication and ensure consistency.
+- **Changes**: 
+  - `ez-dialog.css` (Added `.ez-close-btn`).
+  - Refactored `GuestAside`, `CreateChatDialog`, `JoinChatDialog` to use new class.
+  - Refactored `RightCard`, `LeftCard` to use new class and added consistent positioning.
+## [2026-01-08 08:36] Fix Close Button Background
+- **Goal**: Fix opaque background on close buttons (especially visible on Glass UI).
+- **Changes**: `ez-dialog.css` (Set `.ez-close-btn` background to `transparent`).
+## [2026-01-08 08:40] Fix CreateChatDialog Close Button
+- **Goal**: Fix broken close button style in `CreateChatDialog.vue` (was missing styles).
+- **Changes**: `CreateChatDialog.vue` (Updated template to use `ez-close-btn` global class).
+## [2026-01-08 08:41] Align Progress Bar
+- **Goal**: Align progress bar vertically with the close button in `CreateChatDialog`.
+- **Changes**: `CreateChatDialog.vue` (Increased header padding to 30px).
+## [2026-01-08 08:43] Optimize Margins in CreateChatDialog
+- **Goal**: Unify horizontal spacing/margins.
+- **Changes**: `CreateChatDialog.vue` (Unified `.progress-section` padding to 32px to match header/body).
+## [2026-01-08 08:44] Reduce Margins in CreateChatDialog
+- **Goal**: Unify margins with other dialogs (reduced from 32px/30px to 24px/20px).
+- **Changes**: `CreateChatDialog.vue` (Updated paddings to 24px side, 20px top).
+## [2026-01-08 08:45] Align Close Button in CreateChatDialog
+- **Goal**: Align close button with progress bar (which shifted due to margin reduction).
+- **Changes**: `CreateChatDialog.vue` (Overrode global positional styles locally to `top: 6px; right: 12px`).
+## [2026-01-08 08:46] Shorten Progress Bar
+- **Goal**: Shorten progress bar to prevent overlap with the close button.
+- **Changes**: `CreateChatDialog.vue` (Increased horizontal padding to 56px).
+## [2026-01-08 08:48] Narrow CreateChatDialog
+- **Goal**: Make CreateChatDialog narrower (match JoinChatDialog).
+- **Changes**: `CreateChatDialog.vue` (Reduced width to 480px).
+## [2026-01-08 08:48] Adjust CreateChatDialog Width
+- **Goal**: Find middle ground for width (480px was too narrow).
+- **Changes**: `CreateChatDialog.vue` (Increased width to 520px).
+## [2026-01-08 08:50] Refactor AlertDialog Styles
+- **Goal**: Unify AlertDialog visual style with other dialogs.
+- **Changes**: `ez-dialog.css` (Updated `.ez-dialog` to use glassmorphism vars, increased radius/padding).
+## [2026-01-08 08:53] Refactor AlertDialog Cancel Button
+- **Goal**: Match Cancel button style with GuestAside (transparent).
+- **Changes**: `ez-dialog.css` (Updated `.ez-dialog-btn` to transparent ghost style).
+## [2026-01-08 08:56] Style AlertDialog Buttons as Ghost
+- **Goal**: Make both buttons in AlertDialog behave like Close Button (Transparent -> Hover BG).
+- **Changes**: `ez-dialog.css` (Cancel: Gray Hover; Primary: Light Blue Hover).
+## [2026-01-08 08:58] Revert Primary Button & Sync Cancel
+- **Goal**: Revert Confirm button to solid; Sync Cancel buttons (AlertDialog & GuestAside) to Close Button style.
+- **Changes**: 
+  - `ez-dialog.css`: Reverted Primary to Solid.
+  - `GuestAside.vue`: Updated `.cancel-btn` hover to use `var(--el-border-color-light)`.
+## [2026-01-08 08:59] Revert Primary Button in ez-dialog.css
+- **Goal**: Revert Confirm button to solid filled style.
+- **Changes**: `ez-dialog.css` (Confirm button solid colored).
+## [2026-01-08 09:02] Style Danger Button as Solid Red
+- **Goal**: Make Danger button Solid Red (not soft) for better aesthetics.
+- **Changes**: `ez-dialog.css` (Updated Danger button to solid `var(--el-color-danger)`).
+## [2026-01-08 09:03] Unify Notification Close Button
+- **Goal**: Apply global Close Button style to Notifications.
+- **Changes**: `ez-dialog.css` (Updated `.el-notification__closeBtn` to match `.ez-close-btn` metrics and hover behavior).
+## [2026-01-08 09:07] Create UserAvatar Component
+- **Goal**: Create a unified component for avatar display and upload preview.
+- **Changes**: `UserAvatar.vue` (New component with 3-stage fallback, editable mode, and unified glass styles).
+## [2026-01-08 09:10] Integrate UserAvatar in GuestAside
+- **Goal**: Use UserAvatar component for GuestAside upgrade dialog.
+- **Changes**: `GuestAside.vue` (Imported UserAvatar, replaced inline upload preview logic).
+## [2026-01-08 09:12] Integrate UserAvatar in CreateChatDialog
+- **Goal**: Use UserAvatar component for Create Chat dialog.
+- **Changes**: `CreateChatDialog.vue` (Imported UserAvatar, replaced inline upload preview logic).
+## [2026-01-08 09:12] Integrate UserAvatar in Lists
+- **Goal**: Replace SmartAvatar with UserAvatar across list components.
+- **Changes**: `MessageItem.vue`, `ChatItem.vue`, `ChatMemberListItem.vue`, `UserItem.vue`.
+## [2026-01-08 09:18] Refactor GuestAside Password Inputs
+- **Goal**: Use shared PasswordInput component in GuestAside upgrade dialog.
+- **Changes**: `GuestAside.vue` (Replaced el-input with PasswordInput).
+## [2026-01-08 09:20] Refactor GuestAside Validation
+- **Goal**: Use standardized validators from `validators.ts`.
+- **Changes**: `GuestAside.vue` (Updated rules for username, password, nickname).

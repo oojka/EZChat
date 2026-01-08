@@ -4,12 +4,15 @@ import { storeToRefs } from 'pinia'
 import { useRoomStore } from '@/stores/roomStore'
 import { useUserStore } from '@/stores/userStore'
 import ChatItem from './ChatItem.vue'
+import Avatar from '@/components/Avatar.vue'
+import PasswordInput from '@/components/PasswordInput.vue'
 import { Star, Trophy, Check, Plus, Camera, Close } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules, type UploadProps } from 'element-plus'
 import { upgradeUserApi } from '@/api/User'
 import { uploadAvatarApi } from '@/api/Auth'
 import type { RegisterInfo, Image } from '@/type'
+import { isValidUsername, isValidNickname, isValidPassword } from '@/utils/validators'
 
 const { t } = useI18n()
 const roomStore = useRoomStore()
@@ -74,17 +77,42 @@ const validatePass2 = (rule: any, value: any, callback: any) => {
 const rules = reactive<FormRules>({
     username: [
         { required: true, message: '请输入用户名', trigger: 'blur' },
-        { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
+        {
+            validator: (rule: any, value: any, callback: any) => {
+                if (!isValidUsername(value)) {
+                    callback(new Error('用户名格式不正确 (字母开头，2-20位)'))
+                } else {
+                    callback()
+                }
+            }, trigger: 'blur'
+        }
     ],
     password: [
         { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
+        {
+            validator: (rule: any, value: any, callback: any) => {
+                if (!isValidPassword(value)) {
+                    callback(new Error('密码格式不正确 (8-20位)'))
+                } else {
+                    callback()
+                }
+            }, trigger: 'blur'
+        }
     ],
     confirmPassword: [
         { validator: validatePass2, trigger: 'blur' }
     ],
     nickname: [
-        { required: true, message: '请输入昵称', trigger: 'blur' }
+        { required: true, message: '请输入昵称', trigger: 'blur' },
+        {
+            validator: (rule: any, value: any, callback: any) => {
+                if (!isValidNickname(value)) {
+                    callback(new Error('昵称格式不正确 (2-20位)'))
+                } else {
+                    callback()
+                }
+            }, trigger: 'blur'
+        }
     ]
 })
 
@@ -200,13 +228,12 @@ const customUploadRequest = async (options: any) => {
             </div>
         </div>
 
-        <!-- 升级弹窗 (Modern Style - Wide 2-Col) -->
-        <el-dialog v-model="upgradeDialogVisible" width="750px" class="ez-modern-dialog upgrade-dialog-modern"
+        <el-dialog v-model="upgradeDialogVisible" width="850px" class="ez-modern-dialog upgrade-dialog-modern"
             align-center destroy-on-close :show-close="false" :close-on-click-modal="false">
 
             <template #header>
                 <div class="dialog-header-actions">
-                    <button class="close-btn" type="button" @click="upgradeDialogVisible = false">
+                    <button class="ez-close-btn" type="button" @click="upgradeDialogVisible = false">
                         <el-icon>
                             <Close />
                         </el-icon>
@@ -214,74 +241,58 @@ const customUploadRequest = async (options: any) => {
                 </div>
             </template>
 
-            <div class="dialog-layout-grid">
-                <!-- LEFT COLUMN: Avatar & Branding -->
+            <el-form ref="formRef" :model="form" :rules="rules" label-width="0" class="dialog-layout-grid"
+                hide-required-asterisk status-icon>
+                <!-- LEFT COLUMN: Avatar & Branding & Profile -->
                 <div class="dialog-left-col">
-                    <div class="dialog-title-area-left">
-                        <h3>升级正式账号</h3>
-                        <p class="subtitle">解锁完整功能体验</p>
-                    </div>
-
                     <div class="avatar-upload-section">
                         <el-upload class="avatar-uploader-large" action="#" :http-request="customUploadRequest"
                             :show-file-list="false" :on-success="handleAvatarSuccess"
                             :before-upload="beforeAvatarUpload">
-                            <div v-if="form.avatar && form.avatar.imageUrl" class="avatar-preview-lg">
-                                <img :src="form.avatar.imageUrl" class="avatar-img" />
-                                <div class="edit-mask-lg">
-                                    <el-icon>
-                                        <Camera />
-                                    </el-icon>
-                                    <span>更改头像</span>
-                                </div>
-                            </div>
-                            <div v-else class="placeholder-square-lg">
-                                <el-icon size="48" class="plus-icon">
-                                    <Plus />
-                                </el-icon>
-                                <span class="upload-text">上传头像</span>
-                            </div>
+                            <Avatar :thumb-url="form.avatar?.imageThumbUrl" :url="form.avatar?.imageUrl"
+                                :text="form.nickname" :size="150" shape="square" editable :icon-size="48" />
                         </el-upload>
                         <p class="avatar-tip">支持 JPG/PNG，小于 2MB</p>
                     </div>
-                </div>
 
-                <!-- RIGHT COLUMN: Form Fields -->
-                <div class="dialog-right-col">
-                    <el-form ref="formRef" :model="form" :rules="rules" label-width="0" class="upgrade-form"
-                        hide-required-asterisk status-icon>
-
-                        <!-- Hidden avatar field for validation if needed -->
-                        <el-form-item prop="avatar" class="hidden-item" />
-
-                        <div class="form-row">
-                            <el-form-item prop="username" class="form-col">
-                                <span class="input-label">账号</span>
-                                <el-input v-model="form.username" placeholder="设置登录账号" size="large" />
-                            </el-form-item>
-                            <el-form-item prop="nickname" class="form-col">
-                                <span class="input-label">昵称</span>
-                                <el-input v-model="form.nickname" placeholder="设置昵称" size="large" />
-                            </el-form-item>
-                        </div>
-
-                        <el-form-item prop="password">
-                            <span class="input-label">密码</span>
-                            <el-input v-model="form.password" type="password" placeholder="设置登录密码（6-20位）" show-password
-                                size="large" />
+                    <!-- Moved Profile Inputs -->
+                    <div class="left-col-inputs">
+                        <el-form-item prop="nickname">
+                            <span class="input-label">昵称</span>
+                            <el-input v-model="form.nickname" placeholder="设置昵称" size="large" />
                         </el-form-item>
-                        <el-form-item prop="confirmPassword">
-                            <span class="input-label">确认密码</span>
-                            <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" show-password
-                                size="large" />
-                        </el-form-item>
-
                         <el-form-item prop="bio">
                             <span class="input-label">个人简介</span>
                             <el-input v-model="form.bio" type="textarea" :rows="3" placeholder="一句话介绍自己..."
                                 resize="none" size="large" />
                         </el-form-item>
-                    </el-form>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Auth Fields -->
+                <div class="dialog-right-col">
+                    <div class="dialog-header-right">
+                        <h3>升级正式账号</h3>
+                        <p class="subtitle">解锁完整功能体验</p>
+                    </div>
+
+                    <div class="upgrade-form-fields">
+                        <el-form-item prop="avatar" class="hidden-item" />
+
+                        <el-form-item prop="username">
+                            <span class="input-label">账号</span>
+                            <el-input v-model="form.username" placeholder="设置登录账号" size="large" />
+                        </el-form-item>
+
+                        <el-form-item prop="password">
+                            <span class="input-label">密码</span>
+                            <PasswordInput v-model="form.password" placeholder="设置登录密码（6-20位）" size="large" />
+                        </el-form-item>
+                        <el-form-item prop="confirmPassword">
+                            <span class="input-label">确认密码</span>
+                            <PasswordInput v-model="form.confirmPassword" placeholder="再次输入密码" size="large" />
+                        </el-form-item>
+                    </div>
 
                     <div class="dialog-actions">
                         <el-button @click="upgradeDialogVisible = false" class="action-btn cancel-btn"
@@ -292,7 +303,7 @@ const customUploadRequest = async (options: any) => {
                         </el-button>
                     </div>
                 </div>
-            </div>
+            </el-form>
         </el-dialog>
     </div>
 </template>
@@ -442,12 +453,12 @@ html.dark :deep(.ez-modern-dialog) {
 /* --- Dialog Layout: 2-Column Grid --- */
 .dialog-layout-grid {
     display: flex;
-    min-height: 420px;
+    min-height: 500px;
 }
 
 /* Left Column */
 .dialog-left-col {
-    flex: 0 0 260px;
+    flex: 0 0 320px;
     background: var(--bg-fill-1);
     /* Subtle dark/light background */
     border-right: 1px solid var(--border-glass);
@@ -458,11 +469,11 @@ html.dark :deep(.ez-modern-dialog) {
     text-align: center;
 }
 
-.dialog-title-area-left {
-    margin-bottom: 32px;
+.dialog-header-right {
+    margin-bottom: 24px;
 }
 
-.dialog-title-area-left h3 {
+.dialog-header-right h3 {
     font-size: 20px;
     font-weight: 800;
     color: var(--text-900);
@@ -486,9 +497,9 @@ html.dark :deep(.ez-modern-dialog) {
 
 .avatar-preview-lg,
 .placeholder-square-lg {
-    width: 140px;
+    width: 128px;
     /* Larger avatar */
-    height: 140px;
+    height: 128px;
     border-radius: 24px;
     /* Squircle */
     overflow: hidden;
@@ -569,24 +580,6 @@ html.dark :deep(.ez-modern-dialog) {
     z-index: 10;
 }
 
-.close-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-400);
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.close-btn:hover {
-    background: var(--bg-fill-2);
-    color: var(--text-900);
-}
 
 /* Form Styles */
 .upgrade-form {
@@ -667,11 +660,27 @@ html.dark :deep(.ez-modern-dialog) {
 }
 
 .cancel-btn:hover {
-    background: var(--bg-fill-1);
+    background: var(--el-border-color-light);
+    /* 统一交互：类似 Close Button 的 hover */
     color: var(--text-900);
 }
 
 .submit-btn {
     box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+}
+
+.left-col-inputs {
+    width: 100%;
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.upgrade-form-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 </style>

@@ -293,7 +293,11 @@ const handleRegister = async () => {
     <div class="flip-card-back" :class="{ 'has-shadow': active }" @click.stop>
       <div class="register-container">
         <!-- 关闭按钮：点击返回登录面（步骤4除外） -->
-        <el-button v-if="registerStep !== 4" class="close-flip-btn" :icon="Close" circle @click="onUnflip" />
+        <button v-if="registerStep !== 4" class="ez-close-btn close-flip-btn" type="button" @click="onUnflip">
+          <el-icon>
+            <Close />
+          </el-icon>
+        </button>
 
         <!-- 注册头部：进度条和标题 -->
         <div class="register-header">
@@ -329,7 +333,7 @@ const handleRegister = async () => {
                   :on-success="onAvatarSuccess" :before-upload="beforeAvatarUpload">
                   <!-- 已上传头像预览 -->
                   <div v-if="registerForm.avatar.imageThumbUrl" class="avatar-preview-lg"><img
-                    :src="registerForm.avatar.imageThumbUrl" class="avatar-img" />
+                      :src="registerForm.avatar.imageThumbUrl" class="avatar-img" />
                     <div class="edit-mask-lg"><el-icon>
                         <Camera />
                       </el-icon><span>{{ t('common.change') }}</span></div>
@@ -610,21 +614,6 @@ html.dark .has-shadow {
   right: -16px;
   top: -12px;
   z-index: 10;
-  background: var(--bg-page);
-  border: none;
-  color: var(--text-500);
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.close-flip-btn:hover {
-  background: var(--el-border-color-light);
-  color: var(--text-900);
-  transform: rotate(90deg);
 }
 
 .register-header {

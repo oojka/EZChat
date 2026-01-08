@@ -605,7 +605,6 @@ public class ChatServiceImpl implements ChatService {
      * 
      * @see JoinChatReq 加入请求数据对象
      * @see JoinBroadcastVO 加入广播数据对象
-     * @see MessageUtils#setMessage(int, String, Object) 消息封装工具
      * @see WebSocketServer#broadcast(String, List) WebSocket 广播方法
      */
     @Transactional(rollbackFor = Exception.class)

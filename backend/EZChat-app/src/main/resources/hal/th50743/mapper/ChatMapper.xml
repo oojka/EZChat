@@ -15,7 +15,7 @@
                c.join_enabled,
                c.create_time,
                c.update_time,
-               a.asset_name AS avatarObjectName,
+               a.asset_name AS avatarAssetName,
                (SELECT COUNT(*) FROM chat_members cm WHERE cm.chat_id = c.id) member_count
         FROM chats c 
         JOIN users u ON c.owner_id = u.id
@@ -38,7 +38,7 @@
                c.join_enabled,
                c.create_time,
                c.update_time,
-               a.asset_name AS avatarObjectName,
+               a.asset_name AS avatarAssetName,
                (SELECT COUNT(*) FROM chat_members cm WHERE cm.chat_id = c.id) member_count
         FROM chats c 
         JOIN users u ON c.owner_id = u.id

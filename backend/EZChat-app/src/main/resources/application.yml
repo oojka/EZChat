@@ -1,37 +1,90 @@
-#数据库的连接信息
+# ===================================================================
+# Spring Boot 核心与数据源配置
+# ===================================================================
 spring:
   datasource:
+    # 数据库连接 URL
+    # 使用 ${...} 占位符读取环境变量，这是安全且标准的做法，避免代码泄露敏感信息
     url: ${DB_URL}
+    # 数据库驱动全限定名 (MySQL 8.0+ 推荐使用 cj.jdbc.Driver 以支持新特性)
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # 数据库用户名 (通过环境变量注入)
     username: ${DB_USERNAME}
+    # 数据库密码 (通过环境变量注入)
     password: ${DB_PASSWORD}
+
   application:
+    # 应用名称
+    # 用于注册中心服务名、日志文件标识等 (EZ-chat-app: 您的聊天应用名)
     name: EZ-chat-app
+
+  # Servlet 容器配置 (重点关注文件上传限制)
   servlet:
     multipart:
-      #单个文件最大可上传大小
+      # 单个文件的最大上传限制
+      # 如果用户上传的单张图片/文件超过 10MB，后端会直接抛出异常拒绝
       max-file-size: 10MB
-      #最大请求大小（包括所有文件和表单数据）
+      # 单次 HTTP 请求的总大小限制
+      # 包含表单数据和所有文件。例如：一次发送 9 张图，总和不能超过 100MB
       max-request-size: 100MB
 
+# ===================================================================
+# MyBatis ORM 框架配置
+# ===================================================================
 mybatis:
+  # Mapper XML 映射文件的位置
+  # classpath: 指向编译后的 resources 目录；*.xml 匹配该目录下所有 XML 文件
   mapper-locations: classpath:hal/th50743/mapper/*.xml
+
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    #开启驼峰命名映射的开关
+    # SQL 日志实现配置
+    # [重要] 这里被注释掉是正确的 (StdOutImpl)。
+    # 如果开启它，SQL 会强制打印到标准输出，无法通过 logging.level 关闭，容易造成日志刷屏。
+    # 注释掉后，MyBatis 默认适配 SLF4J，由下面的 logging 节点统一控制。
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+    # 开启驼峰命名自动映射 (Map Underscore To Camel Case)
+    # 作用：自动将数据库中的下划线字段 (如: user_id, create_time)
+    #      映射为 Java 实体类的驼峰属性 (如: userId, createTime)
+    # 如果设为 false，则必须在 XML 中手写 ResultMap 才能查出数据
     map-underscore-to-camel-case: true
 
+# ===================================================================
+# 日志级别精细控制
+# ===================================================================
 logging:
   level:
+    # JDBC 事务管理器日志
+    # 设置为 DEBUG 可以看到事务的开启(Creating)、提交(Committing)和回滚(Rolling back)详情
+    # 开发调试时非常有用，能通过它确认 @Transactional 是否生效
+    # 生产环境建议改为 INFO，否则并发高时日志量很大
     org.springframework.jdbc.support.JdbcTransactionManager: debug
 
+# ===================================================================
+# MinIO 对象存储配置 (用于存取聊天图片、头像等)
+# ===================================================================
 minio:
+  # MinIO 服务接口地址 (例如 http://127.0.0.1:9000 或线上域名)
   endpoint: ${OSS_ENDPOINT}
+  # 访问密钥 (Access Key ID)，类似于账号
   accessKey: ${OSS_ACCESS_KEY}
+  # 秘密密钥 (Secret Access Key)，类似于密码
   secretKey: ${OSS_SECRET_KEY}
+  # 存储桶名称 (Bucket)，类似于根文件夹，所有文件都存在这个桶里
   bucketName: ${OSS_BUCKET_NAME}
+  # 自定义路径前缀 (可选，用于在 Bucket 内进一步划分业务目录)
   path: ${OSS_PATH}
 
+# ===================================================================
+# JWT (JSON Web Token) 认证配置
+# ===================================================================
 jwt:
+  # 签名密钥 (Secret)
+  # 服务器用于生成签名和校验 Token 合法性的私钥，绝不能泄露给前端
+  # 建议长度至少 32 字符以保证安全性
   secret: ${JWT_SECRET}
+
+  # Token 过期时间
+  # 单位通常为毫秒 (如 86400000 = 24小时)
+  # 决定了用户登录一次后，多久需要重新登录或刷新 Token
   expiration: ${JWT_EXPIRATION} #24hours

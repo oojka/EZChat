@@ -111,6 +111,15 @@ router.beforeEach(async (to, from) => {
     websocketStore.resetState()
   }
 
+  // 初始化检查（防止页面刷新时丢失状态）
+  // 逻辑：如果去往 /chat 相关页面（需要登录态），且当前 Store 中没有 Token（说明也是刚刷新或未初始化）
+  // 则尝试执行“恢复登录态初始化”
+  if (to.path.startsWith('/chat') && !userStore.hasToken()) {
+    // 这里传入 'refresh' 类型，initializeApp 内部会尝试 restoreLoginUserFromStorage
+    await appStore.initializeApp(undefined, 'refresh')
+    // 如果初始化后还是没 Token（恢复失败），可能会被后续逻辑重定向或在 initializeApp 内处理
+  }
+
   // 如果目标是 /error，显示全白全屏遮蔽（无转圈无文字）
   if (to.name === 'Error' || to.name === 'NotFound') {
     appStore.loadingBgWhite = true

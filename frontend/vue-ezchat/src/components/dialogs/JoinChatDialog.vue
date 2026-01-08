@@ -156,8 +156,8 @@ watch(() => roomStore.joinChatDialogVisible, (newVal) => {
     class="ez-modern-dialog join-dialog-modern" align-center destroy-on-close :show-close="false"
     :close-on-click-modal="false">
     <template #header>
-      <div class="dialog-header-actions">
-        <button v-if="joinStep === 1" class="close-btn" type="button" @click="closeJoinDialog">
+      <div class="ez-dialog-header-actions">
+        <button v-if="joinStep === 1" class="ez-close-btn" type="button" @click="closeJoinDialog">
           <el-icon>
             <Close />
           </el-icon>
@@ -289,37 +289,9 @@ html.dark :deep(.ez-modern-dialog) {
   /* 压缩高度，使其更紧凑 */
 }
 
+
 /* --- Header Actions --- */
-.dialog-header-actions {
-  position: relative;
-  /* 为 absolute close-btn 提供定位锚点 */
-  height: 0;
-}
-
-.close-btn {
-  position: absolute;
-  right: 16px;
-  top: 24px;
-  /* 调整顶部距离 */
-  z-index: 10;
-  background: var(--bg-page);
-  border: none;
-  color: var(--text-500);
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.close-btn:hover {
-  background: var(--el-border-color-light);
-  color: var(--text-900);
-  transform: rotate(90deg);
-}
+/* Uses global .ez-dialog-header-actions and .ez-close-btn */
 
 .dialog-title-area {
   text-align: center;

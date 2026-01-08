@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import MainHeader from '@/views/layout/layout/MainHeader.vue'
 import MainAside from '@/views/layout/layout/MainAside.vue'
-import {useAppStore} from '@/stores/appStore.ts'
-import {onMounted, onUnmounted} from 'vue'
+import { useAppStore } from '@/stores/appStore.ts'
+import { onMounted, onUnmounted } from 'vue'
 
 const appStore = useAppStore()
 const { initializeApp, setFavicon, removeFavicon } = appStore
 
 onMounted(async () => {
-  // 刷新页面时的初始化：由 App.vue 统一展示全局 Loading 遮罩与 Spinner
-  await initializeApp()
+  // 刷新页面时的初始化：由 router.beforeEach 统一处理，组件内只负责 UI 设置
   setFavicon()
 })
 
@@ -48,7 +47,9 @@ onUnmounted(() => {
   background-color: #f4f4f5;
 }
 
-.outer-container { height: 100%; }
+.outer-container {
+  height: 100%;
+}
 
 .header {
   height: 60px;
@@ -60,7 +61,19 @@ onUnmounted(() => {
   background-color: #fff;
 }
 
-.inner-container { height: calc(100vh - 60px); overflow: hidden; }
-.main-content { padding: 0; height: 100%; overflow: hidden; }
-.main-container { height: 100%; width: 100%; }
+.inner-container {
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+.main-content {
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.main-container {
+  height: 100%;
+  width: 100%;
+}
 </style>

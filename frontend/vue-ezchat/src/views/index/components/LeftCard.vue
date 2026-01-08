@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ChatLineRound, Connection, Right, Search, Ticket } from '@element-plus/icons-vue'
+import { ChatLineRound, Connection, Right, Search, Ticket, Close } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useJoinInput } from '@/hooks/chat/join/useJoinInput.ts'
 import { useUserStore } from '@/stores/userStore'
@@ -102,6 +102,11 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
     <!-- 背面 -->
     <div class="flip-card-back" @click.stop>
       <div class="join-form-container">
+        <button class="ez-close-btn close-flip-btn" type="button" @click="onUnflip">
+          <el-icon>
+            <Close />
+          </el-icon>
+        </button>
         <div class="form-header">
           <h4>{{ t('guest.join_title') }}</h4>
         </div>
@@ -137,7 +142,7 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
               :disabled="(!joinChatCredentialsForm.chatCode && !joinChatCredentialsForm.inviteUrl) || isValidating">{{
                 t('guest.join_submit') }}</el-button>
             <el-button @click="onUnflip" class="join-cancel-btn" :disabled="isValidating">{{ t('common.cancel')
-              }}</el-button>
+            }}</el-button>
           </div>
         </el-form>
       </div>
@@ -300,6 +305,13 @@ html.dark .guest-badge {
 
 .huge-icon {
   font-size: 280px;
+}
+
+.close-flip-btn {
+  position: absolute;
+  right: -16px;
+  top: -12px;
+  z-index: 10;
 }
 
 .join-form-container {

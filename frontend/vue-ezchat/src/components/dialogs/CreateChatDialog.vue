@@ -12,6 +12,7 @@ import {
 import { useCreateChat } from '@/hooks/useCreateChat.ts'
 import { storeToRefs } from 'pinia'
 import { useRoomStore } from '@/stores/roomStore.ts'
+import Avatar from '@/components/Avatar.vue'
 import PasswordConfig from '@/components/PasswordConfig.vue'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import { useI18n } from 'vue-i18n'
@@ -64,16 +65,19 @@ const progressPercentage = computed(() => {
 </script>
 
 <template>
-  <el-dialog :model-value="createChatDialogVisible" @update:model-value="handleClose" width="580px"
+  <el-dialog :model-value="createChatDialogVisible" @update:model-value="handleClose" width="520px"
     class="ez-modern-dialog create-dialog-step" align-center destroy-on-close :show-close="false"
     :close-on-click-modal="false">
     <template #header>
       <div class="create-header">
-        <button v-if="createStep !== 4" class="close-btn" type="button" @pointerdown.stop.prevent @click="handleClose">
-          <el-icon>
-            <Close />
-          </el-icon>
-        </button>
+        <div class="ez-dialog-header-actions">
+          <button v-if="createStep !== 4" class="ez-close-btn" type="button" @pointerdown.stop.prevent
+            @click="handleClose">
+            <el-icon>
+              <Close />
+            </el-icon>
+          </button>
+        </div>
         <div class="progress-section">
           <el-progress :percentage="progressPercentage" :show-text="false" :stroke-width="4"
             :status="createStep === 4 ? (createResult.success ? 'success' : 'exception') : ''"
@@ -101,34 +105,15 @@ const progressPercentage = computed(() => {
               <div class="avatar-upload-box">
                 <el-upload class="avatar-uploader-large" action="/api/auth/register/upload" :show-file-list="false"
                   :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload">
-                  <div v-if="createChatForm.avatar.imageThumbUrl" class="avatar-preview-lg">
-                    <img :src="createChatForm.avatar.imageThumbUrl" class="avatar-img" />
-                    <div class="edit-mask-lg">
-                      <el-icon>
-                        <Camera />
-                      </el-icon>
-                      <span>{{ t('common.change') }}</span>
-                    </div>
-                  </div>
-                  <div v-else-if="defaultAvatarUrl" class="avatar-preview-lg">
-                    <img :src="defaultAvatarUrl" class="avatar-img" />
-                    <div class="edit-mask-lg">
-                      <el-icon>
-                        <Camera />
-                      </el-icon>
-                      <span>{{ t('common.change') }}</span>
-                    </div>
-                  </div>
-                  <div v-else class="placeholder-square-lg">
-                    <el-icon size="40">
-                      <Picture />
-                    </el-icon>
-                    <span>{{ t('create_chat.avatar_label') || t('auth.select_image') }}</span>
-                  </div>
+                  <!-- 统一使用 Avatar 组件 -->
+                  <Avatar :thumb-url="createChatForm.avatar.imageThumbUrl || defaultAvatarUrl"
+                    :url="createChatForm.avatar.imageUrl" :text="createChatForm.chatName" :size="150" shape="square"
+                    editable :icon-size="40" />
                 </el-upload>
                 <div class="avatar-info-area">
                   <!-- 点击上传聊天室头像 -->
-                  <p class="step-hint">{{ t('create_chat.avatar_upload_hint') || t('create_chat.avatar_hint') || t('auth.avatar_hint') }}</p>
+                  <p class="step-hint">{{ t('create_chat.avatar_upload_hint') || t('create_chat.avatar_hint') ||
+                    t('auth.avatar_hint') }}</p>
                 </div>
                 <el-form-item prop="avatar" class="hidden-item" :show-message="false" />
               </div>
@@ -281,7 +266,7 @@ html.dark :deep(.ez-modern-dialog) {
 .create-dialog-container {
   position: relative;
   /* header 与内容区域之间增加间距（padding-top），保持呼吸感 */
-  padding: 10px 32px 16px;
+  padding: 10px 24px 16px;
   display: flex;
   flex-direction: column;
   /* 固定高度：再压缩（整体高度更短，但保持"固定不抖动"） */
@@ -289,46 +274,30 @@ html.dark :deep(.ez-modern-dialog) {
   overflow: visible;
 }
 
-.close-btn {
-  position: absolute;
-  /* 关闭按钮：位于 header 内部，提供合适的上/右边距（避免负值溢出导致点击/布局不稳定） */
-  right: 16px;
-  /* 让按钮"中心点"对齐进度条线段（header padding-top=20px，stroke=4px，线段中心≈2px） */
-  top: calc(20px + 2px);
-  transform: translateY(-50%);
-  z-index: 999999;
-  pointer-events: auto;
-  background: var(--bg-page);
-  border: none;
-  color: var(--text-500);
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.close-btn:hover {
-  background: var(--el-border-color-light);
-  color: var(--text-900);
-  transform: translateY(-50%) rotate(90deg);
-}
-
 /* --- Header --- */
 .create-header {
   position: relative;
   text-align: center;
   margin-bottom: 8px;
-  /* 进度条上方留白：让进度条不贴顶 */
-  padding: 20px 32px 0;
+  /* 回归统一视觉：顶部 20px，两侧 24px (标准 ez-dialog 边距) */
+  padding: 20px 24px 0;
+}
+
+/* 覆盖全局位置：为了与顶部 Progress Bar (padding-top: 20px) 对齐
+   Progress Center Y = 20px + 2px = 22px
+   Button Center Y needs 22px -> Top = 22px - 16px = 6px
+   Right = 12px (slightly closer to edge for compact look) */
+.create-header :deep(.ez-dialog-header-actions) {
+  top: 6px;
+  right: 12px;
 }
 
 .progress-section {
   margin-bottom: 8px;
-  padding: 0 40px;
+  /* 增加水平内边距至 56px：
+     CloseBtn Right(12px) + Width(32px) + Gap(12px) = 56px
+     两侧对称缩短，避免进度条与右侧按钮重叠，并保持视觉居中 */
+  padding: 0 56px;
 }
 
 :deep(.custom-progress .el-progress-bar__outer) {

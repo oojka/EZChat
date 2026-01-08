@@ -2,7 +2,7 @@
 import { computed, ref, watchEffect } from 'vue'
 import { Loading, Picture as IconPicture, WarningFilled } from '@element-plus/icons-vue'
 import { ElImageViewer } from 'element-plus'
-import SmartAvatar from '@/components/SmartAvatar.vue'
+import Avatar from '@/components/Avatar.vue'
 import type { ChatRoom, Message, Image } from '@/type'
 import { useUserStore } from '@/stores/userStore.ts'
 import { useImageStore } from '@/stores/imageStore'
@@ -213,7 +213,7 @@ const handleImageError = async (img: Image, idx: number) => {
 
 <template>
   <li class="message-row" :class="{ 'is-me': isMe }">
-    <SmartAvatar class="user-avatar" :size="38" shape="square" :thumb-url="avatarThumbUrl" :url="avatarUrl"
+    <Avatar class="user-avatar" :size="38" shape="square" :thumb-url="avatarThumbUrl" :url="avatarUrl"
       :text="senderInfo?.nickname || '?'" />
 
     <div class="content-wrapper">

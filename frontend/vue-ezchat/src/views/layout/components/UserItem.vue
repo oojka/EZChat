@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {UserFilled} from '@element-plus/icons-vue'
-import SmartAvatar from '@/components/SmartAvatar.vue'
+import { UserFilled } from '@element-plus/icons-vue'
+import Avatar from '@/components/Avatar.vue'
 
 interface Props {
   avatar?: string
@@ -26,26 +26,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-    class="user-item-wrapper"
-    :class="{ 'is-offline': !isOnline, 'is-clickable': clickable }"
-    @click="clickable && emit('click')"
-  >
+  <div class="user-item-wrapper" :class="{ 'is-offline': !isOnline, 'is-clickable': clickable }"
+    @click="clickable && emit('click')">
     <div class="avatar-section">
-      <el-badge
-        is-dot
-        :offset="[-2, 34]"
-        :type="isOnline ? 'success' : 'info'"
-        :disabled="!showBadge"
-      >
-        <SmartAvatar
-          class="user-avatar"
-          :size="40"
-          shape="square"
-          :thumb-url="avatar"
-          :url="avatar"
-          :text="nickname"
-        />
+      <el-badge is-dot :offset="[-2, 34]" :type="isOnline ? 'success' : 'info'" :disabled="!showBadge">
+        <Avatar class="user-avatar" :size="40" shape="square" :thumb-url="avatar" :url="avatar" :text="nickname" />
       </el-badge>
     </div>
 
@@ -147,6 +132,7 @@ const emit = defineEmits<{
 .is-offline .user-avatar {
   filter: saturate(0.5);
 }
+
 .is-offline .nickname {
   color: #94a3b8;
 }

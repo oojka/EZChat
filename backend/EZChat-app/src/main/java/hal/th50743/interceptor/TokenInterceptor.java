@@ -36,13 +36,14 @@ public class TokenInterceptor implements HandlerInterceptor {
      * @throws Exception 可能抛出的异常
      */
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         // 1. 从请求头中获取 "token"
         String token = request.getHeader("token");
 
         // 2. 检查 Token 是否存在
         if (token == null || token.isEmpty()) {
-            log.info("Token 不存在，请求被拒绝");
+            log.info("Token 不存在，来自: {} 的请求被拒绝", request.getRemoteAddr());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
@@ -58,13 +59,13 @@ public class TokenInterceptor implements HandlerInterceptor {
             CurrentHolder.setCurrentId(userId);
         } catch (Exception e) {
             // 如果解析失败（例如 Token 过期、签名不匹配等），则认为 Token 不合法
-            log.info("Token 不合法，请求被拒绝" + e);
+            log.info("Token 验证失败: {}, 请求被拒绝", e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
 
         // 4. Token 验证通过，放行请求
-        log.info("Token 合法，请求放行");
+        // log.info("Token 验证通过, 用户ID: {} 请求放行", CurrentHolder.getCurrentId());
         return true;
     }
 
@@ -74,7 +75,8 @@ public class TokenInterceptor implements HandlerInterceptor {
      * 此方法用于清理 ThreadLocal 中保存的用户信息，防止内存泄漏。
      */
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+            throws Exception {
         // 移除当前线程中存储的用户 ID
         CurrentHolder.remove();
     }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref, watch} from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import dayjs from 'dayjs'
 import isToday from 'dayjs/plugin/isToday'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -7,10 +7,10 @@ import 'dayjs/locale/ja'
 import 'dayjs/locale/zh-cn'
 import 'dayjs/locale/zh-tw'
 import 'dayjs/locale/ko'
-import type {ChatRoom} from '@/type'
-import {useMessageStore} from '@/stores/messageStore.ts'
-import {useI18n} from 'vue-i18n'
-import SmartAvatar from '@/components/SmartAvatar.vue'
+import type { ChatRoom } from '@/type'
+import { useMessageStore } from '@/stores/messageStore.ts'
+import { useI18n } from 'vue-i18n'
+import Avatar from '@/components/Avatar.vue'
 
 const { t, locale } = useI18n()
 const messageStore = useMessageStore()
@@ -59,14 +59,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 <template>
   <div class="chat-item" :class="{ 'is-active': isActive }" :data-chat-code="chat.chatCode">
     <div class="avatar-wrapper">
-      <SmartAvatar
-        class="avatar"
-        :size="50"
-        shape="square"
+      <Avatar class="avatar" :size="50" shape="square"
         :thumb-url="chat.avatar?.blobThumbUrl || chat.avatar?.imageThumbUrl || ''"
-        :url="chat.avatar?.blobUrl || chat.avatar?.imageUrl || ''"
-        :text="chat.chatName"
-      />
+        :url="chat.avatar?.blobUrl || chat.avatar?.imageUrl || ''" :text="chat.chatName" />
     </div>
 
     <div class="info-container">
@@ -87,19 +82,26 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
 <style scoped>
 .chat-item {
-  display: flex; align-items: center; padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer; user-select: none;
+  cursor: pointer;
+  user-select: none;
   border-bottom: 1px solid var(--el-border-color-extra-light);
   background-color: transparent;
   position: relative;
 }
-.chat-item:last-child { border-bottom: none; }
+
+.chat-item:last-child {
+  border-bottom: none;
+}
 
 /* 悬停态：使用半透明叠加，确保在任何背景下都可见 */
 .chat-item:hover {
   background-color: rgba(148, 163, 184, 0.08);
 }
+
 html.dark .chat-item:hover {
   background-color: rgba(255, 255, 255, 0.04);
 }
@@ -122,27 +124,79 @@ html.dark .chat-item:hover {
   box-shadow: 0 0 10px var(--primary);
 }
 
-.avatar-wrapper { margin-right: 12px; flex-shrink: 0; }
+.avatar-wrapper {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
 .avatar {
   border: 1px solid var(--el-border-color-light);
   transition: transform 0.3s ease;
 }
-.chat-item:hover .avatar { transform: scale(1.05); }
 
-.info-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
-.row1, .row2 { display: flex; justify-content: space-between; align-items: center; }
-.row2 { margin-top: 4px; }
+.chat-item:hover .avatar {
+  transform: scale(1.05);
+}
+
+.info-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.row1,
+.row2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.row2 {
+  margin-top: 4px;
+}
 
 .name {
-  font-size: 15px; font-weight: 700; color: var(--text-900);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: color 0.3s ease;
 }
-.chat-item.is-active .name { color: var(--primary); }
 
-.last-active { font-size: 11px; color: var(--text-500); white-space: nowrap; margin-left: 10px; }
-.last-message { font-size: 13px; color: var(--text-400); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+.chat-item.is-active .name {
+  color: var(--primary);
+}
 
-.badge-wrapper { flex-shrink: 0; display: flex; align-items: center; }
-.unread-badge :deep(.el-badge__content) { transform: none; position: static; border: none; font-weight: 800; }
+.last-active {
+  font-size: 11px;
+  color: var(--text-500);
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+.last-message {
+  font-size: 13px;
+  color: var(--text-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.badge-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.unread-badge :deep(.el-badge__content) {
+  transform: none;
+  position: static;
+  border: none;
+  font-weight: 800;
+}
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {useChatMemberList} from '@/hooks/useChatMemberList.ts'
-import ChatMemberListItem from '@/views/chat/components/ChatMemberListItem.vue'
+import ChatMemberItem from '@/views/chat/components/ChatMemberItem.vue'
 import {useI18n} from 'vue-i18n'
 
 const { t } = useI18n()
@@ -12,7 +12,7 @@ const memberListAreaRef = ref<HTMLElement | null>(null)
 
 /**
  * 滚动成员列表到顶部
- * 
+ *
  * 业务目的：
  * - 成员列表加载完成后自动滚动到顶部，确保用户看到列表开头
  */
@@ -40,7 +40,7 @@ defineExpose({
 
     <div class="member-list-area" ref="memberListAreaRef">
       <TransitionGroup name="member-list" tag="div">
-        <ChatMemberListItem v-for="member in sortedChatMemberList" :key="member.uid" :member="member" :is-me="member.uid === loginUserInfo?.uid" />
+        <ChatMemberItem v-for="member in sortedChatMemberList" :key="member.uid" :member="member" :is-me="member.uid === loginUserInfo?.uid" />
       </TransitionGroup>
     </div>
   </div>
