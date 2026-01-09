@@ -1,5 +1,5 @@
 import axios from 'axios'
-import request from '../utils/request'
+import request from '@/utils/request'
 import type { LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginForm, Image } from '@/type'
 
 /**
@@ -85,7 +85,7 @@ export const uploadAvatarApi = (
 ): Promise<Result<Image>> => {
   const formData = new FormData()
   formData.append('file', file)
-  
+
   return request.post('/auth/register/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'

@@ -1,4 +1,4 @@
-import request from '../utils/request'
+import request from '@/utils/request'
 import { type LoginUserInfo, type Result, type RegisterInfo, type LoginUser } from '@/type'
 
 /**

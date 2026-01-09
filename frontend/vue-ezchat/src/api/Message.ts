@@ -1,5 +1,5 @@
 import type { ChatRoom, Message, Result, Image } from '@/type'
-import request from '@/utils/request.ts'
+import request from '@/utils/request'
 
 export type GetMessageListApiReq = {
   chatCode: string

@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import {type AppInitInfo, type Result} from '@/type'
+import type { AppInitInfo, Result } from '@/type'
 
 /**
  * 获取应用初始化数据（房间列表、在线状态列表等）
