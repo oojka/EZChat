@@ -119,6 +119,26 @@ export type ChatMember = {
   lastSeenAt: string
 }
 
+export type ChatInvite = {
+  id: number
+  inviteCode: string
+  expiresAt: string
+  maxUses: number
+  usedCount: number
+  createTime: string
+}
+
+export type ChatInviteCreateReq = {
+  joinLinkExpiryMinutes: number
+  maxUses: 0 | 1
+}
+
+export type ChatPasswordUpdateReq = {
+  joinEnableByPassword: 0 | 1
+  password: string
+  passwordConfirm: string
+}
+
 /**
  * 创建房间返回（后端 CreateChatVO）
  */
@@ -241,8 +261,30 @@ export type UserStatus = {
   updateTime: string
 }
 
+export type MemberLeaveBroadcastPayload = {
+  chatCode: string
+  uid: string
+  nickname: string
+  leftAt: string
+}
+
+export type OwnerTransferBroadcastPayload = {
+  chatCode: string
+  oldOwnerUid: string
+  newOwnerUid: string
+  newOwnerNickname: string
+  transferredAt: string
+}
+
+export type RoomDisbandBroadcastPayload = {
+  chatCode: string
+  operatorUid: string
+  operatorNickname: string
+  disbandAt: string
+}
+
 export type WebSocketResult = {
-  code?: number        // 新增状态码: 1001=Message, 2001=Status, 2002=ACK, 3001=MemberJoin
+  code?: number        // 新增状态码: 1001=Message, 2001=Status, 2002=ACK, 3001=MemberJoin, 3002=MemberLeave, 3003=OwnerTransfer, 3004=RoomDisband
   isSystemMessage: 0 | 1
   type: string
   data: unknown
@@ -303,4 +345,3 @@ export type RetryableRequestConfig = InternalAxiosRequestConfig & {
  * 业务错误码的联合类型（字符串或数字）
  */
 export type ErrorCodeValue = string | number
-

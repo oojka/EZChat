@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import {Moon, Operation, Setting, Sunny, SwitchButton} from '@element-plus/icons-vue'
-import {useUserStore} from '@/stores/userStore.ts'
-import {useAppStore} from '@/stores/appStore.ts'
-import {storeToRefs} from 'pinia'
-import {useWebsocketStore} from '@/stores/websocketStore.ts'
+import { Moon, Operation, Setting, Sunny, SwitchButton } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/userStore.ts'
+import { useAppStore } from '@/stores/appStore.ts'
+import { storeToRefs } from 'pinia'
+import { useWebsocketStore } from '@/stores/websocketStore.ts'
 import AppLogo from '@/components/AppLogo.vue'
-import {useRouter} from 'vue-router'
-import {showConfirmDialog} from '@/components/dialogs/confirmDialog.ts'
-import {useI18n} from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { showConfirmDialog } from '@/components/dialogs/confirmDialog.ts'
+import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()
 const userStore = useUserStore()
@@ -20,9 +20,9 @@ const router = useRouter()
 
 const handleLogout = () => {
   showConfirmDialog({
-    title: t('common.confirm'),
-    message: t('auth.logout_confirm'),
-    confirmText: t('auth.logout'),
+    title: 'common.confirm',
+    message: 'auth.logout_confirm',
+    confirmText: 'auth.logout',
     type: 'danger',
     onConfirm: () => {
       userStore.logout()
@@ -51,10 +51,12 @@ const currentLangCode = {
       </el-tooltip>
 
       <!-- 2. 语言切换 -->
-      <el-dropdown trigger="click" @command="appStore.changeLanguage" placement="bottom-end" popper-class="ez-header-popper">
+      <el-dropdown trigger="click" @command="appStore.changeLanguage" placement="bottom-end"
+        popper-class="ez-header-popper">
         <div class="action-icon-btn">
           <Transition name="el-fade-in-linear" mode="out-in">
-            <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode] }}</span>
+            <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode]
+              }}</span>
           </Transition>
         </div>
         <template #dropdown>
@@ -71,7 +73,10 @@ const currentLangCode = {
       <!-- 3. 夜间模式切换 -->
       <div class="action-icon-btn" @click="appStore.toggleTheme">
         <div class="theme-toggle-inner" :class="{ 'is-dark': isDark }">
-          <el-icon><Sunny v-if="!isDark" /><Moon v-else /></el-icon>
+          <el-icon>
+            <Sunny v-if="!isDark" />
+            <Moon v-else />
+          </el-icon>
         </div>
       </div>
 
@@ -93,46 +98,104 @@ const currentLangCode = {
 
 <style scoped>
 .header-container {
-  width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   background-color: var(--primary-light);
-  padding: 0 24px; box-sizing: border-box;
+  padding: 0 24px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--el-border-color-light);
   transition: all 0.4s var(--ease-out-expo);
 }
 
-.header-left { display: flex; align-items: center; }
-.header-right { display: flex; align-items: center; gap: 12px; }
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 .ws-status-container {
-  display: flex; align-items: center; gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background-color: var(--bg-card);
   padding: 4px 12px;
   border-radius: var(--radius-base);
   border: 1px solid var(--el-border-color-light);
   transition: all 0.3s ease;
 }
+
 html.dark .ws-status-container {
   background-color: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.05);
 }
 
-.status-dot { width: 8px; height: 8px; border-radius: 50%; transition: background-color 0.3s ease, box-shadow 0.3s ease; }
-html.dark .status-dot { box-shadow: 0 0 8px currentColor; }
-.status-text { font-size: 12px; font-weight: 700; letter-spacing: 0.2px; }
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+html.dark .status-dot {
+  box-shadow: 0 0 8px currentColor;
+}
+
+.status-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
 
 .action-icon-btn {
-  cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-sm); background: var(--bg-glass);
-  transition: all 0.3s var(--ease-out-expo); backdrop-filter: blur(4px);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  transition: all 0.3s var(--ease-out-expo);
+  backdrop-filter: blur(4px);
   color: var(--text-500);
   border: 1px solid var(--border-glass);
 }
-.action-icon-btn:hover { background-color: var(--bg-card); transform: translateY(-1px); color: var(--primary); border-color: var(--primary); }
-html.dark .action-icon-btn:hover { box-shadow: 0 0 12px rgba(77, 171, 255, 0.2); }
 
-.lang-code-text { font-size: 12px; font-weight: 900; font-family: 'Inter', sans-serif; }
-.theme-toggle-inner { display: flex; align-items: center; justify-content: center; transition: transform 0.5s var(--ease-out-expo); }
-.theme-toggle-inner.is-dark { transform: rotate(360deg); }
+.action-icon-btn:hover {
+  background-color: var(--bg-card);
+  transform: translateY(-1px);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+html.dark .action-icon-btn:hover {
+  box-shadow: 0 0 12px rgba(77, 171, 255, 0.2);
+}
+
+.lang-code-text {
+  font-size: 12px;
+  font-weight: 900;
+  font-family: 'Inter', sans-serif;
+}
+
+.theme-toggle-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.5s var(--ease-out-expo);
+}
+
+.theme-toggle-inner.is-dark {
+  transform: rotate(360deg);
+}
 
 .setting-btn {
   border: 1px solid var(--border-glass);
@@ -140,29 +203,70 @@ html.dark .action-icon-btn:hover { box-shadow: 0 0 12px rgba(77, 171, 255, 0.2);
   color: var(--text-500);
   font-size: 18px;
   transition: all 0.4s var(--ease-out-expo);
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
   border-radius: var(--radius-sm);
   padding: 0;
 }
-.setting-btn:hover { background-color: var(--bg-card); color: var(--primary); transform: rotate(90deg); border-color: var(--primary); }
-html.dark .setting-btn:hover { box-shadow: 0 0 12px rgba(77, 171, 255, 0.2); }
+
+.setting-btn:hover {
+  background-color: var(--bg-card);
+  color: var(--primary);
+  transform: rotate(90deg);
+  border-color: var(--primary);
+}
+
+html.dark .setting-btn:hover {
+  box-shadow: 0 0 12px rgba(77, 171, 255, 0.2);
+}
 </style>
 
 <style>
-.el-popper.ez-header-popper { background: transparent !important; border: none !important; box-shadow: none !important; }
-.el-popper.ez-header-popper .el-popper__arrow::before { background: var(--bg-card) !important; border: 1px solid var(--border-glass) !important; }
+.el-popper.ez-header-popper {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.el-popper.ez-header-popper .el-popper__arrow::before {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-glass) !important;
+}
 
 .ez-dropdown-menu {
-  border-radius: var(--radius-base) !important; padding: 6px !important;
+  border-radius: var(--radius-base) !important;
+  padding: 6px !important;
   border: 1px solid var(--border-glass) !important;
   background: var(--bg-card) !important;
   backdrop-filter: blur(10px) !important;
   box-shadow: var(--shadow-glass) !important;
   outline: none !important;
 }
-.ez-dropdown-menu .el-dropdown-menu__item { border-radius: var(--radius-sm) !important; padding: 8px 16px !important; font-weight: 600 !important; font-size: 13px !important; color: var(--text-700) !important; outline: none !important; }
-.ez-dropdown-menu .el-dropdown-menu__item:hover { background-color: var(--bg-page) !important; color: var(--primary) !important; }
-.ez-dropdown-menu .el-dropdown-menu__item.danger-item { color: var(--text-500) !important; }
-.ez-dropdown-menu .el-dropdown-menu__item.danger-item:hover { color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.1) !important; }
+
+.ez-dropdown-menu .el-dropdown-menu__item {
+  border-radius: var(--radius-sm) !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  color: var(--text-700) !important;
+  outline: none !important;
+}
+
+.ez-dropdown-menu .el-dropdown-menu__item:hover {
+  background-color: var(--bg-page) !important;
+  color: var(--primary) !important;
+}
+
+.ez-dropdown-menu .el-dropdown-menu__item.danger-item {
+  color: var(--text-500) !important;
+}
+
+.ez-dropdown-menu .el-dropdown-menu__item.danger-item:hover {
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
 </style>

@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { ChatMember, ChatRoom, CreateChatVO, Image, JoinChatReq, LoginUser, Result } from '@/type'
+import type { ChatInvite, ChatInviteCreateReq, ChatMember, ChatRoom, ChatPasswordUpdateReq, CreateChatVO, Image, JoinChatReq, LoginUser, Result } from '@/type'
 
 
 /**
@@ -46,3 +46,51 @@ export const createChatApi = (payload: {
  */
 export const joinChatApi = (req: JoinChatReq): Promise<Result<null>> =>
   request.post('/chat/join', req)
+
+/**
+ * 退出聊天室
+ *
+ * - 后端接口：POST `/chat/{chatCode}/leave`
+ */
+export const leaveChatApi = (chatCode: string): Promise<Result<null>> =>
+  request.post(`/chat/${chatCode}/leave`)
+
+/**
+ * 解散聊天室（群主）
+ *
+ * - 后端接口：POST `/chat/{chatCode}/disband`
+ */
+export const disbandChatApi = (chatCode: string): Promise<Result<null>> =>
+  request.post(`/chat/${chatCode}/disband`)
+
+/**
+ * 更新聊天室密码（群主）
+ *
+ * - 后端接口：POST `/chat/{chatCode}/password`
+ */
+export const updateChatPasswordApi = (chatCode: string, payload: ChatPasswordUpdateReq): Promise<Result<null>> =>
+  request.post(`/chat/${chatCode}/password`, payload)
+
+/**
+ * 获取聊天室有效邀请链接列表（群主）
+ *
+ * - 后端接口：GET `/chat/{chatCode}/invites`
+ */
+export const getChatInvitesApi = (chatCode: string): Promise<Result<ChatInvite[]>> =>
+  request.get(`/chat/${chatCode}/invites`)
+
+/**
+ * 创建新的邀请链接（群主）
+ *
+ * - 后端接口：POST `/chat/{chatCode}/invites`
+ */
+export const createChatInviteApi = (chatCode: string, payload: ChatInviteCreateReq): Promise<Result<ChatInvite>> =>
+  request.post(`/chat/${chatCode}/invites`, payload)
+
+/**
+ * 撤销邀请链接（群主）
+ *
+ * - 后端接口：DELETE `/chat/{chatCode}/invites/{inviteId}`
+ */
+export const revokeChatInviteApi = (chatCode: string, inviteId: number): Promise<Result<null>> =>
+  request.delete(`/chat/${chatCode}/invites/${inviteId}`)

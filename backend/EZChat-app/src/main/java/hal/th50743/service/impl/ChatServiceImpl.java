@@ -18,6 +18,7 @@ import hal.th50743.utils.*; // 项目工具类（密码、邀请码、消息、�
 // 服务层接口
 import hal.th50743.service.ChatService; // 聊天服务接口
 import hal.th50743.service.AssetService; // 资源文件服务接口
+import hal.th50743.service.ChatInviteService; // 邀请链接管理服务接口
 
 // WebSocket 相关
 import hal.th50743.ws.WebSocketServer; // WebSocket 服务端点
@@ -103,6 +104,9 @@ public class ChatServiceImpl implements ChatService {
 
     /** 资源文件服务 - 负责图片等资源的存储和管理 */
     private final AssetService assetService;
+
+    /** 邀请链接管理服务 - 负责邀请链接创建与管理 */
+    private final ChatInviteService chatInviteService;
 
     /** 聊天数据组装器 - 负责将原始数据组装为前端需要的 VO 对象 */
     private final ChatAssembler chatAssembler;
@@ -784,7 +788,7 @@ public class ChatServiceImpl implements ChatService {
      * <h3>邀请码配置</h3>
      * <ul>
      * <li><b>长度</b>：18位字符（字母数字）</li>
-     * <li><b>存储</b>：存储 SHA256 哈希值，不存储明文</li>
+     * <li><b>存储</b>：存储 SHA256 哈希值，同时保留明文用于管理</li>
      * <li><b>有效期</b>：默认7天（10080分钟），可自定义</li>
      * <li><b>使用次数</b>：0表示无限次，1表示一次性使用</li>
      * </ul>
@@ -890,34 +894,13 @@ public class ChatServiceImpl implements ChatService {
         chatMemberMapper.insertChatMember(chatId, userId, now); // 添加创建者为第一个成员
 
         // ========== 步骤7: 生成邀请码 ==========
-        // 7.1 计算邀请码有效期（默认7天：10080分钟）
-        int expiryMinutes = chatReq.getJoinLinkExpiryMinutes() == null ? 10080 : chatReq.getJoinLinkExpiryMinutes();
-        LocalDateTime expiresAt = now.plusMinutes(Math.max(1, expiryMinutes)); // 至少1分钟
-
-        // 7.2 设置使用次数限制（0=无限次，1=一次性）
-        int maxUses = chatReq.getMaxUses() == null ? 0 : chatReq.getMaxUses();
-        if (maxUses != 0 && maxUses != 1) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "maxUses must be 0 or 1");
-        }
-
-        // 7.3 生成邀请码并计算哈希值
-        String inviteCode = InviteCodeUtils.generateInviteCode(18); // 18位邀请码
-        String codeHash = InviteCodeUtils.sha256Hex(inviteCode); // SHA256 哈希
-
-        // 7.4 创建邀请码记录
-        ChatInvite invite = new ChatInvite(
-                null, // ID（自增）
-                chatId, // 聊天室ID
-                codeHash, // 邀请码哈希值
-                expiresAt, // 过期时间
-                maxUses, // 最大使用次数
-                0, // 已使用次数（初始为0）
-                0, // 是否撤销（0=未撤销）
-                userId, // 创建者用户ID
-                null, // 创建时间（数据库默认值）
-                null); // 更新时间（数据库默认值）
-
-        chatInviteMapper.insertChatInvite(invite); // 插入数据库
+        ChatInviteVO invite = chatInviteService.createInviteForChatId(
+                userId,
+                chatId,
+                chatReq.getJoinLinkExpiryMinutes(),
+                chatReq.getMaxUses()
+        );
+        String inviteCode = invite.inviteCode();
 
         // ========== 步骤8: 插入系统消息 ==========
         // 8.1 初始化聊天室消息序列号（首条消息 seqId = 1）
@@ -1254,6 +1237,291 @@ public class ChatServiceImpl implements ChatService {
 
         // ========== 步骤7: 返回聊天室信息 ==========
         return info;
+    }
+
+    /**
+     * 用户退出聊天室
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void leaveChat(Integer userId, String chatCode) {
+        if (userId == null || chatCode == null || chatCode.isBlank()) {
+            log.warn("[Leave Chat] Invalid params: userId={}, chatCode={}", userId, chatCode);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Chat code is required");
+        }
+
+        // 1) 校验聊天室存在且用户为成员
+        Integer chatId = getChatId(userId, chatCode);
+
+        // 2) 获取群主信息
+        Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
+        if (ownerId == null) {
+            log.error("[Leave Chat] Chat owner not found: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Chat owner not found");
+        }
+
+        // 3) 获取成员列表（用于广播与转让逻辑）
+        List<ChatMember> members = chatMemberMapper.selectChatMemberListByChatId(chatId);
+        if (members == null || members.isEmpty()) {
+            log.error("[Leave Chat] Members not found: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+        List<Integer> memberIds = members.stream().map(ChatMember::getUserId).collect(Collectors.toList());
+
+        // 4) 获取用户信息
+        User user = userMapper.selectUserById(userId);
+        if (user == null) {
+            log.error("[Leave Chat] User not found: userId={}", userId);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // 5) 群主退群：转让或解散
+        if (Objects.equals(ownerId, userId)) {
+            if (members.size() <= 1) {
+                // 仅剩群主一人，直接解散
+                disbandChatInternal(user, chatCode, chatId, memberIds, now);
+                return;
+            }
+
+            ChatMember nextOwner = members.stream()
+                    .filter(m -> !Objects.equals(m.getUserId(), userId))
+                    .min(Comparator.comparing(ChatMember::getCreateTime,
+                            Comparator.nullsLast(Comparator.naturalOrder())))
+                    .orElse(null);
+            if (nextOwner == null || nextOwner.getUserId() == null) {
+                log.error("[Leave Chat] No available member for owner transfer: chatId={}", chatId);
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "No available member for owner transfer");
+            }
+
+            // 5.1 转让群主
+            chatMapper.updateChatOwner(chatId, nextOwner.getUserId());
+
+            // 5.2 移除群主成员关系
+            int removed = chatMemberMapper.deleteChatMember(chatId, userId);
+            if (removed <= 0) {
+                log.warn("[Leave Chat] Remove member failed: chatId={}, userId={}", chatId, userId);
+            }
+
+            // 5.3 广播退群与转让事件
+            broadcastMemberLeave(user, chatCode, chatId, memberIds, now);
+            broadcastOwnerTransfer(user, nextOwner, chatCode, memberIds, now);
+
+            log.info("[Leave Chat] Owner left and transferred: chatId={}, oldOwnerId={}, newOwnerId={}",
+                    chatId, userId, nextOwner.getUserId());
+            return;
+        }
+
+        // 6) 普通成员退群
+        int removed = chatMemberMapper.deleteChatMember(chatId, userId);
+        if (removed <= 0) {
+            log.warn("[Leave Chat] Remove member failed: chatId={}, userId={}", chatId, userId);
+        }
+        broadcastMemberLeave(user, chatCode, chatId, memberIds, now);
+
+        log.info("[Leave Chat] Member left: chatId={}, userId={}", chatId, userId);
+    }
+
+    /**
+     * 解散聊天室（仅群主可执行）
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void disbandChat(Integer userId, String chatCode) {
+        if (userId == null || chatCode == null || chatCode.isBlank()) {
+            log.warn("[Disband Chat] Invalid params: userId={}, chatCode={}", userId, chatCode);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Chat code is required");
+        }
+
+        Integer chatId = getChatId(userId, chatCode);
+        Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
+        if (!Objects.equals(ownerId, userId)) {
+            log.warn("[Disband Chat] Permission denied: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only owner can disband chat");
+        }
+
+        User user = userMapper.selectUserById(userId);
+        if (user == null) {
+            log.error("[Disband Chat] User not found: userId={}", userId);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+
+        List<ChatMember> members = chatMemberMapper.selectChatMemberListByChatId(chatId);
+        List<Integer> memberIds = members == null ? Collections.emptyList()
+                : members.stream().map(ChatMember::getUserId).collect(Collectors.toList());
+
+        disbandChatInternal(user, chatCode, chatId, memberIds, LocalDateTime.now());
+    }
+
+    /**
+     * 更新聊天室密码（仅群主可执行）
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req      密码更新请求
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateChatPassword(Integer userId, String chatCode, ChatPasswordUpdateReq req) {
+        if (userId == null || chatCode == null || chatCode.isBlank()) {
+            log.warn("[Chat Password] Invalid params: userId={}, chatCode={}", userId, chatCode);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Chat code is required");
+        }
+
+        Integer chatId = getChatId(userId, chatCode);
+        Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
+        if (ownerId == null) {
+            log.error("[Chat Password] Chat owner not found: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Chat owner not found");
+        }
+        if (!Objects.equals(ownerId, userId)) {
+            log.warn("[Chat Password] Permission denied: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only owner can update password");
+        }
+
+        if (req == null) {
+            log.warn("[Chat Password] Request body missing: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
+        }
+
+        Integer joinEnableByPassword = req.getJoinEnableByPassword();
+        String passwordHash = null;
+
+        if (joinEnableByPassword == null || joinEnableByPassword == 0) {
+            chatMapper.updateChatPassword(chatId, null);
+            log.info("[Chat Password] Disabled: chatId={}, userId={}", chatId, userId);
+            return;
+        }
+
+        String password = req.getPassword();
+        String confirm = req.getPasswordConfirm();
+        if (password == null || password.isBlank()) {
+            log.warn("[Chat Password] Password required: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.PASSWORD_REQUIRED, "Password is required");
+        }
+        if (confirm == null || confirm.isBlank()) {
+            log.warn("[Chat Password] Password confirm required: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Password confirm is required");
+        }
+        if (!password.equals(confirm)) {
+            log.warn("[Chat Password] Password mismatch: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Password confirm mismatch");
+        }
+
+        passwordHash = PasswordUtils.encode(password);
+        chatMapper.updateChatPassword(chatId, passwordHash);
+        log.info("[Chat Password] Updated: chatId={}, userId={}", chatId, userId);
+    }
+
+    /**
+     * 解散聊天室（内部实现）
+     *
+     * @param operator  操作人信息
+     * @param chatCode  聊天室代码
+     * @param chatId    聊天室ID
+     * @param memberIds 成员ID列表（用于广播）
+     * @param now       当前时间
+     */
+    private void disbandChatInternal(User operator, String chatCode, Integer chatId,
+            List<Integer> memberIds, LocalDateTime now) {
+        // 1) 清理聊天室相关数据
+        chatInviteMapper.deleteByChatId(chatId);
+        messageMapper.deleteMessagesByChatId(chatId);
+        messageMapper.deleteChatSequence(chatId);
+        chatMemberMapper.deleteChatMembersByChatId(chatId);
+        chatMapper.deleteChatById(chatId);
+
+        // 2) 广播解散事件
+        String nickname = operator.getNickname() != null ? operator.getNickname() : "Unknown";
+        RoomDisbandBroadcastVO payload = new RoomDisbandBroadcastVO(
+                chatCode, operator.getUid(), nickname, now);
+        String jsonMsg = MessageUtils.setMessage(3004, "ROOM_DISBAND", payload);
+        WebSocketServer.broadcast(jsonMsg, memberIds);
+
+        log.info("[Disband Chat] Chat disbanded: chatId={}, operatorId={}", chatId, operator.getId());
+    }
+
+    /**
+     * 广播成员退群事件并写入系统消息
+     *
+     * @param user      退群用户
+     * @param chatCode  聊天室代码
+     * @param chatId    聊天室ID
+     * @param memberIds 广播目标成员ID列表
+     * @param now       当前时间
+     */
+    private void broadcastMemberLeave(User user, String chatCode, Integer chatId,
+            List<Integer> memberIds, LocalDateTime now) {
+        String displayName = buildDisplayName(user);
+
+        // 1) 写入系统消息（Type 12: 成员退群）
+        messageMapper.updateChatSequence(chatId);
+        Long seqId = messageMapper.selectCurrentSequence(chatId);
+        Message sysMsg = new Message();
+        sysMsg.setChatId(chatId);
+        sysMsg.setSenderId(user.getId());
+        sysMsg.setSeqId(seqId);
+        sysMsg.setType(12);
+        sysMsg.setText(displayName);
+        sysMsg.setAssetIds("");
+        sysMsg.setCreateTime(now);
+        sysMsg.setUpdateTime(now);
+        messageMapper.insertMessage(sysMsg);
+
+        // 2) 广播消息给前端渲染
+        MessageVO messageVO = new MessageVO(user.getUid(), chatCode, seqId, 12,
+                displayName, "", Collections.emptyList(), now);
+        String messageJson = MessageUtils.setMessage(1001, "MESSAGE", messageVO);
+        WebSocketServer.broadcast(messageJson, memberIds);
+
+        // 3) 广播成员变更事件（用于更新成员列表）
+        MemberLeaveBroadcastVO leaveVO = new MemberLeaveBroadcastVO(
+                chatCode, user.getUid(), displayName, now);
+        String leaveJson = MessageUtils.setMessage(3002, "MEMBER_LEAVE", leaveVO);
+        WebSocketServer.broadcast(leaveJson, memberIds);
+    }
+
+    /**
+     * 广播群主转让事件
+     *
+     * @param oldOwner  原群主
+     * @param newOwner  新群主成员信息
+     * @param chatCode  聊天室代码
+     * @param memberIds 广播目标成员ID列表
+     * @param now       当前时间
+     */
+    private void broadcastOwnerTransfer(User oldOwner, ChatMember newOwner, String chatCode,
+            List<Integer> memberIds, LocalDateTime now) {
+        String newOwnerNickname = newOwner.getNickname() != null ? newOwner.getNickname() : "Unknown";
+        OwnerTransferBroadcastVO payload = new OwnerTransferBroadcastVO(
+                chatCode,
+                oldOwner.getUid(),
+                newOwner.getUid(),
+                newOwnerNickname,
+                now);
+        String jsonMsg = MessageUtils.setMessage(3003, "OWNER_TRANSFER", payload);
+        WebSocketServer.broadcast(jsonMsg, memberIds);
+    }
+
+    /**
+     * 生成成员显示名（区分访客与正式用户）
+     *
+     * @param user 用户信息
+     * @return 显示名称
+     */
+    private String buildDisplayName(User user) {
+        String nickname = user.getNickname() != null ? user.getNickname() : "Unknown";
+        if (user.getUsername() == null) {
+            return "[Guest] " + nickname;
+        }
+        return nickname;
     }
 
 }

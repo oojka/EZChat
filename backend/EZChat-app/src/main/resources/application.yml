@@ -85,6 +85,6 @@ jwt:
   secret: ${JWT_SECRET}
 
   token:
-    access-expire-minutes: 1
+    access-expire-minutes: 5
     formal-refresh-expire-minutes: 10080 # 7 days
     guest-refresh-expire-minutes: 1440 # 1 day

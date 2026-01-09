@@ -120,6 +120,7 @@ DROP TABLE IF EXISTS `chat_invites`;
 CREATE TABLE `chat_invites` (
                                 `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                                 `chat_id`     INT UNSIGNED NOT NULL COMMENT '关联chats表主键',
+                                `invite_code` VARCHAR(24) NOT NULL COMMENT '邀请码明文',
                                 `code_hash`   CHAR(64) NOT NULL,
                                 `expires_at`  DATETIME NOT NULL,
                                 `max_uses`    INT UNSIGNED DEFAULT 0 NOT NULL,

@@ -93,4 +93,18 @@ public interface MessageMapper {
      */
     List<MessageVO> selectMessagesAfterSeqId(@Param("chatId") Integer chatId, @Param("lastSeqId") Long lastSeqId);
 
+    /**
+     * 删除聊天室全部消息
+     *
+     * @param chatId 聊天室ID
+     */
+    void deleteMessagesByChatId(@Param("chatId") Integer chatId);
+
+    /**
+     * 删除聊天室序列号记录
+     *
+     * @param chatId 聊天室ID
+     */
+    void deleteChatSequence(@Param("chatId") Integer chatId);
+
 }

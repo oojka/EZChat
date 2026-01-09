@@ -72,4 +72,35 @@ public interface ChatMapper {
      * @return 聊天室ID
      */
     Integer selectChatIdByInviteCodeHash(String codeHash);
+
+    /**
+     * 获取聊天室群主ID
+     *
+     * @param chatId 聊天室ID
+     * @return 群主用户ID
+     */
+    Integer selectOwnerIdByChatId(Integer chatId);
+
+    /**
+     * 更新聊天室群主
+     *
+     * @param chatId  聊天室ID
+     * @param ownerId 新群主用户ID
+     */
+    void updateChatOwner(Integer chatId, Integer ownerId);
+
+    /**
+     * 更新聊天室密码哈希
+     *
+     * @param chatId 聊天室ID
+     * @param passwordHash 密码哈希（null 表示关闭密码）
+     */
+    void updateChatPassword(Integer chatId, String passwordHash);
+
+    /**
+     * 删除聊天室
+     *
+     * @param chatId 聊天室ID
+     */
+    void deleteChatById(Integer chatId);
 }

@@ -4,10 +4,13 @@ import { useRoomStore } from '@/stores/roomStore.ts'
 import { InfoFilled, MoreFilled } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'
 import { useI18n } from 'vue-i18n'
+import { useChatRoomActions } from '@/composables/useChatRoomActions'
+import RoomSettingsDialog from '@/components/dialogs/RoomSettingsDialog.vue'
 
 const { t } = useI18n()
 const roomStore = useRoomStore()
-const { currentRoom } = storeToRefs(roomStore)
+const { currentRoom, roomSettingsDialogVisible } = storeToRefs(roomStore)
+const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatRoomActions()
 </script>
 
 <template>
@@ -37,13 +40,30 @@ const { currentRoom } = storeToRefs(roomStore)
             </el-icon></div>
         </el-tooltip>
         <el-tooltip :content="t('common.menu')" placement="bottom" :show-after="300">
-          <div class="action-btn"><el-icon>
-              <MoreFilled />
-            </el-icon></div>
+          <el-dropdown trigger="click" placement="bottom-end">
+            <div class="action-btn"><el-icon>
+                <MoreFilled />
+              </el-icon></div>
+            <template #dropdown>
+              <el-dropdown-menu class="ez-dropdown-menu">
+                <el-dropdown-item v-if="isOwner" @click="roomSettingsDialogVisible = true">
+                  {{ t('chat.room_info') }}
+                </el-dropdown-item>
+                <el-dropdown-item v-if="canLeave" @click="confirmLeave">
+                  {{ t('chat.leave_room') }}
+                </el-dropdown-item>
+                <el-dropdown-item v-if="canDisband" divided class="danger-item" @click="confirmDisband">
+                  {{ t('chat.disband_room') }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </el-tooltip>
       </div>
     </div>
   </div>
+
+  <RoomSettingsDialog v-if="roomSettingsDialogVisible" />
 </template>
 
 <style scoped>

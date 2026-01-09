@@ -156,9 +156,9 @@ const progressPercentage = computed(() => {
 
               <!-- 创建成功：展示 chatCode + 邀请链接（可滚动区域） -->
               <div v-if="createResult.success && createResult.chatCode" class="result-details">
-                <div class="invite-block">
+                <div class="invite-block" style="margin-top: 30px;">
                   <!-- roomId：主视觉（大号数字） -->
-                  <div class="credential-label" style="margin-top: 30px;">{{ tf('chat.room_id', '房间ID') }}</div>
+                  <div class="credential-label">{{ tf('chat.room_id', '房间ID') }}</div>
                   <div class="credential-roomid-row">
                     <div class="credential-roomid-value">{{ roomIdDisplay }}</div>
                     <el-tooltip :content="tf('common.copy', '复制')" placement="top">

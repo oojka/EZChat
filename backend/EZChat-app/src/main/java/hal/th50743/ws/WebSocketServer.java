@@ -27,7 +27,6 @@ import io.jsonwebtoken.ExpiredJwtException; // JWT 过期异常
 
 // WebSocket 相关
 import jakarta.websocket.*; // WebSocket 核心注解
-import jakarta.websocket.server.PathParam; // 路径参数注解
 import jakarta.websocket.server.ServerEndpoint; // WebSocket 服务端点注解
 
 // Lombok 日志
@@ -82,7 +81,7 @@ import java.util.concurrent.*; // 并发工具包
  * @see org.springframework.stereotype.Component
  */
 @Slf4j
-@ServerEndpoint(value = "/websocket/{token}")
+@ServerEndpoint(value = "/websocket")
 @Component
 public class WebSocketServer {
 
@@ -220,9 +219,12 @@ public class WebSocketServer {
      * <b>安全考虑</b>：Token 过期会返回 4001 状态码，认证失败返回 4002 状态码，
      * 前端可根据状态码进行相应的错误处理。
      * </p>
+     *
+     * <p>
+     * <b>鉴权方式</b>：Token 通过查询参数 token 传递。
+     * </p>
      * 
      * @param session WebSocket 会话对象，包含连接信息和通信通道
-     * @param token   JWT 认证令牌，从路径参数中获取
      * @throws ExpiredJwtException Token 过期异常
      * @throws Exception           其他认证或业务异常
      * 
@@ -230,8 +232,14 @@ public class WebSocketServer {
      * @see io.jsonwebtoken.ExpiredJwtException
      */
     @OnOpen
-    public void onOpen(Session session, @PathParam("token") String token) {
+    public void onOpen(Session session) {
         try {
+            String token = resolveToken(session);
+            if (token == null || token.isBlank()) {
+                log.warn("WS连接拒绝: Token 缺失");
+                closeSession(session, 4002, "Authentication Failed");
+                return;
+            }
             // ========== 步骤1: Token 解析和用户身份识别 ==========
             // 安全解析 JWT Token，提取用户信息
             Claims claims = jwtUtils.parseJwt(token);
@@ -638,6 +646,25 @@ public class WebSocketServer {
         }
         // 如果会话无效，消息被静默丢弃
         // 业务考虑：是否需要重试机制或持久化存储？
+    }
+
+    /**
+     * 从查询参数中解析 Token
+     *
+     * @param session WebSocket 会话对象
+     * @return token 字符串，解析失败返回 null
+     */
+    private String resolveToken(Session session) {
+        Map<String, List<String>> params = session.getRequestParameterMap();
+        if (params == null) {
+            return null;
+        }
+        List<String> tokens = params.get("token");
+        if (tokens == null || tokens.isEmpty()) {
+            return null;
+        }
+        String token = tokens.get(0);
+        return (token == null || token.isBlank()) ? null : token;
     }
 
     /**

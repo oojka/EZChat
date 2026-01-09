@@ -292,7 +292,39 @@
     "join": "参加",
     "join_success": "参加に成功しました",
     "join_failed": "参加に失敗しました",
-    "login_required": "まずログインしてください"
+    "login_required": "まずログインしてください",
+    "leave_room": "グループを退出",
+    "disband_room": "グループを解散",
+    "leave_confirm": "このグループを退出しますか？",
+    "leave_owner_confirm": "あなたは群主です。退出すると、群主は最も早く参加したメンバーに引き継がれます。続行しますか？",
+    "disband_confirm": "解散すると全員が退出し、元に戻せません。解散しますか？",
+    "owner_transfer_alert": "「{0}」の群主になりました。",
+    "room_disband_alert": "「{0}」は解散されました。"
+  },
+  "room_settings": {
+    "invite_section_title": "招待リンク管理",
+    "invite_section_desc": "有効なリンクは最大5件まで。いつでも撤回できます。",
+    "create_invite_title": "招待リンク作成",
+    "create_invite_desc": "有効期限と使用回数を設定して新しいリンクを作成します。",
+    "new": "新規",
+    "create_invite": "招待リンクを生成",
+    "invite_limit_tip": "有効な招待リンク {count}/{max}",
+    "invite_limit_reached": "招待リンクの上限に達しました",
+    "invite_create_success": "招待リンクを作成しました",
+    "invite_create_failed": "作成に失敗しました",
+    "invite_revoke_success": "招待リンクを撤回しました",
+    "invite_revoke_failed": "撤回に失敗しました",
+    "invite_revoke_confirm": "この招待リンクを撤回しますか？",
+    "empty_invites": "有効な招待リンクがありません",
+    "expires_at": "有効期限：",
+    "usage": "使用済み：",
+    "unlimited": "無制限",
+    "revoke": "撤回",
+    "password_section_title": "ルームパスワード",
+    "password_section_desc": "有効にするとルームID+パスワードで参加できます。無効にするとパスワードを削除します。",
+    "password_save": "パスワードを保存",
+    "password_update_success": "パスワードを更新しました",
+    "password_update_failed": "パスワードの更新に失敗しました"
   },
   "create_chat": {
     "title": "ルーム新規作成",
@@ -382,6 +414,7 @@
   "system": {
     "room_created": "ルームが作成されました",
     "member_joined": "{0} がグループに参加しました",
-    "guest_joined": "{0} がゲストとしてグループに参加しました"
+    "guest_joined": "{0} がゲストとしてグループに参加しました",
+    "member_left": "{0} がグループを退出しました"
   }
 }

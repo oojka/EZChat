@@ -21,8 +21,11 @@ const systemText = computed(() => {
             return t('system.guest_joined', [nickname])
         }
         return t('system.member_joined', [nickname])
+    } else if (props.msg.type === 12) {
+        const nickname = props.msg.text || props.msg.sender || 'Unknown'
+        return t('system.member_left', [nickname])
     }
-    // Future extension for other system message types (12, 13)
+    // Future extension for other system message types
     return props.msg.text || ''
 })
 

@@ -315,7 +315,39 @@
     "join": "Join",
     "join_success": "Joined successfully",
     "join_failed": "Failed to join",
-    "login_required": "Please login first"
+    "login_required": "Please login first",
+    "leave_room": "Leave Room",
+    "disband_room": "Disband Room",
+    "leave_confirm": "Are you sure you want to leave this room?",
+    "leave_owner_confirm": "You are the owner. Leaving will transfer ownership to the earliest joined member. Continue?",
+    "disband_confirm": "Disbanding will remove all members and cannot be undone. Continue?",
+    "owner_transfer_alert": "You are now the owner of \"{0}\".",
+    "room_disband_alert": "\"{0}\" has been disbanded."
+  },
+  "room_settings": {
+    "invite_section_title": "Invite Link Management",
+    "invite_section_desc": "Up to 5 active links. You can revoke anytime.",
+    "create_invite_title": "Create Invite Link",
+    "create_invite_desc": "Set expiry and usage limit for a new invite link.",
+    "new": "New",
+    "create_invite": "Create Invite Link",
+    "invite_limit_tip": "Active invites {count}/{max}",
+    "invite_limit_reached": "Invite limit reached",
+    "invite_create_success": "Invite link created",
+    "invite_create_failed": "Create failed",
+    "invite_revoke_success": "Invite revoked",
+    "invite_revoke_failed": "Revoke failed",
+    "invite_revoke_confirm": "Revoke this invite link?",
+    "empty_invites": "No active invite links",
+    "expires_at": "Expires at:",
+    "usage": "Used:",
+    "unlimited": "Unlimited",
+    "revoke": "Revoke",
+    "password_section_title": "Room Password",
+    "password_section_desc": "Enable to join via room ID + password. Disable to clear password.",
+    "password_save": "Save Password",
+    "password_update_success": "Password updated",
+    "password_update_failed": "Password update failed"
   },
   "create_chat": {
     "title": "Create New Room",
@@ -405,6 +437,7 @@
   "system": {
     "room_created": "Room created",
     "member_joined": "{0} joined the group",
-    "guest_joined": "{0} joined the group as a guest"
+    "guest_joined": "{0} joined the group as a guest",
+    "member_left": "{0} left the group"
   }
 }

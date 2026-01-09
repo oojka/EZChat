@@ -6,9 +6,9 @@
 
     <insert id="insertChatInvite" parameterType="hal.th50743.pojo.ChatInvite" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chat_invites
-        (chat_id, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time)
+        (chat_id, invite_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time)
         VALUES
-        (#{chatId}, #{codeHash}, #{expiresAt}, #{maxUses}, #{usedCount}, #{revoked}, #{createdBy}, NOW(), NOW())
+        (#{chatId}, #{inviteCode}, #{codeHash}, #{expiresAt}, #{maxUses}, #{usedCount}, #{revoked}, #{createdBy}, NOW(), NOW())
     </insert>
 
     <update id="consume">
@@ -24,7 +24,7 @@
     </update>
 
     <select id="selectByCodeHash" resultType="hal.th50743.pojo.ChatInvite">
-        SELECT id, chat_id, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
+        SELECT id, chat_id, invite_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
         FROM chat_invites
         WHERE code_hash = #{codeHash}
     </select>
@@ -33,5 +33,38 @@
         DELETE FROM chat_invites
         WHERE code_hash = #{codeHash}
     </delete>
+
+    <delete id="deleteByChatId">
+        DELETE FROM chat_invites
+        WHERE chat_id = #{chatId}
+    </delete>
+
+    <select id="selectActiveInvitesByChatId" resultType="hal.th50743.pojo.ChatInvite">
+        SELECT id, chat_id, invite_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
+        FROM chat_invites
+        WHERE chat_id = #{chatId}
+          AND revoked = 0
+          AND expires_at > NOW()
+          AND (max_uses = 0 OR used_count &lt; max_uses)
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="countActiveInvitesByChatId" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_invites
+        WHERE chat_id = #{chatId}
+          AND revoked = 0
+          AND expires_at > NOW()
+          AND (max_uses = 0 OR used_count &lt; max_uses)
+    </select>
+
+    <update id="revokeById">
+        UPDATE chat_invites
+        SET revoked = 1,
+            update_time = NOW()
+        WHERE chat_id = #{chatId}
+          AND id = #{inviteId}
+          AND revoked = 0
+    </update>
 
 </mapper>

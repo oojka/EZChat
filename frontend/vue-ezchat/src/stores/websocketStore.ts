@@ -9,6 +9,7 @@ import type { Image, Message, ChatMember } from '@/type'
 import { useConfigStore } from '@/stores/configStore.ts'
 import { useImageStore } from '@/stores/imageStore.ts'
 import i18n from '@/i18n'
+import { isTokenExpired } from '@/utils/validators'
 
 /**
  * WebsocketStore：管理 WebSocket 连接与分发
@@ -55,7 +56,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
    *
    * @param token JWT token（拼接到 `/websocket/{token}`）
    */
-  const initWS = (token: string) => {
+  const initWS = async (token: string) => {
     if (!token || isInitialized.value) return
     authRetryCount.value = 0
 
@@ -65,9 +66,24 @@ export const useWebsocketStore = defineStore('websocket', () => {
     const roomStore = useRoomStore()
     const userStore = useUserStore()
 
+    let wsToken = token
+    if (isTokenExpired(wsToken)) {
+      const refreshedToken = await userStore.refreshAccessToken()
+      if (!refreshedToken) {
+        close()
+        await userStore.logout({ showDialog: true })
+        return
+      }
+      wsToken = refreshedToken
+    }
+
     // 拼接 Token 到 URL
-    const buildWsUrl = (nextToken: string) => `${websocketUrl.value}/${nextToken}`
-    const fullUrl = buildWsUrl(token)
+    const buildWsUrl = (nextToken: string) => {
+      const url = new URL(websocketUrl.value)
+      url.searchParams.set('token', nextToken)
+      return url.toString()
+    }
+    const fullUrl = buildWsUrl(wsToken)
 
     connect(fullUrl, {
       onMessage: (data: any) => {
@@ -95,6 +111,15 @@ export const useWebsocketStore = defineStore('websocket', () => {
         }
         roomStore.addRoomMember(member)
       },
+      onChatMemberLeave: (payload) => {
+        roomStore.handleMemberLeave(payload)
+      },
+      onChatOwnerTransfer: (payload) => {
+        roomStore.handleOwnerTransfer(payload)
+      },
+      onChatRoomDisband: (payload) => {
+        roomStore.handleRoomDisband(payload).then(() => { })
+      },
       onAck: (data: any) => {
         // 系统消息：服务端 ACK，标记本地“发送中”消息为 sent
         // data 结构: { tempId: string, seqId: number }
@@ -118,7 +143,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
             authRetryCount.value += 1
             const refreshedToken = await userStore.refreshAccessToken()
             if (refreshedToken) {
-              initWS(refreshedToken)
+              await initWS(refreshedToken)
               return
             }
           }

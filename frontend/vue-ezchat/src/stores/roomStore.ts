@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore, storeToRefs } from 'pinia'
-import type { ChatRoom, Message, Image, JoinChatReq, ValidateChatJoinReq } from '@/type'
+import type { ChatRoom, Message, Image, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload } from '@/type'
 import { initApi } from '@/api/AppInit.ts'
 import { getChatMembersApi, joinChatApi } from '@/api/Chat'
 import { validateChatJoinApi } from '@/api/Auth'
@@ -42,6 +42,7 @@ export const useRoomStore = defineStore('room', () => {
 
   const createChatDialogVisible = ref(false)
   const joinChatDialogVisible = ref(false)
+  const roomSettingsDialogVisible = ref(false)
 
   /**
    * 当前房间成员列表加载状态（按 chatCode）
@@ -310,6 +311,75 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   /**
+   * 处理成员退群广播
+   *
+   * @param payload 退群广播数据
+   */
+  const handleMemberLeave = (payload: MemberLeaveBroadcastPayload) => {
+    const room = _roomList.value.find(r => r.chatCode === payload.chatCode)
+    if (!room) return
+
+    if (room.chatMembers && room.chatMembers.length > 0) {
+      room.chatMembers = room.chatMembers.filter(m => m.uid !== payload.uid)
+      room.memberCount = room.chatMembers.length
+      room.onLineMemberCount = room.chatMembers.filter(m => {
+        const status = userStatusList.value.find(s => s.uid === m.uid)
+        return status?.online
+      }).length
+      return
+    }
+
+    room.memberCount = Math.max((room.memberCount || 0) - 1, 0)
+    if (room.onLineMemberCount && room.onLineMemberCount > 0) {
+      const status = userStatusList.value.find(s => s.uid === payload.uid)
+      if (status?.online) {
+        room.onLineMemberCount = Math.max(room.onLineMemberCount - 1, 0)
+      }
+    }
+  }
+
+  /**
+   * 处理群主转让广播
+   *
+   * @param payload 群主转让广播数据
+   */
+  const handleOwnerTransfer = (payload: OwnerTransferBroadcastPayload) => {
+    const room = _roomList.value.find(r => r.chatCode === payload.chatCode)
+    if (room) {
+      room.ownerUid = payload.newOwnerUid
+    }
+
+    if (loginUserInfo.value?.uid === payload.newOwnerUid) {
+      const roomName = room?.chatName || payload.chatCode
+      showAlertDialog({
+        message: t('chat.owner_transfer_alert', [roomName]),
+        type: 'info',
+      })
+    }
+  }
+
+  /**
+   * 处理群聊解散广播
+   *
+   * @param payload 解散广播数据
+   */
+  const handleRoomDisband = async (payload: RoomDisbandBroadcastPayload) => {
+    const room = _roomList.value.find(r => r.chatCode === payload.chatCode)
+    const roomName = room?.chatName || payload.chatCode
+    await showAlertDialog({
+      message: t('chat.room_disband_alert', [roomName]),
+      type: 'warning',
+    })
+
+    const currentChatParam = router.currentRoute.value.params.chatCode
+    const activeChatCode = typeof currentChatParam === 'string' ? currentChatParam : ''
+    if (activeChatCode === payload.chatCode) {
+      await router.push('/chat')
+    }
+    await initRoomList()
+  }
+
+  /**
    * 处理加入成功后的导航逻辑
    * @param chatCode 目标房间代码
    */
@@ -420,12 +490,16 @@ export const useRoomStore = defineStore('room', () => {
     isRoomListLoading,
     createChatDialogVisible,
     joinChatDialogVisible,
+    roomSettingsDialogVisible,
     getRoomByCode, // 导出此方法
     initRoomList,
     updateRoomInfo,
     updateMemberStatus,
     addRoomMember,
     updateRoomPreview,
+    handleMemberLeave,
+    handleOwnerTransfer,
+    handleRoomDisband,
     fetchRoomMembers,
     isCurrentRoomMembersLoading,
     joinChat, // 加入聊天室

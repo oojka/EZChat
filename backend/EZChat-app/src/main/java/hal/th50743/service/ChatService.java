@@ -5,6 +5,7 @@ import hal.th50743.pojo.Chat;
 import hal.th50743.pojo.ChatJoinInfo;
 import hal.th50743.pojo.ChatMemberVO;
 import hal.th50743.pojo.ChatReq;
+import hal.th50743.pojo.ChatPasswordUpdateReq;
 import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.JoinChatReq;
@@ -130,5 +131,30 @@ public interface ChatService {
      * @throws BusinessException 如果验证失败（房间不存在、禁止加入、密码错误等）
      */
     ChatVO validateChatJoin(ValidateChatJoinReq req);
+
+    /**
+     * 用户退出聊天室
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     */
+    void leaveChat(Integer userId, String chatCode);
+
+    /**
+     * 解散聊天室（仅群主可执行）
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     */
+    void disbandChat(Integer userId, String chatCode);
+
+    /**
+     * 更新聊天室密码（仅群主可执行）
+     *
+     * @param userId 当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req 密码更新请求
+     */
+    void updateChatPassword(Integer userId, String chatCode, ChatPasswordUpdateReq req);
 
 }

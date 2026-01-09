@@ -292,7 +292,39 @@
     "join": "加入",
     "join_success": "加入成功",
     "join_failed": "加入失敗",
-    "login_required": "請先登入"
+    "login_required": "請先登入",
+    "leave_room": "退出目前群組",
+    "disband_room": "解散群聊",
+    "leave_confirm": "確定要退出目前群組嗎？",
+    "leave_owner_confirm": "你是群主，退出後群主將轉讓給最早加入的成員。確定退出嗎？",
+    "disband_confirm": "解散後所有成員將被移出，且無法恢復。確定解散嗎？",
+    "owner_transfer_alert": "你已成為「{0}」的群主。",
+    "room_disband_alert": "「{0}」已被群主解散。"
+  },
+  "room_settings": {
+    "invite_section_title": "邀請連結管理",
+    "invite_section_desc": "最多同時存在 5 個有效連結，可隨時撤銷。",
+    "create_invite_title": "建立邀請連結",
+    "create_invite_desc": "設定有效期限與使用次數，用於產生新連結。",
+    "new": "新增",
+    "create_invite": "產生邀請連結",
+    "invite_limit_tip": "目前 {count}/{max} 個有效邀請連結",
+    "invite_limit_reached": "已達邀請連結上限",
+    "invite_create_success": "邀請連結已建立",
+    "invite_create_failed": "建立失敗",
+    "invite_revoke_success": "邀請連結已撤銷",
+    "invite_revoke_failed": "撤銷失敗",
+    "invite_revoke_confirm": "確定要撤銷這個邀請連結嗎？",
+    "empty_invites": "暫無有效邀請連結",
+    "expires_at": "到期時間：",
+    "usage": "已使用：",
+    "unlimited": "無限制",
+    "revoke": "撤銷",
+    "password_section_title": "群密碼設定",
+    "password_section_desc": "啟用後可用房間ID+密碼加入，停用會清除密碼。",
+    "password_save": "儲存密碼設定",
+    "password_update_success": "群密碼已更新",
+    "password_update_failed": "群密碼更新失敗"
   },
   "create_chat": {
     "title": "建立新房間",
@@ -382,6 +414,7 @@
   "system": {
     "room_created": "房間已建立",
     "member_joined": "{0} 加入了群聊",
-    "guest_joined": "{0} 以訪客身份加入了群聊"
+    "guest_joined": "{0} 以訪客身份加入了群聊",
+    "member_left": "{0} 退出了群聊"
   }
 }

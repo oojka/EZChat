@@ -79,7 +79,8 @@ export const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\
  */
 
 // 类型导入
-import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage, AckPayload } from '@/type'
+import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage, AckPayload, MemberLeaveBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, ChatInvite } from '@/type'
+import { jwtDecode } from 'jwt-decode'
 
 export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
@@ -231,6 +232,37 @@ export const isJwtPayload = (data: unknown): data is JwtPayload => {
     typeof d.iat === 'number' &&
     typeof d.exp === 'number'
   )
+}
+
+/**
+ * 解析 JWT 并返回安全的 Payload
+ *
+ * @param token JWT 字符串
+ * @returns 合法的 JwtPayload，否则返回 null
+ */
+export const decodeJwtPayload = (token: string): JwtPayload | null => {
+  if (!token) return null
+  try {
+    const decoded = jwtDecode<unknown>(token)
+    return isJwtPayload(decoded) ? decoded : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 判断 Token 是否已过期（支持提前量）
+ *
+ * @param token JWT 字符串
+ * @param skewSeconds 提前量秒数
+ * @returns 是否过期
+ */
+export const isTokenExpired = (token: string, skewSeconds = 30): boolean => {
+  const payload = decodeJwtPayload(token)
+  if (!payload) return true
+  const expMs = payload.exp * 1000
+  const nowMs = Date.now()
+  return expMs <= nowMs + skewSeconds * 1000
 }
 
 /**
@@ -414,6 +446,54 @@ export const isAckPayload = (data: unknown): data is AckPayload => {
 
 export const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null
+}
+
+const isStringValue = (value: unknown): value is string => {
+  return typeof value === 'string'
+}
+
+const isNumberValue = (value: unknown): value is number => {
+  return typeof value === 'number' && !Number.isNaN(value)
+}
+
+export const isMemberLeavePayload = (data: unknown): data is MemberLeaveBroadcastPayload => {
+  if (!isRecord(data)) return false
+  return isStringValue(data.chatCode)
+    && isStringValue(data.uid)
+    && isStringValue(data.nickname)
+    && isStringValue(data.leftAt)
+}
+
+export const isOwnerTransferPayload = (data: unknown): data is OwnerTransferBroadcastPayload => {
+  if (!isRecord(data)) return false
+  return isStringValue(data.chatCode)
+    && isStringValue(data.oldOwnerUid)
+    && isStringValue(data.newOwnerUid)
+    && isStringValue(data.newOwnerNickname)
+    && isStringValue(data.transferredAt)
+}
+
+export const isRoomDisbandPayload = (data: unknown): data is RoomDisbandBroadcastPayload => {
+  if (!isRecord(data)) return false
+  return isStringValue(data.chatCode)
+    && isStringValue(data.operatorUid)
+    && isStringValue(data.operatorNickname)
+    && isStringValue(data.disbandAt)
+}
+
+export const isChatInvite = (data: unknown): data is ChatInvite => {
+  if (!isRecord(data)) return false
+  return isNumberValue(data.id)
+    && isStringValue(data.inviteCode)
+    && isStringValue(data.expiresAt)
+    && isNumberValue(data.maxUses)
+    && isNumberValue(data.usedCount)
+    && isStringValue(data.createTime)
+}
+
+export const isChatInviteList = (data: unknown): data is ChatInvite[] => {
+  if (!Array.isArray(data)) return false
+  return data.every(isChatInvite)
 }
 
 export const extractErrorCode = (payload: unknown): string | number | null => {

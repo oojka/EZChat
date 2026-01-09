@@ -36,6 +36,24 @@ function generateTempId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2)
 }
 
+function getLocalISOString(date = new Date()) {
+  const pad = (num: number, size = 2) => String(num).padStart(size, '0')
+  const year = date.getFullYear()
+  const month = pad(date.getMonth() + 1)
+  const day = pad(date.getDate())
+  const hours = pad(date.getHours())
+  const minutes = pad(date.getMinutes())
+  const seconds = pad(date.getSeconds())
+  const milliseconds = pad(date.getMilliseconds(), 3)
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const absOffset = Math.abs(offset)
+  const offsetHours = pad(Math.floor(absOffset / 60))
+  const offsetMinutes = pad(absOffset % 60)
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}${sign}${offsetHours}:${offsetMinutes}`
+}
+
 // =========================================
 // MessageStore 定义
 // =========================================
@@ -479,7 +497,7 @@ export const useMessageStore = defineStore('message', () => {
       type,
       text: text,
       images: imagesCopy,
-      createTime: new Date().toISOString(),
+      createTime: getLocalISOString(),
       tempId: tempId,
       status: 'sending'  // 初始状态：发送中
     }

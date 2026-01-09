@@ -47,4 +47,37 @@ public interface ChatInviteMapper {
      * @return 删除的行数
      */
     int deleteByCodeHash(@Param("codeHash") String codeHash);
+
+    /**
+     * 根据聊天室ID删除邀请码记录
+     *
+     * @param chatId 聊天室ID
+     * @return 删除的行数
+     */
+    int deleteByChatId(@Param("chatId") Integer chatId);
+
+    /**
+     * 查询聊天室下有效邀请码列表（未撤销、未过期、未用尽）
+     *
+     * @param chatId 聊天室ID
+     * @return 有效邀请码列表
+     */
+    java.util.List<ChatInvite> selectActiveInvitesByChatId(@Param("chatId") Integer chatId);
+
+    /**
+     * 统计聊天室下有效邀请码数量（未撤销、未过期、未用尽）
+     *
+     * @param chatId 聊天室ID
+     * @return 有效邀请码数量
+     */
+    int countActiveInvitesByChatId(@Param("chatId") Integer chatId);
+
+    /**
+     * 撤销邀请码（软删除）
+     *
+     * @param chatId   聊天室ID
+     * @param inviteId 邀请码ID
+     * @return 更新行数
+     */
+    int revokeById(@Param("chatId") Integer chatId, @Param("inviteId") Integer inviteId);
 }

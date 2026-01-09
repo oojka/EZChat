@@ -1,0 +1,207 @@
+import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
+import { useRoomStore } from '@/stores/roomStore'
+import { createChatInviteApi, getChatInvitesApi, revokeChatInviteApi } from '@/api/Chat'
+import type { ChatInvite } from '@/type'
+import { isChatInvite, isChatInviteList } from '@/utils/validators'
+import { showConfirmDialog } from '@/components/dialogs/confirmDialog'
+
+const INVITE_BASE_URL = 'https://ez-chat.oojka.com/invite/'
+const DEFAULT_EXPIRY_MINUTES = 10080
+const MAX_ACTIVE_INVITES = 5
+
+export const useRoomInviteManager = () => {
+  const roomStore = useRoomStore()
+  const { currentRoom, roomSettingsDialogVisible } = storeToRefs(roomStore)
+  const { t } = useI18n()
+
+  const inviteList = ref<ChatInvite[]>([])
+  const isLoading = ref(false)
+  const isCreating = ref(false)
+  const revokingId = ref<number | null>(null)
+
+  const selectedDate = ref<Date | null>(null)
+  const selectedDateRadio = ref<1 | 7 | 30 | null>(7)
+  const oneTimeLink = ref(false)
+  const joinLinkExpiryMinutes = ref<number | null>(DEFAULT_EXPIRY_MINUTES)
+
+  const tf = (key: string, fallback: string) => {
+    const translated = t(key)
+    const result = typeof translated === 'string' ? translated : String(translated)
+    return result === key ? fallback : result
+  }
+
+  const resetForm = () => {
+    selectedDate.value = null
+    selectedDateRadio.value = 7
+    oneTimeLink.value = false
+    joinLinkExpiryMinutes.value = DEFAULT_EXPIRY_MINUTES
+  }
+
+  watch(selectedDateRadio, (newVal) => {
+    if (newVal) {
+      selectedDate.value = null
+      joinLinkExpiryMinutes.value = newVal * 24 * 60
+    }
+  })
+
+  watch(selectedDate, (newVal) => {
+    if (newVal) {
+      selectedDateRadio.value = null
+      const diffMs = newVal.getTime() - Date.now()
+      joinLinkExpiryMinutes.value = Math.max(1, Math.floor(diffMs / 60000))
+    } else if (!selectedDateRadio.value) {
+      selectedDateRadio.value = 7
+    }
+  })
+
+  const disabledDate = (time: Date) => {
+    const now = new Date()
+    const startOfToday = new Date(now.setHours(0, 0, 0, 0))
+    const thirtyDaysLater = new Date(startOfToday.getTime() + 31 * 24 * 60 * 60 * 1000)
+    return time.getTime() < startOfToday.getTime() || time.getTime() > thirtyDaysLater.getTime()
+  }
+
+  const inviteCount = computed(() => inviteList.value.length)
+  const canCreate = computed(() => inviteCount.value < MAX_ACTIVE_INVITES && !isCreating.value)
+  const inviteLimitTip = computed(() => t('room_settings.invite_limit_tip', {
+    count: inviteCount.value,
+    max: MAX_ACTIVE_INVITES,
+  }))
+
+  const buildInviteUrl = (inviteCode: string) => `${INVITE_BASE_URL}${inviteCode}`
+
+  const formatDateTime = (value: string) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    const pad = (num: number) => String(num).padStart(2, '0')
+    const year = date.getFullYear()
+    const month = pad(date.getMonth() + 1)
+    const day = pad(date.getDate())
+    const hours = pad(date.getHours())
+    const minutes = pad(date.getMinutes())
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+  }
+
+  const fetchInvites = async () => {
+    const chatCode = currentRoom.value?.chatCode
+    if (!chatCode) return
+
+    isLoading.value = true
+    try {
+      const res = await getChatInvitesApi(chatCode)
+      const data = res?.data
+      inviteList.value = isChatInviteList(data) ? data : []
+    } catch (error) {
+      console.error('[ERROR] [RoomInvite] Failed to fetch invites:', error)
+      inviteList.value = []
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const createInvite = async (): Promise<boolean> => {
+    const chatCode = currentRoom.value?.chatCode
+    if (!chatCode) return false
+    if (inviteCount.value >= MAX_ACTIVE_INVITES) {
+      ElMessage.warning(tf('room_settings.invite_limit_reached', '已达到邀请码上限'))
+      return false
+    }
+
+    isCreating.value = true
+    try {
+      const maxUses = oneTimeLink.value ? 1 : 0
+      const expiryMinutes = joinLinkExpiryMinutes.value ?? DEFAULT_EXPIRY_MINUTES
+      const res = await createChatInviteApi(chatCode, {
+        joinLinkExpiryMinutes: expiryMinutes,
+        maxUses,
+      })
+      const data = res?.data
+      if (!isChatInvite(data)) {
+        throw new Error('Invalid invite response')
+      }
+      inviteList.value = [data, ...inviteList.value]
+      ElMessage.success(tf('room_settings.invite_create_success', '邀请链接已创建'))
+      return true
+    } catch (error) {
+      console.error('[ERROR] [RoomInvite] Failed to create invite:', error)
+      ElMessage.error(tf('room_settings.invite_create_failed', '创建失败'))
+      return false
+    } finally {
+      isCreating.value = false
+    }
+  }
+
+  const confirmRevoke = (inviteId: number) => {
+    if (revokingId.value !== null) return
+    showConfirmDialog({
+      title: 'dialog.confirm',
+      message: 'room_settings.invite_revoke_confirm',
+      confirmText: 'common.confirm',
+      cancelText: 'common.cancel',
+      type: 'danger',
+      onConfirm: () => {
+        revokeInvite(inviteId).then(() => { })
+      },
+    })
+  }
+
+  const revokeInvite = async (inviteId: number) => {
+    const chatCode = currentRoom.value?.chatCode
+    if (!chatCode) return
+
+    revokingId.value = inviteId
+    try {
+      await revokeChatInviteApi(chatCode, inviteId)
+      inviteList.value = inviteList.value.filter(invite => invite.id !== inviteId)
+      ElMessage.success(tf('room_settings.invite_revoke_success', '邀请码已撤销'))
+    } catch (error) {
+      console.error('[ERROR] [RoomInvite] Failed to revoke invite:', error)
+      ElMessage.error(tf('room_settings.invite_revoke_failed', '撤销失败'))
+    } finally {
+      revokingId.value = null
+    }
+  }
+
+  const copyInviteUrl = async (inviteCode: string) => {
+    if (!inviteCode) return
+    try {
+      await navigator.clipboard.writeText(buildInviteUrl(inviteCode))
+      ElMessage.success(tf('common.copied', '已复制'))
+    } catch {
+      ElMessage.error(tf('common.copy_failed', '复制失败'))
+    }
+  }
+
+  watch(roomSettingsDialogVisible, (visible) => {
+    if (visible) {
+      inviteList.value = []
+      fetchInvites().then(() => { })
+      resetForm()
+    } else {
+      resetForm()
+    }
+  }, { immediate: true })
+
+  return {
+    inviteList,
+    inviteCount,
+    inviteLimitTip,
+    isLoading,
+    isCreating,
+    revokingId,
+    selectedDate,
+    selectedDateRadio,
+    oneTimeLink,
+    disabledDate,
+    canCreate,
+    formatDateTime,
+    fetchInvites,
+    createInvite,
+    confirmRevoke,
+    copyInviteUrl,
+    resetForm,
+  }
+}

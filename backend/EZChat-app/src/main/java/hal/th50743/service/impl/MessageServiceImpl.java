@@ -157,10 +157,10 @@ public class MessageServiceImpl implements MessageService {
 
         // 使用 cursorSeqId 进行分页查询
         List<MessageVO> messageList = messageMapper.selectMessageListByChatIdAndCursor(chatId, cursorSeqId);
-        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
+//        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
-        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
+//        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
         // 4. 使用 Assembler 填充附件信息

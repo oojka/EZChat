@@ -117,4 +117,14 @@
         ORDER BY m.seq_id DESC
     </select>
 
+    <delete id="deleteMessagesByChatId">
+        DELETE FROM messages
+        WHERE chat_id = #{chatId}
+    </delete>
+
+    <delete id="deleteChatSequence">
+        DELETE FROM chat_sequences
+        WHERE chat_id = #{chatId}
+    </delete>
+
 </mapper>

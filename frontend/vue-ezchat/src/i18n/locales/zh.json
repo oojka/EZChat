@@ -315,7 +315,39 @@
     "join": "加入",
     "join_success": "加入成功",
     "join_failed": "加入失败",
-    "login_required": "请先登录"
+    "login_required": "请先登录",
+    "leave_room": "退出当前群",
+    "disband_room": "解散群聊",
+    "leave_confirm": "确定要退出当前群吗？",
+    "leave_owner_confirm": "你是群主，退出后群主将转让给加入最早的成员。确定退出吗？",
+    "disband_confirm": "解散后所有成员将被移出，且不可恢复。确定解散吗？",
+    "owner_transfer_alert": "你已成为“{0}”的群主。",
+    "room_disband_alert": "“{0}”已被群主解散。"
+  },
+  "room_settings": {
+    "invite_section_title": "邀请链接管理",
+    "invite_section_desc": "最多同时存在 5 个有效链接，支持随时撤销。",
+    "create_invite_title": "创建邀请链接",
+    "create_invite_desc": "设置有效期和使用次数，用于生成新的邀请链接。",
+    "new": "新建",
+    "create_invite": "生成邀请链接",
+    "invite_limit_tip": "当前 {count}/{max} 个有效邀请链接",
+    "invite_limit_reached": "已达到邀请码上限",
+    "invite_create_success": "邀请链接已创建",
+    "invite_create_failed": "创建失败",
+    "invite_revoke_success": "邀请码已撤销",
+    "invite_revoke_failed": "撤销失败",
+    "invite_revoke_confirm": "确定要撤销该邀请链接吗？",
+    "empty_invites": "暂无有效邀请链接",
+    "expires_at": "过期时间：",
+    "usage": "已使用：",
+    "unlimited": "无限",
+    "revoke": "撤销",
+    "password_section_title": "群密码设置",
+    "password_section_desc": "开启后可通过房间ID+密码加入，关闭则清除密码。",
+    "password_save": "保存密码设置",
+    "password_update_success": "群密码已更新",
+    "password_update_failed": "群密码更新失败"
   },
   "create_chat": {
     "title": "创建新房间",
@@ -405,6 +437,7 @@
   "system": {
     "room_created": "房间已创建",
     "member_joined": "{0} 加入了群聊",
-    "guest_joined": "{0} 以访客身份加入了群聊"
+    "guest_joined": "{0} 以访客身份加入了群聊",
+    "member_left": "{0} 退出了群聊"
   }
 }

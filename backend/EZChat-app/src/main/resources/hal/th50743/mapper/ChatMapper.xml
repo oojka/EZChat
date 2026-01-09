@@ -68,4 +68,27 @@
         VALUES
         (#{chatCode}, #{chatName}, #{ownerId}, #{chatPasswordHash}, #{joinEnabled}, #{objectId}, NOW(), NOW())
     </insert>
+
+    <select id="selectOwnerIdByChatId" resultType="java.lang.Integer">
+        SELECT owner_id FROM chats WHERE id = #{chatId}
+    </select>
+
+    <update id="updateChatOwner">
+        UPDATE chats
+        SET owner_id = #{ownerId},
+            update_time = NOW()
+        WHERE id = #{chatId}
+    </update>
+
+    <update id="updateChatPassword">
+        UPDATE chats
+        SET chat_password_hash = #{passwordHash},
+            update_time = NOW()
+        WHERE id = #{chatId}
+    </update>
+
+    <delete id="deleteChatById">
+        DELETE FROM chats
+        WHERE id = #{chatId}
+    </delete>
 </mapper>

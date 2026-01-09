@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
  *
  * 说明：
  * - 本工程不使用物理外键（FK），chat_id 关联关系由业务逻辑保证
- * - code_hash 为邀请码短码的 SHA-256 Hex，用于防止 DB 泄露直接可用
+ * - invite_code 用于后台管理展示与复制
+ * - code_hash 为邀请码短码的 SHA-256 Hex，用于校验与防止明文滥用
  */
 @Data
 @AllArgsConstructor
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 public class ChatInvite {
     private Integer id;
     private Integer chatId;
+    private String inviteCode;
     private String codeHash;
     private LocalDateTime expiresAt;
     private Integer maxUses;
@@ -28,5 +30,3 @@ public class ChatInvite {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
-
-

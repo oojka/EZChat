@@ -829,3 +829,79 @@
 ## [2026-01-09 11:17] 删除旧版 request.ts 转发文件
 - **Goal**: 清理冗余代码。逻辑已完全迁移至 src/utils/request/ 目录。
 - **Changes**: 删除了 [request.ts](file:///home/dev/EZChat/frontend/vue-ezchat/src/utils/request.ts)。
+## [2026-01-09 11:43] WS 连接前刷新 Token
+- **Goal**: Safari 建连前确保 accessToken 未过期，避免 WS 握手被拒绝。
+- **Changes**:
+  - Modified `frontend/vue-ezchat/src/utils/validators.ts`: 新增 decodeJwtPayload 与 isTokenExpired。
+  - Modified `frontend/vue-ezchat/src/stores/websocketStore.ts`: initWS 建连前校验并刷新 token。
+## [2026-01-09 12:03] WS Token 迁移为 Query 参数
+- **Goal**: 将 WebSocket 鉴权 token 从路径迁移到查询参数。
+- **Changes**:
+  - Modified `backend/EZChat-app/src/main/java/hal/th50743/ws/WebSocketServer.java`: 端点改为 `/websocket`，从查询参数解析 token。
+  - Modified `frontend/vue-ezchat/src/stores/websocketStore.ts`: WS URL 使用 `?token=` 形式。
+- **Tests**:
+  - `npm run type-check` (failed: `src/components/notification.ts` 类型错误与本次修改无关)
+
+## [2026-01-09 12:27] Analyze Vite WS Proxy Relevance
+- **Goal**: 判断 Safari WebSocket 问题是否与 Vite 代理有关并给出方向
+- **Changes**: 未修改代码；给出 Vite/Nginx 侧排查建议
+
+## [2026-01-09 12:29] Diagnose Safari WS First-Login Failure
+- **Goal**: 分析 Safari 刚登录时 WS 无法连接的潜在原因并给出排查方向
+- **Changes**: 未修改代码；提供竞态与时序问题的排查建议
+## [2026-01-09 13:05] Chat Room Leave/Disband
+- **Goal**: Add leave-room, owner transfer on leave, and disband-room flows with WS broadcasts and UI actions.
+- **Changes**: backend ChatService/Controller/mapper updates, new broadcast VO classes; frontend ChatHeader menu + composable, websocket handlers, room store updates, i18n strings, system message handling.
+## [2026-01-09 14:00] Room Settings Invite Management
+- **Goal**: Add owner-only room settings with invite link management and backend APIs.
+- **Changes**:
+  - `backend/EZChat-app/src/main/resources/sql/init.sql`: Added invite_code column.
+  - `backend/EZChat-app/src/main/java/hal/th50743/pojo/ChatInvite.java`: Added inviteCode field/docs.
+  - `backend/EZChat-app/src/main/java/hal/th50743/pojo/ChatInviteCreateReq.java`: New request.
+  - `backend/EZChat-app/src/main/java/hal/th50743/pojo/ChatInviteVO.java`: New VO.
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/ChatInviteService.java`: New service interface.
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatInviteServiceImpl.java`: Invite management logic.
+  - `backend/EZChat-app/src/main/java/hal/th50743/mapper/ChatInviteMapper.java` and `backend/EZChat-app/src/main/resources/hal/th50743/mapper/ChatInviteMapper.xml`: Added invite_code and list/count/revoke queries.
+  - `backend/EZChat-app/src/main/java/hal/th50743/controller/ChatController.java`: Added invite endpoints.
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java`: Reused invite service in create.
+  - `frontend/vue-ezchat/src/views/chat/layout/ChatHeader.vue`: Owner-only menu item + dialog mount.
+  - `frontend/vue-ezchat/src/components/dialogs/RoomSettingsDialog.vue`: New dialog UI.
+  - `frontend/vue-ezchat/src/composables/useRoomInviteManager.ts`: Invite management composable.
+  - `frontend/vue-ezchat/src/api/Chat.ts`: Invite APIs.
+  - `frontend/vue-ezchat/src/type/index.ts`: Added ChatInvite types.
+  - `frontend/vue-ezchat/src/utils/validators.ts`: Added invite type guards.
+  - `frontend/vue-ezchat/src/stores/roomStore.ts`: Added roomSettingsDialogVisible.
+  - `frontend/vue-ezchat/src/composables/useChatRoomActions.ts`: Exposed isOwner.
+  - `frontend/vue-ezchat/src/i18n/locales/en.json`: Added room_settings strings.
+  - `frontend/vue-ezchat/src/i18n/locales/ja.json`: Added room_settings strings.
+  - `frontend/vue-ezchat/src/i18n/locales/ko.json`: Added room_settings strings.
+  - `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: Added room_settings strings.
+  - `frontend/vue-ezchat/src/i18n/locales/zh.json`: Added room_settings strings.
+## [2026-01-09 14:07] Fix MyBatis XML Parse Error
+- **Goal**: Resolve ChatInviteMapper.xml parsing failure by escaping '<'.
+- **Changes**: `backend/EZChat-app/src/main/resources/hal/th50743/mapper/ChatInviteMapper.xml`
+
+## [2026-01-09 14:18] Fix string syntax in RoomSettingsDialog
+- **Goal**: Fix multiline string syntax error causing TS error.
+- **Changes**: frontend/vue-ezchat/src/components/dialogs/RoomSettingsDialog.vue
+## [2026-01-09 14:23] Fix RoomSettingsDialog z-index
+- **Goal**: Fix dialog obscuring issue
+- **Changes**: RoomSettingsDialog.vue (added append-to-body)
+## [2026-01-09 14:33] Add Room Password Settings
+- **Goal**: Add room password enable/disable UI in RoomSettings dialog with backend update API.
+- **Changes**:
+  - `backend/EZChat-app/src/main/java/hal/th50743/pojo/ChatPasswordUpdateReq.java`: New request object.
+  - `backend/EZChat-app/src/main/java/hal/th50743/mapper/ChatMapper.java` and `backend/EZChat-app/src/main/resources/hal/th50743/mapper/ChatMapper.xml`: Add updateChatPassword.
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/ChatService.java`: New updateChatPassword signature.
+  - `backend/EZChat-app/src/main/java/hal/th50743/service/impl/ChatServiceImpl.java`: Implement password update logic.
+  - `backend/EZChat-app/src/main/java/hal/th50743/controller/ChatController.java`: Add /chat/{chatCode}/password endpoint.
+  - `frontend/vue-ezchat/src/api/Chat.ts`: Add updateChatPasswordApi.
+  - `frontend/vue-ezchat/src/type/index.ts`: Add ChatPasswordUpdateReq type.
+  - `frontend/vue-ezchat/src/composables/useRoomPasswordSettings.ts`: New composable for password form + validation.
+  - `frontend/vue-ezchat/src/components/dialogs/settings/RoomPasswordSettings.vue`: New password settings section.
+  - `frontend/vue-ezchat/src/components/dialogs/RoomSettingsDialog.vue`: Render password settings in list step.
+  - `frontend/vue-ezchat/src/i18n/locales/en.json`: Add room_settings password/create invite keys.
+  - `frontend/vue-ezchat/src/i18n/locales/ja.json`: Add room_settings password/create invite keys.
+  - `frontend/vue-ezchat/src/i18n/locales/ko.json`: Add room_settings password/create invite keys.
+  - `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: Add room_settings password/create invite keys.
+  - `frontend/vue-ezchat/src/i18n/locales/zh.json`: Add room_settings password/create invite keys.

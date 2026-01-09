@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Message, UserStatus, WebSocketResult, AckPayload } from '@/type'
-import { isAckPayload } from '@/utils/validators'
+import type { Message, UserStatus, WebSocketResult, AckPayload, MemberLeaveBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload } from '@/type'
+import { isAckPayload, isMemberLeavePayload, isOwnerTransferPayload, isRoomDisbandPayload } from '@/utils/validators'
 import i18n from '@/i18n'
 
 const { t } = i18n.global
@@ -17,6 +17,9 @@ type ConnectOptions = {
   // 新增：关闭事件回调，用于处理 4001 等特殊状态码
   onClose?: (event: CloseEvent) => void
   onChatMemberAdd?: (member: any) => void
+  onChatMemberLeave?: (payload: MemberLeaveBroadcastPayload) => void
+  onChatOwnerTransfer?: (payload: OwnerTransferBroadcastPayload) => void
+  onChatRoomDisband?: (payload: RoomDisbandBroadcastPayload) => void
   // 新增：重连成功回调，用于触发消息同步
   onReconnect?: () => void
 }
@@ -167,6 +170,27 @@ export function useWebsocket() {
               // 此时 payload 被视为 MemberJoinMessage (Type 11)，TS 校验通过（因为 MemberJoinMessage 只有 text）
               if (isMessagePayload(payload)) {
                 currentOptions?.onMessage(payload)
+              }
+              break
+            case 3002: // MEMBER_LEAVE
+              if (isMemberLeavePayload(payload)) {
+                currentOptions?.onChatMemberLeave?.(payload)
+              } else {
+                console.warn('[WS] Invalid MEMBER_LEAVE payload:', payload)
+              }
+              break
+            case 3003: // OWNER_TRANSFER
+              if (isOwnerTransferPayload(payload)) {
+                currentOptions?.onChatOwnerTransfer?.(payload)
+              } else {
+                console.warn('[WS] Invalid OWNER_TRANSFER payload:', payload)
+              }
+              break
+            case 3004: // ROOM_DISBAND
+              if (isRoomDisbandPayload(payload)) {
+                currentOptions?.onChatRoomDisband?.(payload)
+              } else {
+                console.warn('[WS] Invalid ROOM_DISBAND payload:', payload)
               }
               break
           }

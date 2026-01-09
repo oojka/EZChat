@@ -93,4 +93,21 @@ public interface ChatMemberMapper {
      */
     void insertChatMember(@Param("chatId") Integer chatId, @Param("userId") Integer userId,
             @Param("now") LocalDateTime now);
+
+    /**
+     * 删除单个成员关系
+     *
+     * @param chatId 聊天室ID
+     * @param userId 用户ID
+     * @return 影响行数
+     */
+    int deleteChatMember(@Param("chatId") Integer chatId, @Param("userId") Integer userId);
+
+    /**
+     * 删除聊天室全部成员
+     *
+     * @param chatId 聊天室ID
+     * @return 影响行数
+     */
+    int deleteChatMembersByChatId(@Param("chatId") Integer chatId);
 }

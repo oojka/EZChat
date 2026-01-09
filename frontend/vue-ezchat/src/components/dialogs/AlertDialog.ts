@@ -60,7 +60,7 @@ export const showAlertDialog = ({
 }: AlertDialogOptions): Promise<void> | void => {
   const finalTitle = title ? title : getDefaultTitleByType(type)
   const finalMessage = message
-  const finalConfirmText = confirmText ? confirmText : t('common.confirm') || 'Confirm'
+  const finalConfirmText = confirmText || t('common.confirm') || 'Confirm'
 
   // 1️⃣ 按钮样式：除了 error/danger 用红色，其他统一用系统蓝色
   let confirmButtonClass = 'ez-dialog-btn'
