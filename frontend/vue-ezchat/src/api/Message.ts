@@ -20,6 +20,22 @@ export const getMessageListApi = (
 }>> =>
   request.get('/message?chatCode=' + data.chatCode + (data.cursorSeqId ? '&cursorSeqId=' + data.cursorSeqId : ''))
 
+export type SyncMessageApiReq = {
+  chatCode: string
+  lastSeqId: number
+}
+
+/**
+ * 同步消息（补齐断层/重连同步）
+ * 
+ * - 后端接口：GET `/message/sync?chatCode=...&lastSeqId=...`
+ * - 业务目的：检测到 seqId 不连续时，拉取缺失的消息
+ */
+export const syncMessageApi = (
+  data: SyncMessageApiReq
+): Promise<Result<Message[]>> =>
+  request.get('/message/sync?chatCode=' + data.chatCode + '&lastSeqId=' + data.lastSeqId)
+
 /**
  * 上传消息附件（如图片）
  *

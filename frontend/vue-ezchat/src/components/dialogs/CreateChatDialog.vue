@@ -158,7 +158,7 @@ const progressPercentage = computed(() => {
               <div v-if="createResult.success && createResult.chatCode" class="result-details">
                 <div class="invite-block">
                   <!-- roomId：主视觉（大号数字） -->
-                  <div class="credential-label">{{ tf('chat.room_id', '房间ID') }}</div>
+                  <div class="credential-label" style="margin-top: 30px;">{{ tf('chat.room_id', '房间ID') }}</div>
                   <div class="credential-roomid-row">
                     <div class="credential-roomid-value">{{ roomIdDisplay }}</div>
                     <el-tooltip :content="tf('common.copy', '复制')" placement="top">
@@ -167,7 +167,8 @@ const progressPercentage = computed(() => {
                   </div>
 
                   <!-- invite link：普通文本（不使用输入框） -->
-                  <div class="credential-label">{{ tf('create_chat.invite_link', '邀请链接') }}</div>
+                  <div class="credential-label" style="margin-top: 20px;">{{ tf('create_chat.invite_link', '邀请链接') }}
+                  </div>
                   <div class="credential-link-row">
                     <div v-if="createResult.inviteUrl" class="credential-link-value">
                       {{ createResult.inviteUrl }}
@@ -242,8 +243,8 @@ const progressPercentage = computed(() => {
 
 html.dark :deep(.ez-modern-dialog) {
   background: var(--bg-card) !important;
-  backdrop-filter: blur(24px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* 重置 Element Plus header 默认样式，避免占位/边距影响自定义布局 */
@@ -269,9 +270,521 @@ html.dark :deep(.ez-modern-dialog) {
   padding: 10px 24px 16px;
   display: flex;
   flex-direction: column;
-  /* 固定高度：再压缩（整体高度更短，但保持"固定不抖动"） */
-  min-height: 420px;
+  /* 增加高度以容纳内容而不滚动 */
+  min-height: 400px;
   overflow: visible;
+}
+
+/* --- Header --- */
+.create-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 8px;
+  /* 回归统一视觉：顶部 20px，两侧 24px (标准 ez-dialog 边距) */
+  padding: 20px 24px 0;
+}
+
+/* 覆盖全局位置：为了与顶部 Progress Bar (padding-top: 20px) 对齐 */
+.create-header :deep(.ez-dialog-header-actions) {
+  top: 6px;
+  right: 12px;
+}
+
+.progress-section {
+  margin-bottom: 8px;
+  padding: 0 56px;
+}
+
+:deep(.custom-progress .el-progress-bar__outer) {
+  background-color: var(--el-border-color-extra-light) !important;
+}
+
+.step-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: 1px;
+}
+
+.create-header h4 {
+  margin: 12px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-900);
+}
+
+/* --- Form Content --- */
+.create-form-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.step-container {
+  /* 增加高度，确保结果页内容能舒展显示 */
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.step-container-password {
+  justify-content: flex-start;
+  padding-top: 0;
+}
+
+/* --- Avatar Upload Box --- */
+.avatar-upload-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.avatar-info-area {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.step-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-400);
+  margin: 0;
+}
+
+.avatar-error-container {
+  height: 20px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.avatar-error-text {
+  font-size: 11px;
+  color: var(--el-color-danger);
+  font-weight: 600;
+  text-align: center;
+}
+
+.avatar-uploader-large {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.avatar-preview-lg,
+.placeholder-square-lg {
+  width: 150px;
+  height: 150px;
+  border-radius: calc(150px * var(--avatar-border-radius-ratio));
+  /* 45px (30%) */
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  margin: 0 auto;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+  background: var(--bg-input);
+  /* Recessed look */
+}
+
+.placeholder-square-lg {
+  border: 2px dashed var(--el-border-color-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-400);
+  gap: 8px;
+}
+
+.placeholder-square-lg span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-mask-lg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: 0.3s;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.avatar-preview-lg:hover .edit-mask-lg {
+  opacity: 1;
+}
+
+.hidden-item {
+  margin: 0 !important;
+  height: 0;
+  overflow: hidden;
+}
+
+/* --- Form Vertical Stack --- */
+.form-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* 压缩 Step1 的纵向间距 */
+  gap: 18px;
+}
+
+.spaced-item {
+  /* 需求：ルーム名区域整体下移 10px（仅影响 Step1 的房间名表单项） */
+  margin-top: 10px;
+  margin-bottom: 0 !important;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+:deep(.el-form-item__label) {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-700);
+  padding-bottom: 4px !important;
+  line-height: 1 !important;
+}
+
+/* --- Config Cards --- */
+.config-glass-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-glass);
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+html.dark .config-glass-card {
+  background: var(--bg-input);
+  border-color: var(--el-border-color-darker);
+  box-shadow: none;
+}
+
+.config-glass-card:hover {
+  border-color: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-700);
+  padding-left: 4px;
+}
+
+/* --- Input Styles --- */
+:deep(.el-input__wrapper) {
+  /* background-color: var(--bg-page) !important; -> Global in main.css */
+  /* box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important; -> Global */
+  border-radius: var(--radius-base);
+  transition: all 0.3s;
+  height: 48px !important;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) inset !important;
+}
+
+:deep(.el-input__inner) {
+  color: var(--text-900) !important;
+}
+
+/* --- Result Step --- */
+.result-step {
+  text-align: center;
+  /* Step4 撑满容器高度，让 flex 子项可分配 */
+  justify-content: flex-start;
+  padding-top: 10px;
+  /* 移除负边距，恢复正常布局 */
+  margin-top: 0;
+}
+
+.result-content {
+  display: flex;
+  flex-direction: column;
+  /* 使用 stretch 确保子元素宽度不超出父容器 */
+  align-items: stretch;
+  /* 恢复舒适间距 */
+  gap: 16px;
+  /* 撑满高度，让 result-details 可分配剩余空间 */
+  height: 100%;
+  min-height: 0;
+}
+
+/* 顶部摘要区：icon + 标题 + 消息（紧凑布局） */
+.result-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.result-icon {
+  /* 基础尺寸（失败态） */
+  font-size: 40px;
+  transition: font-size 0.2s ease;
+}
+
+.result-icon.success {
+  /* 恢复稍大的图标，保持视觉中心 */
+  font-size: 64px;
+  color: var(--el-color-success);
+}
+
+.result-icon.error {
+  color: var(--el-color-danger);
+}
+
+.result-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-900);
+  line-height: 1.2;
+}
+
+.result-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-500);
+  line-height: 1.5;
+  /* 单行省略，减少垂直噪音 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* 详情区：可滚动，撑满剩余高度 */
+.result-details {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 美化滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--el-border-color-light) transparent;
+  padding-bottom: 2px;
+}
+
+.result-details::-webkit-scrollbar {
+  width: 4px;
+}
+
+.result-details::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.result-details::-webkit-scrollbar-thumb {
+  background: var(--el-border-color-light);
+  border-radius: 2px;
+}
+
+.invite-block {
+  width: 100%;
+  /* 恢复标准内边距 */
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  display: flex;
+  flex-direction: column;
+  /* 恢复标准内部间距 */
+  gap: 16px;
+}
+
+html.dark .invite-block {
+  background: transparent;
+  border-color: var(--el-border-color);
+  backdrop-filter: none;
+}
+
+/* 成功页字段标题（ルームID / 招待リンク） */
+.credential-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-400);
+  letter-spacing: 0.5px;
+  /* 首个 label 无需额外 margin-top */
+  text-align: left;
+  text-transform: uppercase;
+}
+
+/* roomId：大号数字 + 复制（数字视觉居中，按钮固定右侧） */
+.credential-roomid-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  /* 恢复垂直边距 */
+  margin: 4px 0 8px;
+}
+
+/* 左侧占位：与右侧复制按钮等宽，使数字视觉居中 */
+.credential-roomid-row::before {
+  content: '';
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.credential-roomid-value {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+  /* 恢复字体大小 */
+  font-size: clamp(36px, 6vw, 44px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-900);
+  line-height: 1;
+  user-select: text;
+}
+
+/* 邀请链接：普通文本展示 + 复制 */
+.credential-link-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.credential-link-value {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--bg-input);
+  /* Match global input style */
+  border: 1px solid var(--el-border-color-light);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-700);
+  line-height: 1.4;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  user-select: text;
+  /* 限制最大高度，超长时滚动 */
+  max-height: 64px;
+  overflow-y: auto;
+}
+
+.invite-empty {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--bg-input);
+  /* Match global input style */
+  border: 1px dashed var(--el-border-color-light);
+  color: var(--text-400);
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.invite-copy-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.invite-copy-primary {
+  height: 44px;
+  border-radius: 12px;
+  padding: 0 14px;
+}
+
+/* 复制按钮：不使用蓝色 primary，改为 icon-only 的玻璃按钮（更"高级"且不抢主色） */
+.copy-icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  color: var(--text-700);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-glass);
+  transition: transform 0.2s var(--ease-out-expo), background-color 0.2s var(--ease-out-expo);
+  font-size: 16px;
+}
+
+.copy-icon-btn:hover {
+  transform: translateY(-2px);
+  background: var(--bg-page);
+  color: var(--primary);
+  border-color: var(--primary-light);
+}
+
+.copy-icon-btn:active {
+  transform: translateY(0);
+}
+
+/* 更强调的复制按钮（邀请链接）：仍然不用蓝色，但通过边框/阴影做“主操作”层级 */
+.copy-icon-btn--primary {
+  border-color: rgba(64, 158, 255, 0.35);
+}
+
+.invite-tip {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-500);
+  line-height: 1.4;
+  text-align: left;
+  padding-top: 4px;
 }
 
 /* --- Header --- */
@@ -506,8 +1019,8 @@ html.dark :deep(.ez-modern-dialog) {
 
 /* --- Input Styles --- */
 :deep(.el-input__wrapper) {
-  background-color: var(--bg-page) !important;
-  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+  /* background-color: var(--bg-page) !important; -> Global in main.css */
+  /* box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important; -> Global */
   border-radius: var(--radius-base);
   transition: all 0.3s;
   height: 48px !important;
@@ -526,7 +1039,9 @@ html.dark :deep(.ez-modern-dialog) {
   text-align: center;
   /* Step4 撑满容器高度，让 flex 子项可分配 */
   justify-content: flex-start;
-  padding-top: 8px;
+  padding-top: 0;
+  /* 整体上移，留出底部空间 */
+  margin-top: -15px;
 }
 
 .result-content {
@@ -534,8 +1049,8 @@ html.dark :deep(.ez-modern-dialog) {
   flex-direction: column;
   /* 使用 stretch 确保子元素宽度不超出父容器 */
   align-items: stretch;
-  /* 减少间距，让内容更紧凑 */
-  gap: 8px;
+  /* 极度紧凑 */
+  gap: 4px;
   /* 撑满高度，让 result-details 可分配剩余空间 */
   height: 100%;
   min-height: 0;
@@ -555,13 +1070,13 @@ html.dark :deep(.ez-modern-dialog) {
 
 .result-icon {
   /* 基础尺寸（失败态） */
-  font-size: 44px;
+  font-size: 40px;
   transition: font-size 0.2s ease;
 }
 
 .result-icon.success {
-  /* 成功态放大，作为页面主视觉 */
-  font-size: 64px;
+  /* 成功态放大，但不要太大 */
+  font-size: 48px;
   color: var(--el-color-success);
 }
 
@@ -571,17 +1086,17 @@ html.dark :deep(.ez-modern-dialog) {
 
 .result-title {
   margin: 0;
-  /* 略微缩小标题字体，让成功图标更突出 */
   font-size: 16px;
   font-weight: 800;
   color: var(--text-900);
+  line-height: 1.2;
 }
 
 .result-message {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-500);
-  line-height: 1.4;
+  line-height: 1.3;
   /* 单行省略，减少垂直噪音 */
   white-space: nowrap;
   overflow: hidden;
@@ -601,6 +1116,7 @@ html.dark :deep(.ez-modern-dialog) {
   /* 美化滚动条 */
   scrollbar-width: thin;
   scrollbar-color: var(--el-border-color-light) transparent;
+  padding-bottom: 0;
 }
 
 .result-details::-webkit-scrollbar {
@@ -618,44 +1134,47 @@ html.dark :deep(.ez-modern-dialog) {
 
 .invite-block {
   width: 100%;
-  padding: 12px;
+  /* 进一步缩小内边距 */
+  padding: 10px 14px;
   box-sizing: border-box;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-glass);
   background: var(--bg-glass);
   backdrop-filter: var(--blur-glass);
   -webkit-backdrop-filter: var(--blur-glass);
+  display: flex;
+  flex-direction: column;
+  /* 紧凑间距 */
+  gap: 8px;
 }
 
 /* 成功页字段标题（ルームID / 招待リンク） */
 .credential-label {
-  font-size: 12px;
-  font-weight: 900;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--text-400);
-  letter-spacing: 0.3px;
-  /* 首个 label 无需额外 margin-top，后续 label 用 :not(:first-child) 控制 */
+  letter-spacing: 0.5px;
+  /* 首个 label 无需额外 margin-top */
   margin-top: 0;
   text-align: left;
-}
-
-.credential-label:not(:first-child) {
-  margin-top: 8px;
+  text-transform: uppercase;
 }
 
 /* roomId：大号数字 + 复制（数字视觉居中，按钮固定右侧） */
 .credential-roomid-row {
-  margin-top: 6px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
+  /* 极小垂直边距 */
+  margin: 2px 0 4px;
 }
 
 /* 左侧占位：与右侧复制按钮等宽，使数字视觉居中 */
 .credential-roomid-row::before {
   content: '';
-  width: 36px;
+  width: 32px;
   flex-shrink: 0;
 }
 
@@ -664,10 +1183,10 @@ html.dark :deep(.ez-modern-dialog) {
   min-width: 0;
   text-align: center;
   font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
-  /* 降低最大字体，适配紧凑布局 */
-  font-size: clamp(32px, 6vw, 44px);
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  /* 进一步缩小 Room ID 字体 */
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
   color: var(--text-900);
   line-height: 1;
   user-select: text;
@@ -675,10 +1194,9 @@ html.dark :deep(.ez-modern-dialog) {
 
 /* 邀请链接：普通文本展示 + 复制 */
 .credential-link-row {
-  margin-top: 6px;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -686,58 +1204,58 @@ html.dark :deep(.ez-modern-dialog) {
 .credential-link-value {
   flex: 1;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 6px 10px;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--bg-page);
   border: 1px solid var(--el-border-color-light);
   font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
   font-size: 11px;
-  font-weight: 700;
-  color: var(--text-900);
-  line-height: 1.4;
+  font-weight: 600;
+  color: var(--text-700);
+  line-height: 1.3;
   word-break: break-all;
   overflow-wrap: anywhere;
   user-select: text;
-  /* 限制最大高度，超长时滚动 */
-  max-height: 60px;
+  /* 限制最大高度 */
+  max-height: 48px;
   overflow-y: auto;
 }
 
 .invite-empty {
   flex: 1;
   min-width: 0;
-  min-height: 36px;
+  min-height: 32px;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--bg-page);
   border: 1px dashed var(--el-border-color-light);
   color: var(--text-400);
   display: flex;
   align-items: center;
-  padding: 8px 10px;
+  padding: 6px 10px;
 }
 
 .invite-copy-btn {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 10px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
   font-weight: 800;
   flex-shrink: 0;
 }
 
 .invite-copy-primary {
-  height: 44px;
-  border-radius: 12px;
-  padding: 0 14px;
+  height: 36px;
+  border-radius: 8px;
+  padding: 0 10px;
 }
 
 /* 复制按钮：不使用蓝色 primary，改为 icon-only 的玻璃按钮（更"高级"且不抢主色） */
 .copy-icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   flex-shrink: 0;
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -746,11 +1264,14 @@ html.dark :deep(.ez-modern-dialog) {
   -webkit-backdrop-filter: var(--blur-glass);
   box-shadow: var(--shadow-glass);
   transition: transform 0.2s var(--ease-out-expo), background-color 0.2s var(--ease-out-expo);
+  font-size: 14px;
 }
 
 .copy-icon-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   background: var(--bg-page);
+  color: var(--primary);
+  border-color: var(--primary-light);
 }
 
 .copy-icon-btn:active {
@@ -763,11 +1284,12 @@ html.dark :deep(.ez-modern-dialog) {
 }
 
 .invite-tip {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 10px;
   color: var(--text-500);
-  line-height: 1.4;
+  line-height: 1.2;
   text-align: left;
+  padding-top: 2px;
 }
 
 @media (max-width: 520px) {

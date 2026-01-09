@@ -24,6 +24,7 @@
         SELECT chat_id
         FROM chat_members
         WHERE user_id = #{Id} )
+          AND u.is_deleted = 0
     </select>
 
     <select id="selectChatMembersByUserIdAndChatId" resultType="java.lang.Integer">
@@ -49,7 +50,7 @@
                m.last_seen_at,
                m.create_time,
                m.update_time FROM chats c
-            JOIN ( chat_members m JOIN users u ON m.user_id = u.id LEFT JOIN assets a ON u.asset_id = a.id )
+            JOIN ( chat_members m JOIN users u ON m.user_id = u.id AND u.is_deleted = 0 LEFT JOIN assets a ON u.asset_id = a.id )
             ON c.id = m.chat_id
         WHERE m.chat_id IN (SELECT chat_id
         FROM chat_members cm WHERE cm.user_id = #{userId})
@@ -62,7 +63,7 @@
                m.last_seen_at AS lastSeenAt
         FROM chats c
                  JOIN chat_members m ON c.id = m.chat_id
-                 JOIN users u ON m.user_id = u.id
+                 JOIN users u ON m.user_id = u.id AND u.is_deleted = 0
         WHERE m.chat_id IN (
             SELECT chat_id
             FROM chat_members cm
@@ -76,14 +77,14 @@
                m.user_id,
                u.uid,
                u.nickname,
-               u.asset_id,
+               u.asset_id as assetId,
                a.asset_name as avatarAssetName,
                m.last_seen_at,
                m.create_time,
                m.update_time
         FROM chats c
                  JOIN chat_members m ON c.id = m.chat_id
-                 JOIN users u ON m.user_id = u.id
+                 JOIN users u ON m.user_id = u.id AND u.is_deleted = 0
                  LEFT JOIN assets a ON u.asset_id = a.id
         WHERE c.id = #{chatId}
     </select>

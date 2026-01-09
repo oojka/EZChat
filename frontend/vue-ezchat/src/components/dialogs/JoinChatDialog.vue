@@ -15,6 +15,8 @@ import { useLoginJoin } from '@/hooks/chat/join/useLoginJoin.ts'
 import { useRoomStore } from '@/stores/roomStore'
 import { useUserStore } from '@/stores/userStore'
 import { useI18n } from 'vue-i18n'
+import { isAppError } from '@/error/ErrorTypes'
+import PasswordInput from '@/components/PasswordInput.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -84,7 +86,7 @@ const navigateToChat = async (chatCode: string) => {
 const handleJoin = async () => {
   try {
     // 1. 验证并获取 Payload
-    const payload = await validateAndGetPayload(false)
+    const payload = await validateAndGetPayload(joinChatCredentialsForm.value, false)
     if (!payload) return // 验证失败或取消
 
     // 2. 执行加入
@@ -105,14 +107,35 @@ const handleJoin = async () => {
 
       await navigateToChat(targetCode || '')
     } else {
-      // FAILED
+      // FAILED (General)
       joinResult.value = { success: false, message: t('chat.join_failed') || 'Join failed' }
       joinStep.value = 2
     }
 
   } catch (e: any) {
-    // 这里的 error 通常已经被 hook 内部捕获并显示 ElMessage，但为了保险
-    console.error(e)
+    // 捕获验证或加入过程中的错误，显示在 Dialog 的结果页中
+    let errMsg = t('chat.join_failed')
+
+    if (e) {
+      if (typeof e === 'string') {
+        errMsg = e
+      } else if (e instanceof Error) {
+        errMsg = e.message
+      } else if (isAppError(e)) {
+        errMsg = e.message
+      } else if (e.message) {
+        // 兜底：尝试读取任意对象的 message 属性
+        errMsg = String(e.message)
+      }
+    }
+
+    // 尝试翻译错误消息（如果是 api.xxx 格式）
+    if (errMsg && errMsg.startsWith('api.')) {
+      errMsg = t(errMsg)
+    }
+
+    joinResult.value = { success: false, message: errMsg }
+    joinStep.value = 2
   }
 }
 
@@ -156,21 +179,23 @@ watch(() => roomStore.joinChatDialogVisible, (newVal) => {
     class="ez-modern-dialog join-dialog-modern" align-center destroy-on-close :show-close="false"
     :close-on-click-modal="false">
     <template #header>
-      <div class="ez-dialog-header-actions">
-        <button v-if="joinStep === 1" class="ez-close-btn" type="button" @click="closeJoinDialog">
-          <el-icon>
-            <Close />
-          </el-icon>
-        </button>
-      </div>
-      <div v-if="joinStep === 1" class="dialog-title-area">
-        <h3>{{ t('chat.join_chat') }}</h3>
+      <div class="join-header">
+        <div class="ez-dialog-header-actions">
+          <button v-if="joinStep === 1" class="ez-close-btn" type="button" @click="closeJoinDialog">
+            <el-icon>
+              <Close />
+            </el-icon>
+          </button>
+        </div>
+        <!-- Keep title area in DOM to preserve height, but hide text in result step -->
+        <div class="dialog-title-area" :style="{ visibility: joinStep === 1 ? 'visible' : 'hidden' }">
+          <h3>{{ t('chat.join_chat') }}</h3>
+        </div>
       </div>
     </template>
 
     <div class="join-dialog-content">
       <transition name="el-fade-in-linear" mode="out-in">
-
         <div v-if="joinStep === 1" key="step1" class="step-container">
 
           <div class="mode-toggle-pill">
@@ -198,15 +223,15 @@ watch(() => roomStore.joinChatDialogVisible, (newVal) => {
               </el-form-item>
 
               <el-form-item :label="t('chat.password')" prop="password">
-                <el-input v-model="joinChatCredentialsForm.password" :placeholder="t('chat.password_placeholder')"
-                  type="password" size="large" show-password @keydown.enter.prevent="handleJoin" />
+                <PasswordInput v-model="joinChatCredentialsForm.password" :placeholder="t('chat.password_placeholder')"
+                  size="large" @enter="handleJoin" />
               </el-form-item>
             </template>
 
             <template v-else>
-              <el-form-item :label="t('chat.invite_url')" prop="inviteUrl">
+              <el-form-item :label="t('chat.invite_url')" style="margin-top: 25px;" prop="inviteUrl">
                 <el-input v-model="joinChatCredentialsForm.inviteUrl" :placeholder="t('chat.invite_url_placeholder')"
-                  type="textarea" :rows="3" resize="none" size="large" @keydown.enter.prevent="handleJoin" />
+                  type="textarea" :rows="5" resize="none" size="large" @keydown.enter.prevent="handleJoin" />
               </el-form-item>
             </template>
           </el-form>
@@ -223,16 +248,18 @@ watch(() => roomStore.joinChatDialogVisible, (newVal) => {
 
         <div v-else key="step2" class="step-container result-container">
           <div class="result-content">
-            <el-icon :class="['result-icon', joinResult.success ? 'success' : 'error']">
-              <CircleCheckFilled v-if="joinResult.success" />
-              <CircleCloseFilled v-else />
-            </el-icon>
+            <div class="result-summary">
+              <el-icon :class="['result-icon', joinResult.success ? 'success' : 'error']">
+                <CircleCheckFilled v-if="joinResult.success" />
+                <CircleCloseFilled v-else />
+              </el-icon>
 
-            <h3 class="result-title">
-              {{ joinResult.success ? t('chat.join_success') : t('chat.join_failed') }}
-            </h3>
+              <h3 class="result-title">
+                {{ joinResult.success ? t('chat.join_success') : t('chat.join_failed') }}
+              </h3>
 
-            <p class="result-message">{{ joinResult.message }}</p>
+              <p class="result-message">{{ joinResult.message }}</p>
+            </div>
           </div>
 
           <div class="dialog-actions">
@@ -242,14 +269,12 @@ watch(() => roomStore.joinChatDialogVisible, (newVal) => {
             </el-button>
           </div>
         </div>
-
       </transition>
     </div>
   </el-dialog>
 </template>
 
 <style scoped>
-/* --- Dialog Container --- */
 /* --- Dialog Container --- */
 :deep(.ez-modern-dialog) {
   background: var(--bg-glass) !important;
@@ -260,12 +285,14 @@ watch(() => roomStore.joinChatDialogVisible, (newVal) => {
   box-shadow: var(--shadow-glass) !important;
   overflow: hidden;
   transition: all 0.3s var(--ease-out-expo);
+  /* Ensure dialog dimensions match CreateChatDialog style reference */
+  width: 480px !important;
 }
 
 html.dark :deep(.ez-modern-dialog) {
   background: var(--bg-card) !important;
-  backdrop-filter: blur(24px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* 重置 Element Plus header 默认样式 */
@@ -282,51 +309,72 @@ html.dark :deep(.ez-modern-dialog) {
 .join-dialog-content {
   position: relative;
   /* header 与内容区域之间增加间距（padding-top），保持呼吸感 */
-  padding: 10px 32px 24px;
+  padding: 0 32px 20px;
   display: flex;
   flex-direction: column;
-  min-height: 320px;
-  /* 压缩高度，使其更紧凑 */
+  /* 固定高度，防止切换时的抖动，压缩整体高度 */
+  height: 320px;
+  overflow: hidden;
 }
 
 
 /* --- Header Actions --- */
-/* Uses global .ez-dialog-header-actions and .ez-close-btn */
+.join-header {
+  position: relative;
+  text-align: center;
+  /* 顶部 20px，保持统一 */
+  padding-top: 16px;
+}
+
+.join-header :deep(.ez-dialog-header-actions) {
+  /* 覆盖全局位置: 顶部 (20px + 2px offset) = 22px center -> top approx 6px */
+  top: 12px;
+  right: 12px;
+}
+
 
 .dialog-title-area {
   text-align: center;
-  margin-top: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 4px;
   padding: 0 40px;
 }
 
 .dialog-title-area h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-900);
   margin: 0;
 }
 
-/* --- Steps --- */
+/* --- Transitions --- */
 .step-container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 /* --- Mode Switcher --- */
 .mode-toggle-pill {
   display: flex;
-  background: var(--bg-page);
+  background: var(--el-fill-color-light);
+  /* Softer than bg-page in dark mode */
   padding: 4px;
   border-radius: 14px;
-  margin-bottom: 24px;
+  /* Reduced margin */
+  margin-bottom: 16px;
   border: 1px solid var(--el-border-color-light);
+}
+
+html.dark .mode-toggle-pill {
+  background: var(--bg-input);
+  border-color: var(--el-border-color-darker);
 }
 
 .mode-tab {
   flex: 1;
-  height: 36px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -346,12 +394,10 @@ html.dark :deep(.ez-modern-dialog) {
 .mode-tab.active {
   background: var(--bg-card);
   color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-glass);
 }
 
-html.dark .mode-tab.active {
-  background: var(--el-bg-color-overlay);
-}
+/* Remove html.dark override to ensure it uses var(--bg-card) which is #1e1f20 in dark mode, matching LeftCard */
 
 /* --- Form --- */
 .join-form {
@@ -361,24 +407,30 @@ html.dark .mode-tab.active {
 }
 
 :deep(.el-form-item) {
-  margin-bottom: 16px;
+  /* Reduced margin */
+  margin-bottom: 12px;
 }
 
 :deep(.el-form-item__label) {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-700);
-  padding-bottom: 6px !important;
+  padding-bottom: 4px !important;
   line-height: 1 !important;
 }
 
-/* Input Styles */
+/* Input Styles - Standard Inputs */
 :deep(.el-input__wrapper),
 :deep(.el-textarea__inner) {
-  background-color: var(--bg-page) !important;
-  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+  /* Ensure bg is page color for contrast against glass dialog */
+  /* background-color handled globally */
   border-radius: var(--radius-base);
   transition: all 0.3s;
+}
+
+/* Force standard height for non-textarea inputs to match design system (48px) if 'size=large' isn't catching vertically or needs override */
+:deep(.el-input--large .el-input__wrapper) {
+  height: 44px !important;
 }
 
 :deep(.el-input__wrapper.is-focus),
@@ -395,18 +447,29 @@ html.dark .mode-tab.active {
 .result-container {
   justify-content: center;
   align-items: center;
-  padding-top: 20px;
+  padding-top: 0;
+  padding-bottom: 0;
   height: 100%;
 }
 
 .result-content {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100%;
+}
+
+.result-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  width: 100%;
 }
 
 .result-icon {
@@ -427,15 +490,18 @@ html.dark .mode-tab.active {
   font-size: 18px;
   font-weight: 800;
   color: var(--text-900);
-  margin: 0 0 8px;
+  margin: 0 0 12px;
 }
 
 .result-message {
   font-size: 14px;
   color: var(--text-500);
-  margin: 0;
-  max-width: 80%;
-  line-height: 1.5;
+  margin-top: 8px;
+  /* Widen message area to prevent wrapping */
+  max-width: 100%;
+  padding: 0 16px;
+  line-height: 1.6;
+  word-break: break-word;
 }
 
 /* --- Bottom Actions --- */

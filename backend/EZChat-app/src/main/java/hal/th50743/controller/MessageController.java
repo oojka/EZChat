@@ -4,7 +4,6 @@ import hal.th50743.pojo.*;
 import hal.th50743.service.MessageService;
 
 import java.util.List;
-import java.util.Map;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +32,7 @@ public class MessageController {
      * @return 包含消息列表的统一响应结果
      */
     @GetMapping
-    public Result<Map<String, Object>> getMessagesByChatCode(@RequestParam String chatCode,
+    public Result<hal.th50743.pojo.MessageListVO> getMessagesByChatCode(@RequestParam String chatCode,
             @RequestParam(required = false) Long cursorSeqId) {
         // 从线程上下文中获取当前登录用户的ID
         Integer userID = CurrentHolder.getCurrentId();

@@ -116,6 +116,7 @@
   "api": {
     "too_many_requests": "請求太快了，請稍慢一點。",
     "unexpected_error": "發生了預料之外的錯誤。",
+    "retry_required": "操作未完成，請重試。",
     "already_exists": "「{info}」已被占用。",
     "data_already_exists": "該資料已存在。",
     "you_have_already_in_this_room": "您已經加入此房間，請勿重複加入。",
@@ -150,16 +151,27 @@
     "http_503": "服務暫時不可用",
     "http_504": "閘道超時",
     "errors": {
-      "42001": "房間未找到或已被刪除。",
+      "40000": "請求參數錯誤。",
+      "40100": "未授權訪問，請重新登入。",
+      "40101": "登入已過期，請重新登入。",
       "40300": "加入被禁用或密碼登入未啟用。",
+      "40400": "資源未找到。",
+      "41001": "使用者未找到。",
+      "41002": "使用者已存在。",
+      "41003": "使用者名稱或密碼錯誤。",
+      "42001": "房間未找到或已被刪除。",
+      "42002": "無訪問權限：您不是該聊天室的成員。",
       "42003": "密碼必填。",
       "42004": "密碼錯誤。",
-      "40000": "請求參數錯誤。",
       "42010": "邀請碼無效。",
       "42011": "邀請碼已過期。",
       "42012": "邀請碼已被撤銷。",
       "42013": "邀請碼使用次數已滿。",
-      "50001": "資料庫錯誤，請稍後重試。"
+      "43001": "檔案為空或未選擇。",
+      "43002": "檔案過大，請選擇較小的檔案。",
+      "50000": "系統內部錯誤，請稍後重試。",
+      "50001": "資料庫錯誤，請稍後重試。",
+      "53001": "檔案上傳失敗。"
     }
   },
   "error_pages": {
@@ -339,6 +351,33 @@
     "no_account": "沒有帳號？",
     "register": "「註冊」",
     "validation_expired": "邀請資訊已失效，請重新驗證"
+  },
+  "upgrade": {
+    "benefits": {
+      "create_chat": "建立專屬聊天頻道",
+      "unlimited_join": "聊天室加入無限制",
+      "cloud_storage": "訊息雲端永久保存",
+      "multi_device": "多端即時同步",
+      "custom_profile": "頭像暱稱自訂"
+    },
+    "title": "解鎖完整功能體驗",
+    "button": "成為正式用戶",
+    "dialog_title": "升級正式帳號",
+    "dialog_subtitle": "解鎖完整功能體驗",
+    "nickname_placeholder": "設定暱稱",
+    "bio_placeholder": "一句話介紹自己...",
+    "username_placeholder": "設定登入帳號",
+    "password_placeholder": "設定登入密碼（8-20位）",
+    "confirm_password_placeholder": "再次輸入密碼",
+    "cancel_button": "取消",
+    "submit_button": "立即升級",
+    "avatar_tip": "支援 JPG/PNG，小於 2MB",
+    "success": "升級成功，歡迎成為正式用戶！",
+    "failed": "升級失敗",
+    "avatar_upload_success": "頭像上傳成功",
+    "avatar_upload_failed": "頭像上傳失敗",
+    "avatar_format_error": "頭像圖片必須是 JPG 或 PNG 格式！",
+    "avatar_size_error": "頭像圖片大小不能超過 2MB！"
   },
   "system": {
     "room_created": "房間已建立",

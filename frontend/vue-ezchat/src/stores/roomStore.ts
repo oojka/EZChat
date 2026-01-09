@@ -399,9 +399,10 @@ export const useRoomStore = defineStore('room', () => {
       if (isAppError(e)) {
         throw e
       }
+      const errorMsg = e instanceof Error ? e.message : 'Room validation failed'
       throw createAppError(
         ErrorType.NETWORK,
-        'Room validation failed',
+        errorMsg,
         {
           severity: ErrorSeverity.ERROR,
           component: 'roomStore',

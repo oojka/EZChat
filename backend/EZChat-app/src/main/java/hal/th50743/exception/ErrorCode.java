@@ -86,6 +86,16 @@ public enum ErrorCode {
     UNAUTHORIZED(40100, "Unauthorized"),
 
     /**
+     * AccessToken 已过期
+     * <p>
+     * 使用场景：
+     * - AccessToken 过期，需要前端触发静默刷新
+     * <p>
+     * 前端处理：仅此错误码触发 refresh 流程
+     */
+    TOKEN_EXPIRED(40101, "Token expired"),
+
+    /**
      * 禁止访问
      * <p>
      * 使用场景：

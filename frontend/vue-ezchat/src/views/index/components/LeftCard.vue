@@ -62,7 +62,7 @@ const onUnflip = () => {
   setTimeout(() => {
     resetJoinForm()
     joinFormRef.value?.clearValidate()
-  }, 800)
+  }, 500)
 }
 
 // 监听模式切换，清除校验
@@ -155,7 +155,7 @@ watch(() => joinChatCredentialsForm.value.joinMode, () => {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
@@ -189,15 +189,7 @@ html.dark .flip-card-back {
   -webkit-backdrop-filter: none;
 }
 
-.is-flipped .flip-card-front {
-  visibility: hidden;
-  transition: visibility 0s 0.4s;
-}
-
-.flip-card-inner:not(.is-flipped) .flip-card-front {
-  visibility: visible;
-  transition: visibility 0s 0.4s;
-}
+/* REMOVED visibility transitions to fix disappearance glitch */
 
 .flip-card-back {
   transform: rotateY(180deg);
@@ -346,7 +338,8 @@ html.dark .guest-badge {
 .modern-tabs-small {
   width: 100%;
   display: flex;
-  background: var(--bg-page);
+  background: var(--el-fill-color-light);
+  /* Softer than bg-page in dark mode */
   padding: 4px;
   border-radius: var(--radius-base);
   border: 1px solid var(--el-border-color-extra-light);
@@ -398,7 +391,7 @@ html.dark .guest-badge {
 .url-textarea :deep(.el-textarea__inner) {
   padding: 10px 16px;
   line-height: 1.4;
-  background-color: var(--bg-page);
+  /* background-color handled globally */
   color: var(--text-900);
   border: 1px solid var(--el-border-color-light);
   border-radius: var(--radius-base);
@@ -432,8 +425,10 @@ html.dark .guest-badge {
   border-radius: var(--radius-md);
   font-weight: 700;
   font-size: 15px;
-  background: var(--bg-page);
-  border: none;
+  background: transparent;
+  /* Remove contrasting bg-page */
+  border: 1px solid var(--el-border-color-light);
+  /* Add border for definition */
   color: var(--text-500);
   margin: 0 !important;
   transition: all 0.3s;
@@ -445,8 +440,8 @@ html.dark .guest-badge {
 }
 
 :deep(.el-input__wrapper) {
-  background-color: var(--bg-page) !important;
-  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+  /* background-color: var(--bg-page) !important; -> Global in main.css */
+  /* box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important; -> Global */
   border-radius: var(--radius-base);
   transition: all 0.3s;
 }

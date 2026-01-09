@@ -654,27 +654,33 @@ public class ChatServiceImpl implements ChatService {
             // 用户不存在异常：理论上不应该发生，因为用户ID来自已验证的Token
             log.error("Failed to find user for system message: info={}", joinChatReq);
             throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found after join");
-        } else {
-            // UserMapper.getUserById 已经关联了 formal_users 表
-            // 如果 username 为 null，说明是访客用户
-            String dbUsername = user.getUsername();
-            boolean isGuest = (dbUsername == null);
-            // 构建显示名称：访客用户添加 [Guest] 前缀
-            displayName = (isGuest ? "[Guest] " : "")
-                    + (user.getNickname() != null ? user.getNickname() : "Unknown");
-
-            // 创建系统消息对象
-            sysMsg = new Message();
-            sysMsg.setChatId(chatInfo.getChatId()); // 聊天室ID
-            sysMsg.setSenderId(joinChatReq.getUserId()); // 发送者ID（新加入的用户）
-            sysMsg.setType(11); // 消息类型：11 表示成员加入
-            sysMsg.setText(displayName); // 显示名称（前端会进行本地化）
-            sysMsg.setAssetIds(""); // 确保不为null，数据库安全性
-            sysMsg.setCreateTime(now); // 创建时间
-            sysMsg.setUpdateTime(now); // 更新时间
-            messageMapper.insertMessage(sysMsg); // 持久化到数据库
-            log.info("System message persisted for join: msgId={}, text={}", sysMsg.getId(), displayName);
         }
+
+        // UserMapper.getUserById 已经关联了 formal_users 表
+        // 如果 username 为 null，说明是访客用户
+        String dbUsername = user.getUsername();
+        boolean isGuest = (dbUsername == null);
+        // 构建显示名称：访客用户添加 [Guest] 前缀
+        displayName = (isGuest ? "[Guest] " : "")
+                + (user.getNickname() != null ? user.getNickname() : "Unknown");
+
+        // 获取消息序列号（提升到外层作用域，确保 WebSocket 广播时可用）
+        messageMapper.updateChatSequence(chatInfo.getChatId());
+        Long seqId = messageMapper.selectCurrentSequence(chatInfo.getChatId());
+
+        // 创建系统消息对象
+        sysMsg = new Message();
+        sysMsg.setChatId(chatInfo.getChatId()); // 聊天室ID
+        sysMsg.setSenderId(joinChatReq.getUserId()); // 发送者ID（新加入的用户）
+        sysMsg.setSeqId(seqId); // 群内消息序号
+        sysMsg.setType(11); // 消息类型：11 表示成员加入
+        sysMsg.setText(displayName); // 显示名称（前端会进行本地化）
+        sysMsg.setAssetIds(""); // 确保不为null，数据库安全性
+        sysMsg.setCreateTime(now); // 创建时间
+        sysMsg.setUpdateTime(now); // 更新时间
+        messageMapper.insertMessage(sysMsg); // 持久化到数据库
+        log.info("System message persisted for join: msgId={}, seqId={}, text={}", sysMsg.getId(), seqId,
+                displayName);
 
         // ========== 步骤4.2: WebSocket 广播通知 ==========
         // 4.2.1 获取聊天室所有成员ID列表（包括新加入的用户）
@@ -687,6 +693,7 @@ public class ChatServiceImpl implements ChatService {
         // 4.2.2 构造广播数据对象（包含成员信息）
         JoinBroadcastVO broadcastVO = chatMemberAssembler.toJoinBroadcastVO(user, chatInfo.getChatCode(), displayName,
                 now);
+        broadcastVO.setSeqId(seqId); // 设置消息序列号，确保前端可以正确排序和去重
 
         // 4.2.3 封装为 WebSocket 消息并广播
         // 消息格式：状态码 3001 表示成员加入事件
@@ -913,10 +920,15 @@ public class ChatServiceImpl implements ChatService {
         chatInviteMapper.insertChatInvite(invite); // 插入数据库
 
         // ========== 步骤8: 插入系统消息 ==========
-        // 8.1 创建房间创建系统消息（Type 10）
+        // 8.1 初始化聊天室消息序列号（首条消息 seqId = 1）
+        messageMapper.updateChatSequence(chatId);
+        Long seqId = messageMapper.selectCurrentSequence(chatId);
+
+        // 8.2 创建房间创建系统消息（Type 10）
         Message sysMsg = new Message();
         sysMsg.setChatId(chatId); // 聊天室ID
         sysMsg.setSenderId(userId); // 发送者ID（创建者）
+        sysMsg.setSeqId(seqId); // 群内消息序号
         sysMsg.setType(10); // 消息类型：10 表示房间创建
         sysMsg.setText(null); // 文本内容为null，前端进行本地化
         sysMsg.setAssetIds(null); // 资源文件ID（无）
@@ -925,7 +937,8 @@ public class ChatServiceImpl implements ChatService {
         messageMapper.insertMessage(sysMsg); // 插入数据库
 
         // ========== 步骤9: 记录成功日志并返回 ==========
-        log.info("Chat room created successfully: userId={}, chatId={}, chatCode={}", userId, chatId, chatCode);
+        log.info("Chat room created successfully: userId={}, chatId={}, chatCode={}, seqId={}", userId, chatId,
+                chatCode, seqId);
         return new CreateChatVO(chatCode, inviteCode);
     }
 

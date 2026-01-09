@@ -54,14 +54,28 @@ watchEffect(() => {
 // 排除 \p{Extended_Pictographic}（太宽泛，会匹配非 Emoji 字符）
 const emojiRegex = /(\u00a9|\u00ae|\ud83c[\udf00-\udfff]|\ud83d[\udc00-\udfff]|\ud83e[\udd00-\uddff])/gu
 
+// URL 正则表达式：匹配 http/https 链接
+// 匹配规则：
+// - 协议：http:// 或 https://
+// - 域名：字母数字、点、横杠
+// - 路径：可选，包含字母数字、斜杠、点、横杠、问号、等号、井号、百分号等
+const urlRegex = /(https?:\/\/[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+)/g
+
 const renderedText = computed(() => {
   if (!props.msg.text) return ''
-  const escaped = props.msg.text
+
+  // Step 1: HTML 转义（防止 XSS）
+  let escaped = props.msg.text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
+
+  // Step 2: 将 URL 包裹为可点击链接（在新标签页打开）
+  escaped = escaped.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>')
+
+  // Step 3: 将 Emoji 包裹为样式 span
   return escaped.replace(emojiRegex, '<span class="inline-emoji">$1</span>')
 })
 
@@ -414,6 +428,29 @@ html.dark .message-row.is-me .message-text-bubble {
   display: inline-block;
   margin: 0 1px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* 消息内链接样式 */
+:deep(.message-link) {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+  transition: opacity 0.2s ease;
+}
+
+:deep(.message-link:hover) {
+  opacity: 0.8;
+}
+
+/* 自己消息的链接：白色带下划线 */
+.message-row.is-me :deep(.message-link) {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.message-row.is-me :deep(.message-link:hover) {
+  color: #ffffff;
+  opacity: 1;
 }
 
 /* 图片消息：容器负责宽度约束（<= 80%），子项填满容器，避免百分比嵌套导致异常占位 */

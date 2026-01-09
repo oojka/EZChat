@@ -7,28 +7,47 @@
    1. Global Design Tokens (Light Mode)
    ========================================= */
 :root {
-  --primary: #409eff;
-  --primary-light: #e0f2fe;
-  --primary-dark: #337ecc;
+  /* Premium Brand Colors: Vibrant & Trustworthy */
+  --primary: #3b82f6;
+  --primary-light: #eff6ff;
+  --primary-dark: #2563eb;
 
-  /* Element Plus Light Vars（用于全局 Spinner 等组件保持一致） */
-  --el-border-color-light: #dcdfe6;
+  /* Element Plus Light Vars */
+  --el-border-color-light: #e2e8f0;
 
+  /* Premium Typography: High Contrast & Cool Tones */
   --text-900: #0f172a;
+  /* Slate 900 */
   --text-700: #334155;
+  /* Slate 700 */
   --text-500: #64748b;
+  /* Slate 500 (Cleaned up from 475569) */
   --text-400: #94a3b8;
+  /* Slate 400 */
 
+  /* Premium Surfaces: Airy & Breathable */
   --bg-page: #f8fafc;
+  /* Slate 50: Much brighter and cleaner */
+  --bg-input: #ffffff;
+  /* Pure White: Crisp and standard */
   --bg-card: #ffffff;
   --bg-aside: #ffffff;
 
-  --bg-glass: rgba(255, 255, 255, 0.65);
-  /* 局部遮蔽层（例如 RightAside 的加载遮罩）：比 dialog 更透明，能看出背后内容被磨砂 */
-  --bg-glass-overlay: rgba(255, 255, 255, 0.42);
-  --blur-glass: blur(24px) saturate(180%);
-  --border-glass: rgba(255, 255, 255, 0.5);
-  --shadow-glass: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+  /* Modern Glassmorphism 2.0 */
+  --bg-glass: rgba(255, 255, 255, 0.72);
+  /* Higher transparency */
+  --bg-glass-overlay: rgba(255, 255, 255, 0.60);
+  /* Brighter overlays */
+  --blur-glass: blur(20px) saturate(180%);
+  /* Sharper blur */
+  --border-glass: rgba(255, 255, 255, 0.6);
+  /* Subtle rim light */
+
+  /* Premium Shadow: Layered Depth with Blue Tint (Not Black) */
+  /* Layer 1: Soft ambient | Layer 2: Sharp definition */
+  --shadow-glass:
+    0 20px 40px -12px rgba(18, 48, 92, 0.12),
+    0 2px 8px -2px rgba(18, 48, 92, 0.04);
 
   --radius-ss: 4px;
   --radius-sm: 8px;
@@ -60,12 +79,17 @@ html.dark {
   --bg-card: #1e1f20;
   --bg-aside: #131314;
 
+  /* Dark Mode Input Background */
+  --bg-input: #131314;
+  /* Matches card/overlay for seamless look, or #2a2b2e for contrast */
+
   --bg-glass: rgba(30, 31, 32, 0.75);
   /* 暗黑模式下的局部遮蔽：避免“全黑/全透明”，保持磨砂层次 */
   --bg-glass-overlay: rgba(30, 31, 32, 0.55);
   --blur-glass: blur(24px) saturate(200%);
   --border-glass: rgba(255, 255, 255, 0.06);
-  --shadow-glass: 0 16px 48px 0 rgba(0, 0, 0, 0.6);
+  /* Deep shadow from RightCard style */
+  --shadow-glass: 0 20px 80px rgba(0, 0, 0, 0.8);
 
   /* Element Plus Dark Vars */
   --el-bg-color: #131314;
@@ -89,11 +113,16 @@ body {
 
 /* =========================================
    3. Global Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
 ::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.2);
   border-radius: var(--radius-round);
 }
+
 html.dark ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.08);
 }
@@ -130,6 +159,32 @@ html.dark .el-badge__content--danger {
 :deep(.el-input--large .el-input__wrapper),
 :deep(.el-form-item .el-input__wrapper[size="large"]) {
   height: 36px !important;
+}
+
+/* Global Input Background Override */
+/* Global Input Background Override */
+/* By overriding the Element Plus variable, we ensure all components (including internal ones)
+   use our controlled background color automatically. */
+:root {
+  --el-input-bg-color: var(--bg-input);
+  --el-fill-color-blank: var(--bg-input);
+}
+
+/* Also ensure dark mode respects this */
+html.dark {
+  --el-input-bg-color: var(--bg-input);
+  --el-fill-color-blank: var(--bg-input);
+}
+
+.el-input__wrapper,
+.el-textarea__inner {
+  background-color: var(--el-input-bg-color) !important;
+  box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) inset !important;
 }
 
 /* Unified Button Height (Primary and Large Buttons) */
@@ -171,10 +226,14 @@ html {
 }
 
 /* 允许 ID 和代码显示区域文字选择 */
-.credential-roomid-value,  /* CreateChatDialog 结果页面的房间ID */
-.credential-link-value,    /* CreateChatDialog 结果页面的邀请链接URL */
-.room-code,                 /* Join 页面的房间ID */
-.room-name {                /* Join 页面的房间名 */
+.credential-roomid-value,
+/* CreateChatDialog 结果页面的房间ID */
+.credential-link-value,
+/* CreateChatDialog 结果页面的邀请链接URL */
+.room-code,
+/* Join 页面的房间ID */
+.room-name {
+  /* Join 页面的房间名 */
   user-select: text !important;
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
@@ -182,8 +241,10 @@ html {
 }
 
 /* 允许消息内容文字选择 */
-.message-text,              /* MessageArea 中的消息文本 */
-.message-text-bubble {      /* 消息气泡，包含文本 */
+.message-text,
+/* MessageArea 中的消息文本 */
+.message-text-bubble {
+  /* 消息气泡，包含文本 */
   user-select: text !important;
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
@@ -203,21 +264,25 @@ html {
 
 /* Base class for square avatars with proportional border-radius */
 .avatar-square {
-  --avatar-size: var(--size, 40px); /* Default to 40px if --size not set */
+  --avatar-size: var(--size, 40px);
+  /* Default to 40px if --size not set */
   border-radius: calc(var(--avatar-size) * var(--avatar-border-radius-ratio));
 }
 
 /* Utility classes for common avatar sizes (optional, for convenience) */
 .avatar-square-sm {
-  border-radius: calc(40px * var(--avatar-border-radius-ratio)); /* 12px */
+  border-radius: calc(40px * var(--avatar-border-radius-ratio));
+  /* 12px */
 }
 
 .avatar-square-md {
-  border-radius: calc(90px * var(--avatar-border-radius-ratio)); /* 27px */
+  border-radius: calc(90px * var(--avatar-border-radius-ratio));
+  /* 27px */
 }
 
 .avatar-square-lg {
-  border-radius: calc(150px * var(--avatar-border-radius-ratio)); /* 45px */
+  border-radius: calc(150px * var(--avatar-border-radius-ratio));
+  /* 45px */
 }
 
 /* =========================================

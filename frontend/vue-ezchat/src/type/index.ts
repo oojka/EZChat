@@ -1,3 +1,5 @@
+import type { InternalAxiosRequestConfig } from 'axios'
+
 export type Result<T> = {
   status: 0 | 1
   code: number
@@ -23,13 +25,14 @@ export type LoginForm = {
 /**
  * 登录用户信息（对应后端 LoginVO）
  * 包括登录用户和访客用户
- * - 用于存储登录态（uid/username/token）
+ * - 用于存储登录态（uid/username/accessToken/refreshToken）
  * - 供 HTTP header 和 WebSocket 连接使用
  */
 export type LoginUser = {
   uid: string
   username: string
-  token: string
+  accessToken: string
+  refreshToken: string
 }
 
 /**
@@ -45,33 +48,16 @@ export type UserLoginState =
   | { type: 'guest'; formal: undefined; guest: LoginUser }
   | { type: 'none'; formal: undefined; guest: undefined }
 
-export type Token = {
-  type: 'formal'
-  accessToken?: {
-    token: string
-    payload: JwtPayload
-  }
-  refreshToken: {
-    token: string
-    payload: JwtPayload
-  }
+export type TokenPayload = {
+  token: string
+  payload: JwtPayload
 }
-  | {
-    type: 'guest'
-    accessToken?: {
-      token: string
-      payload: JwtPayload
-    }
-    refreshToken: {
-      token: string
-      payload: JwtPayload
-    }
-  }
-  | {
-    type: 'none'
-    accessToken: undefined
-    refreshToken: undefined
-  }
+
+export type Token = {
+  type: 'formal' | 'guest' | 'none'
+  accessToken?: TokenPayload
+  refreshToken?: TokenPayload
+}
 
 export interface JwtPayload {
   uid: string;
@@ -259,7 +245,19 @@ export type WebSocketResult = {
   code?: number        // 新增状态码: 1001=Message, 2001=Status, 2002=ACK, 3001=MemberJoin
   isSystemMessage: 0 | 1
   type: string
-  data: any
+  data: unknown
+}
+
+/**
+ * WebSocket ACK 消息载荷（对应后端 AckVO）
+ *
+ * 业务场景：服务端收到消息后回传确认，前端据此更新消息状态
+ * - tempId: 客户端发送时生成的临时ID，用于匹配本地消息
+ * - seqId: 服务端持久化后分配的序列号
+ */
+export type AckPayload = {
+  tempId: string
+  seqId: number
 }
 
 export type GuestJoinReq = {
@@ -292,3 +290,17 @@ export type JoinChatCredentialsForm = {
   /** 解析出的邀请码 */
   inviteCode: string
 }
+
+/**
+ * 可重试的请求配置扩展
+ */
+export type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean       // 标记是否已经重试过，防止死循环
+  _retryToken?: string   // 记录重试时使用的 token
+}
+
+/**
+ * 业务错误码的联合类型（字符串或数字）
+ */
+export type ErrorCodeValue = string | number
+

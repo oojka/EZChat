@@ -17,8 +17,8 @@ const { wsDisplayState } = storeToRefs(websocketStore)
       <el-badge is-dot :offset="[-2, 34]" :type="isMe ? wsDisplayState.type : (member.online ? 'success' : 'info')"
         class="status-dot">
         <Avatar class="member-avatar" :size="40" shape="square"
-          :thumb-url="member.avatar.blobThumbUrl || member.avatar.imageThumbUrl"
-          :url="member.avatar.blobUrl || member.avatar.imageUrl" :text="member.nickname" />
+          :thumb-url="member.avatar?.blobThumbUrl || member.avatar?.imageThumbUrl || ''"
+          :url="member.avatar?.blobUrl || member.avatar?.imageUrl || ''" :text="member.nickname" />
       </el-badge>
     </div>
 

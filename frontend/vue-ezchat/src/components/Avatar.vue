@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Camera, Loading, Picture } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
@@ -46,27 +46,98 @@ const props = withDefaults(defineProps<{
 
 const currentUrl = ref<string>('')
 const isError = ref(false)
+const isLoading = ref(false)
+let loadSeq = 0
 
-// 监听 url 变化重置状态
-watchEffect(() => {
+const getUrlCandidates = () => {
     const thumb = props.thumbUrl || ''
     const original = props.url || ''
-    currentUrl.value = thumb || original || ''
-    isError.value = !currentUrl.value
-})
+    const isGif = /\.gif($|\?)/i.test(thumb) || /\.gif($|\?)/i.test(original)
 
-const handleError = (e: Event) => {
-    const thumb = props.thumbUrl || ''
-    const original = props.url || ''
-
-    // 如果当前是缩略图且有原图，降级到原图
-    if (currentUrl.value === thumb && original && original !== thumb) {
-        currentUrl.value = original
-        // 不置 error，继续尝试
-    } else {
-        // 彻底失败
-        isError.value = true
+    if (isGif) {
+        return {
+            primary: original || thumb,
+            fallback: original && thumb && original !== thumb ? thumb : ''
+        }
     }
+
+    return {
+        primary: thumb || original,
+        fallback: thumb && original && thumb !== original ? original : ''
+    }
+}
+
+const preloadAndSwap = (urls: string[]) => {
+    if (!urls.length) {
+        currentUrl.value = ''
+        isError.value = true
+        isLoading.value = false
+        return
+    }
+
+    const primary = urls[0]
+    if (primary === currentUrl.value && currentUrl.value) {
+        isError.value = false
+        isLoading.value = false
+        return
+    }
+
+    const seq = ++loadSeq
+    isLoading.value = true
+    isError.value = false
+
+    const tryLoad = (index: number) => {
+        const target = urls[index]
+        if (!target) {
+            if (seq === loadSeq) {
+                currentUrl.value = ''
+                isError.value = true
+                isLoading.value = false
+            }
+            return
+        }
+        const img = new Image()
+        img.onload = () => {
+            if (seq !== loadSeq) return
+            currentUrl.value = target
+            isError.value = false
+            isLoading.value = false
+        }
+        img.onerror = () => {
+            if (seq !== loadSeq) return
+            if (index + 1 < urls.length) {
+                tryLoad(index + 1)
+                return
+            }
+            currentUrl.value = ''
+            isError.value = true
+            isLoading.value = false
+        }
+        img.src = target
+    }
+
+    tryLoad(0)
+}
+
+watch(
+    () => [props.thumbUrl, props.url],
+    () => {
+        const { primary, fallback } = getUrlCandidates()
+        if (primary && primary === currentUrl.value && !isError.value) {
+            return
+        }
+        const urls: string[] = []
+        if (primary) urls.push(primary)
+        if (fallback && fallback !== primary) urls.push(fallback)
+        preloadAndSwap(urls)
+    },
+    { immediate: true }
+)
+
+const handleError = () => {
+    currentUrl.value = ''
+    isError.value = true
+    isLoading.value = false
 }
 
 // --- Styles ---
@@ -108,16 +179,23 @@ const firstChar = computed(() => (props.text || '?').trim().charAt(0).toUpperCas
 
         <!-- 占位模式 (无图或加载失败) -->
         <div v-else class="avatar-placeholder">
-            <!-- 如果有文字，优先显文字，否则显通用 Icon -->
-            <span v-if="text && text !== '?'" class="placeholder-text">{{ firstChar }}</span>
-            <div v-else class="placeholder-icon-wrapper">
-                <el-icon :size="iconSize">
-                    <Picture />
+            <div v-if="isLoading" class="image-slot loading">
+                <el-icon class="is-loading">
+                    <Loading />
                 </el-icon>
-                <span v-if="editable" class="placeholder-hint">
-                    {{ t('auth.select_image') }}
-                </span>
             </div>
+            <template v-else>
+                <!-- 如果有文字，优先显文字，否则显通用 Icon -->
+                <span v-if="text && text !== '?'" class="placeholder-text">{{ firstChar }}</span>
+                <div v-else class="placeholder-icon-wrapper">
+                    <el-icon :size="iconSize">
+                        <Picture />
+                    </el-icon>
+                    <span v-if="editable" class="placeholder-hint">
+                        {{ t('auth.select_image') }}
+                    </span>
+                </div>
+            </template>
         </div>
 
         <!-- 编辑遮罩 (Hover) -->

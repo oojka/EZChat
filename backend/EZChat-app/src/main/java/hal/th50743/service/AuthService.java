@@ -45,6 +45,14 @@ public interface AuthService {
      */
     LoginVO joinChat(GuestJoinReq req);
 
+    /**
+     * RefreshToken 兑换 AccessToken
+     *
+     * @param req RefreshToken 请求对象
+     * @return LoginVO 返回新的 AccessToken
+     */
+    LoginVO refreshToken(RefreshTokenReq req);
+
 
 
 }

@@ -118,7 +118,7 @@ const onUnflip = () => {
     resetRegisterForm()
     // 重置默认头像 URL（下次翻转时会重新生成）
     defaultAvatarUrl.value = ''
-  }, 800)
+  }, 500)
 }
 
 // ==================== 头像上传处理 ====================
@@ -450,7 +450,7 @@ const handleRegister = async () => {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
@@ -493,15 +493,7 @@ html.dark .has-shadow {
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8);
 }
 
-.is-flipped .flip-card-front {
-  visibility: hidden;
-  transition: visibility 0s 0.4s;
-}
-
-.flip-card-inner:not(.is-flipped) .flip-card-front {
-  visibility: visible;
-  transition: visibility 0s 0.4s;
-}
+/* REMOVED visibility transitions to fix disappearance glitch */
 
 .flip-card-back {
   transform: rotateY(180deg);
@@ -542,8 +534,7 @@ html.dark .has-shadow {
 
 .login-form :deep(.el-input__wrapper) {
   border-radius: var(--radius-md);
-  box-shadow: 0 0 0 1px var(--el-border-color-light) inset;
-  background-color: var(--bg-page);
+  /* background-color handled globally */
   padding: 6px 16px;
   transition: all 0.3s;
 }

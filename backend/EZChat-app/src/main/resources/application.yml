@@ -84,7 +84,7 @@ jwt:
   # 建议长度至少 32 字符以保证安全性
   secret: ${JWT_SECRET}
 
-  # Token 过期时间
-  # 单位通常为毫秒 (如 86400000 = 24小时)
-  # 决定了用户登录一次后，多久需要重新登录或刷新 Token
-  expiration: ${JWT_EXPIRATION} #24hours
+  token:
+    access-expire-minutes: 1
+    formal-refresh-expire-minutes: 10080 # 7 days
+    guest-refresh-expire-minutes: 1440 # 1 day

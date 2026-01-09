@@ -28,7 +28,7 @@
 
 .ez-dialog .el-message-box__content {
   font-size: 14px;
-  color: var(--text-500);
+  color: var(--text-700);
   padding: 8px 0 24px;
   text-align: center;
   line-height: 1.6;

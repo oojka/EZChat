@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Message, UserStatus, WebSocketResult } from '@/type'
+import type { Message, UserStatus, WebSocketResult, AckPayload } from '@/type'
+import { isAckPayload } from '@/utils/validators'
 import i18n from '@/i18n'
 
 const { t } = i18n.global
@@ -9,11 +10,15 @@ const { t } = i18n.global
 type ConnectOptions = {
   onMessage: (data: any) => void
   onUserStatus: (uid: string, isOnline: boolean) => void
-  onAck: (tempId: string) => void
+  onAck: (data: AckPayload) => void
   getHeartbeatPayload: () => string
+  // 重连前获取新的连接地址（用于刷新 Token）
+  getReconnectUrl?: () => Promise<string | null>
   // 新增：关闭事件回调，用于处理 4001 等特殊状态码
   onClose?: (event: CloseEvent) => void
   onChatMemberAdd?: (member: any) => void
+  // 新增：重连成功回调，用于触发消息同步
+  onReconnect?: () => void
 }
 
 // 修改：宽松的 Payload 检查，只确保是对象，具体字段校验交给业务层
@@ -34,6 +39,8 @@ export function useWebsocket() {
   let heartbeatTimer: number | null = null
   // 新增：标记是否为主动关闭（主动退出时不应重连）
   let isIntentionalClose = false
+  // 新增：标记是否曾经连接成功（用于检测重连）
+  let wasConnected = false
   // 状态平滑：CONNECTING（黄灯）出现后，0.5s 内不允许再变化，给用户“正在连接”的稳定感
   const MIN_CONNECTING_MS = 500
   let connectingStartAt = 0
@@ -100,15 +107,24 @@ export function useWebsocket() {
     // --- 事件监听 ---
 
     socket.value.onopen = () => {
+      const isReconnect = wasConnected // 判断是否是重连
+      wasConnected = true // 标记为已连接过
       setStatus('OPEN')
       startHeartbeat()
+
+      // 重连成功后触发回调，供业务层同步消息
+      if (isReconnect && currentOptions?.onReconnect) {
+        currentOptions.onReconnect()
+      }
     }
 
     socket.value.onmessage = (event) => {
       if (event.data === 'PONG') return
 
+      // console.log('[WS] Raw message received:', event.data)
       try {
         const result: WebSocketResult = JSON.parse(event.data)
+        // console.log('[WS] Parsed result:', result)
         const parseData = (data: unknown) => {
           if (typeof data !== 'string') return data
           try {
@@ -131,9 +147,13 @@ export function useWebsocket() {
               currentOptions?.onUserStatus(us.uid, us.online)
               break
             case 2002: // ACK
-              // ACK 的 data 通常是 tempId 字符串
-              const tempId = typeof result.data === 'string' ? result.data : String(result.data)
-              currentOptions?.onAck(tempId)
+              // ACK payload 结构: { tempId: string, seqId: number }
+              // console.log('[WS] ACK received:', payload)
+              if (isAckPayload(payload)) {
+                currentOptions?.onAck(payload)
+              } else {
+                console.warn('[WS] Invalid ACK payload:', payload)
+              }
               break
             case 3001: // MEMBER_JOIN (System Broadcast)
               // payload 是 JoinBroadcastVO，包含 { member, text, type=11, ... }
@@ -157,7 +177,11 @@ export function useWebsocket() {
         // ... (保留部分逻辑用于稳健性，但移除导致类型报错的 msg.member 访问)
         if (result.isSystemMessage) {
           if (result.type === 'ACK') {
-            if (typeof result.data === 'string') currentOptions?.onAck(result.data)
+            // 旧协议 ACK: 尝试解析为 AckPayload 对象
+            const ackData = parseData(result.data)
+            if (isAckPayload(ackData)) {
+              currentOptions?.onAck(ackData)
+            }
           } else if (result.type === 'USER_STATUS') {
             const userStatus = parseData(result.data) as UserStatus
             currentOptions?.onUserStatus(userStatus.uid, userStatus.online)
@@ -204,10 +228,18 @@ export function useWebsocket() {
     lockReconnect.value = true
 
     // 设置重连延迟
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentUrl && currentOptions) {
         // 确保不是在“不再重连”的状态下
         if (!isIntentionalClose) {
+          if (currentOptions.getReconnectUrl) {
+            const nextUrl = await currentOptions.getReconnectUrl()
+            if (!nextUrl) {
+              lockReconnect.value = false
+              return
+            }
+            currentUrl = nextUrl
+          }
           connect(currentUrl, currentOptions)
         }
       }

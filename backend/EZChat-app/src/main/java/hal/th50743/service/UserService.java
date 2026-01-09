@@ -39,6 +39,22 @@ public interface UserService {
     void update(UserReq userReq);
 
     /**
+     * 更新用户类型
+     *
+     * @param userId   用户ID
+     * @param userType 用户类型
+     */
+    void updateUserType(Integer userId, Integer userType);
+
+    /**
+     * 更新用户删除标记
+     *
+     * @param userId    用户ID
+     * @param isDeleted 删除标记
+     */
+    void updateUserDeleted(Integer userId, Integer isDeleted);
+
+    /**
      * 上传头像
      *
      * @param file 头像文件

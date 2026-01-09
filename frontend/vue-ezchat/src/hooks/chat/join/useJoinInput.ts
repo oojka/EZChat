@@ -253,15 +253,14 @@ export const useJoinInput = () => {
                 userStore.clearValidatedJoinChatInfo() // 先清除旧数据，防止数据污染
 
                 try {
-                    // [DEBUG] Log current form state to diagnose validation errors
-                    console.log('[DEBUG] Validating Join Request:', JSON.parse(JSON.stringify(joinCredentialsReq)))
-
                     // 1. 本地解析与校验 - 使用工具函数验证格式
                     const req = parseAndValidateJoinInfo(joinCredentialsReq)
 
                     // 2. 调用 store 验证 API - 远程验证房间可访问性
                     // 这一步会把验证结果存入 userStore.validatedChatRoom，供后续步骤使用
-                    await roomStore.validateRoomAccess(req)
+                    const validatedRoom = await roomStore.validateRoomAccess(req)
+                    if (!validatedRoom) return null
+
                     useLoading = useGlobalLoading
                     return req
                 } catch (e: any) {
@@ -285,9 +284,12 @@ export const useJoinInput = () => {
                     if (isAppError(e)) {
                         throw e
                     } else {
+                        // Preserving the original error message if it's an Error object
+                        const originalMsg = e instanceof Error ? e.message : 'api unknown error'
+
                         throw createAppError(
                             ErrorType.UNKNOWN,
-                            'api unknown error',
+                            originalMsg, // Use the original message instead of generic 'api unknown error'
                             {
                                 severity: ErrorSeverity.ERROR,
                                 component: 'validateAndGetPayload',

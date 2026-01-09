@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -47,27 +48,27 @@ public class MessageServiceImpl implements MessageService {
      * 
      * @param userId     发送用户ID
      * @param messageReq 消息请求对象
-     * @return 需要接收该消息的用户ID列表
+     * @return 处理结果（包含接收用户列表和 seqId）
      */
     @Override
-    public List<Integer> handleWSMessage(Integer userId, MessageReq messageReq) {
+    public WSMessageResult handleWSMessage(Integer userId, MessageReq messageReq) {
         // 1. 通过聊天代码获取内部chatId
         Integer chatId = chatMapper.selectChatIdByChatCode(messageReq.getChatCode());
         if (chatId == null) {
             log.warn("handleWSMessage: 收到未知聊天室的消息, chatCode={}", messageReq.getChatCode());
-            return Collections.emptyList(); // 如果聊天不存在，返回空列表
+            return new WSMessageResult(Collections.emptyList(), null); // 如果聊天不存在，返回空列表
         }
         // 2. 验证用户是否是该聊天室成员，并获取所有成员列表用于消息推送
         List<Integer> senList = chatMemberMapper.selectChatMembersByUserIdAndChatId(userId, chatId);
         if (senList == null || senList.isEmpty()) {
             log.warn("handleWSMessage: 用户 {} 不是聊天室 {} 的成员，拒绝发送消息", userId, chatId);
-            return Collections.emptyList();
+            return new WSMessageResult(Collections.emptyList(), null);
         }
 
-        // 3. 保存消息到数据库
-        addMessage(userId, chatId, messageReq.getText(), messageReq.getImages());
-        // 4. 返回需要接收消息的用户ID列表
-        return senList;
+        // 3. 保存消息到数据库，并获取 seqId
+        Long seqId = addMessage(userId, chatId, messageReq.getText(), messageReq.getImages());
+        // 4. 返回处理结果
+        return new WSMessageResult(senList, seqId);
     }
 
     /**
@@ -77,10 +78,11 @@ public class MessageServiceImpl implements MessageService {
      * @param chatId 聊天ID
      * @param text   文本内容
      * @param images 从客户端传来的对象存储URL数组
+     * @return 消息的 Sequence ID
      */
     @Override
-    @org.springframework.transaction.annotation.Transactional
-    public void addMessage(Integer userId, Integer chatId, String text, List<Image> images) {
+    @Transactional
+    public Long addMessage(Integer userId, Integer chatId, String text, List<Image> images) {
         log.info("add message, userId={}, chatId={}, text={}, images={}", userId, chatId, text, images);
         String assetIdsJson = null;
         // 如果有附件，则提取 objectId（直接使用 Image 对象的 objectId 字段）
@@ -138,6 +140,8 @@ public class MessageServiceImpl implements MessageService {
             assetService.activateFilesBatch(assetNames, AssetCategory.MESSAGE_IMG, msg.getId());
             log.debug("Activated {} files for message: messageId={}", assetNames.size(), msg.getId());
         }
+
+        return currentSeq;
     }
 
     /**
@@ -145,11 +149,10 @@ public class MessageServiceImpl implements MessageService {
      * 
      * @param userId    当前用户ID
      * @param chatCode  聊天室的公开代码
-     * @param timeStamp 可选的时间戳，用于获取该时间点之后的消息
      * @return 经过处理的消息视图对象列表
      */
     @Override
-    public Map<String, Object> getMessagesByChatCode(Integer userId, String chatCode, Long cursorSeqId) {
+    public MessageListVO getMessagesByChatCode(Integer userId, String chatCode, Long cursorSeqId) {
         Integer chatId = chatService.getChatId(userId, chatCode);
 
         // 使用 cursorSeqId 进行分页查询
@@ -166,10 +169,7 @@ public class MessageServiceImpl implements MessageService {
         // 调用 ChatService 获取完整的 ChatVO (包含头像转换、成员列表等)
         ChatVO chatVO = chatService.getChat(userId, chatCode);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("messageList", messageList);
-        result.put("chatRoom", chatVO);
-        return result;
+        return new MessageListVO(messageList, chatVO);
     }
 
     /**

@@ -54,6 +54,9 @@ export const useGuestJoin = () => {
         if (response?.data) {
             guestAvatar.value.imageThumbUrl = response.data.imageThumbUrl || response.data.url || ''
             guestAvatar.value.imageUrl = response.data.imageUrl || response.data.url || ''
+            // 关键修复：必须保存后端返回的 assetId，否则后端无法正确关联头像（特别是 GIF/重复文件）
+            guestAvatar.value.assetId = response.data.assetId
+            guestAvatar.value.imageName = response.data.imageName || response.data.name
         }
     }
 

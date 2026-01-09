@@ -1,5 +1,6 @@
+import axios from 'axios'
 import request from '../utils/request'
-import type {LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginForm, Image} from '@/type'
+import type { LoginUser, RegisterInfo, Result, ValidateChatJoinReq, ChatRoom, GuestJoinReq, LoginForm, Image } from '@/type'
 
 /**
  * 用户登录
@@ -93,3 +94,20 @@ export const uploadAvatarApi = (
   })
 }
 
+const refreshClient = axios.create({
+  baseURL: '/api',
+  timeout: 600000
+})
+
+/**
+ * RefreshToken 兑换 AccessToken
+ *
+ * - 后端接口：POST `/auth/refresh`
+ * - 业务目的：刷新 accessToken，保持登录态
+ */
+export const refreshTokenApi = (
+  refreshToken: string
+): Promise<Result<LoginUser>> =>
+  refreshClient
+    .post('/auth/refresh', { refreshToken })
+    .then(response => response.data)

@@ -12,7 +12,7 @@ import { computed } from 'vue'
 // ... (imports remain)
 import useLogin from '@/hooks/useLogin.ts'
 import AppLogo from '@/components/AppLogo.vue'
-import SmartAvatar from '@/components/SmartAvatar.vue'
+import Avatar from '@/components/Avatar.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { Moon, Sunny, User, Camera, Picture, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
@@ -183,7 +183,7 @@ const handleGoToRegister = () => {
 
               <div class="room-card-preview">
                 <div class="room-avatar-wrapper">
-                  <SmartAvatar :thumb-url="validatedChatRoom?.avatar?.imageThumbUrl"
+                  <Avatar :thumb-url="validatedChatRoom?.avatar?.imageThumbUrl"
                     :url="validatedChatRoom?.avatar?.imageUrl" :text="validatedChatRoom?.chatName" :size="100"
                     shape="square" class="room-avatar" />
                 </div>
@@ -226,28 +226,9 @@ const handleGoToRegister = () => {
                   <div class="avatar-upload-area">
                     <el-upload class="avatar-uploader" action="/api/auth/register/upload" :show-file-list="false"
                       :on-success="handleAvatarSuccess">
-                      <div class="avatar-wrapper"
-                        :class="{ 'has-image': guestAvatar.imageThumbUrl || guestAvatar.imageUrl || guestAvatar.blobUrl }">
-                        <img v-if="guestAvatar.imageThumbUrl || guestAvatar.imageUrl || guestAvatar.blobUrl"
-                          :src="guestAvatar.imageThumbUrl || guestAvatar.imageUrl || guestAvatar.blobUrl"
-                          class="avatar-img" />
-                        <img v-else-if="defaultAvatarUrl" :src="defaultAvatarUrl" class="avatar-img" />
-
-                        <div v-else class="placeholder-state">
-                          <div class="icon-circle">
-                            <el-icon>
-                              <Picture />
-                            </el-icon>
-                          </div>
-                          <span class="upload-text">{{ t('join_page.click_to_upload_avatar') }}</span>
-                        </div>
-
-                        <div class="hover-mask">
-                          <el-icon>
-                            <Camera />
-                          </el-icon>
-                        </div>
-                      </div>
+                      <Avatar :thumb-url="guestAvatar.imageThumbUrl || guestAvatar.blobUrl || defaultAvatarUrl || ''"
+                        :url="guestAvatar.imageUrl || ''" :size="100" shape="square" :editable="true"
+                        class="guest-avatar-preview" />
                     </el-upload>
                     <p class="text-muted">{{ t('join_page.click_to_upload_avatar') }}</p>
                   </div>
@@ -815,6 +796,11 @@ html.dark .right-section {
   text-align: center;
   display: flex;
   justify-content: center;
+}
+
+/* 复用 Avatar 组件的样式覆盖 */
+.guest-avatar-preview {
+  cursor: pointer;
 }
 
 .avatar-wrapper {

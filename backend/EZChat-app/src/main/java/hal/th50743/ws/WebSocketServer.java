@@ -14,6 +14,7 @@ import hal.th50743.pojo.UserStatus; // 用户状态对象
 // 服务层接口
 import hal.th50743.service.ChatService; // 聊天服务
 import hal.th50743.service.MessageService; // 消息服务
+import hal.th50743.service.TokenCacheService; // Token 缓存服务
 import hal.th50743.service.UserService; // 用户服务
 
 // 工具类
@@ -163,6 +164,9 @@ public class WebSocketServer {
     /** 消息服务 - 处理消息的存储和业务逻辑 */
     private static MessageService messageService;
 
+    /** Token 缓存服务 - 校验 AccessToken 有效性 */
+    private static TokenCacheService tokenCacheService;
+
     /**
      * Service 依赖注入方法
      * 
@@ -182,14 +186,16 @@ public class WebSocketServer {
      * @param userService    用户服务实例
      * @param chatService    聊天服务实例
      * @param messageService 消息服务实例
+     * @param tokenCacheService Token 缓存服务实例
      */
     @Autowired
     public void setServices(JwtUtils jwtUtils, UserService userService,
-            ChatService chatService, MessageService messageService) {
+            ChatService chatService, MessageService messageService, TokenCacheService tokenCacheService) {
         WebSocketServer.jwtUtils = jwtUtils;
         WebSocketServer.userService = userService;
         WebSocketServer.chatService = chatService;
         WebSocketServer.messageService = messageService;
+        WebSocketServer.tokenCacheService = tokenCacheService;
     }
 
     /**
@@ -229,8 +235,21 @@ public class WebSocketServer {
             // ========== 步骤1: Token 解析和用户身份识别 ==========
             // 安全解析 JWT Token，提取用户信息
             Claims claims = jwtUtils.parseJwt(token);
+            String tokenType = claims.get("tokenType", String.class);
+            if (!"access".equals(tokenType)) {
+                log.warn("WS连接拒绝: Token 类型不合法 tokenType={}", tokenType);
+                closeSession(session, 4002, "Authentication Failed");
+                return;
+            }
             this.uid = claims.get("uid", String.class); // 获取用户唯一标识
             this.userId = Integer.valueOf(userService.getIdByUid(this.uid).toString()); // 转换为数据库用户ID
+
+            String cachedToken = tokenCacheService.getAccessToken(this.userId);
+            if (cachedToken == null || !cachedToken.equals(token)) {
+                log.warn("WS连接拒绝: AccessToken 缓存校验失败 userId={}", this.userId);
+                closeSession(session, 4002, "Authentication Failed");
+                return;
+            }
 
             // ========== 步骤2: 用户会话管理 ==========
             // 将用户会话存入全局在线用户映射表，后续消息推送依赖此表
@@ -342,9 +361,11 @@ public class WebSocketServer {
             log.info("收到消息: sender={}, chatCode={}", this.uid, msg.getChatCode());
 
             // ========== 步骤4: 业务逻辑处理 ==========
-            // 调用消息服务处理业务逻辑，返回需要接收此消息的用户列表
+            // 调用消息服务处理业务逻辑，返回处理结果（包含用户列表和 seqId）
             // 业务逻辑包括：消息存储、权限验证、关系检查等
-            List<Integer> sendList = messageService.handleWSMessage(this.userId, msg);
+            hal.th50743.pojo.WSMessageResult wsResult = messageService.handleWSMessage(this.userId, msg);
+            List<Integer> sendList = wsResult.sendList();
+            Long messageSeqId = wsResult.seqId();
 
             // ========== 步骤5: 构建广播消息视图对象 ==========
             // 判断消息类型：0-文本, 1-图片, 2-图文混合
@@ -356,7 +377,7 @@ public class WebSocketServer {
             MessageVO messageVO = new MessageVO(
                     this.uid, // 发送者UID
                     msg.getChatCode(), // 聊天室代码
-                    null, // seqId (暂时为空，如需实时需调整接口返回)
+                    messageSeqId, // seqId (已填充)
                     messageType, // 消息类型
                     msg.getText(), // 文本内容
                     null, // 预留字段
@@ -369,9 +390,13 @@ public class WebSocketServer {
             send(MessageUtils.setMessage(1001, "MESSAGE", messageVO), sendList);
 
             // 6.2 给自己发送 ACK (确认消息已达服务端)
-            // 业务意义：前端收到 ACK 后可将消息标记为"已发送"
+            // 业务意义：前端收到 ACK 后可将消息标记为"已发送"并更新 seqId
             // 消息格式：状态码 2002 表示确认回执
-            sendSelf(onLineUsers.get(this.userId), MessageUtils.setMessage(2002, "ACK", msg.getTempId()));
+            hal.th50743.pojo.AckVO ackVO = hal.th50743.pojo.AckVO.builder()
+                    .tempId(msg.getTempId())
+                    .seqId(messageSeqId)
+                    .build();
+            sendSelf(onLineUsers.get(this.userId), MessageUtils.setMessage(2002, "ACK", ackVO));
 
         } catch (JsonProcessingException e) {
             // JSON 解析异常：客户端发送了非法格式的消息

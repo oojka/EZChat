@@ -107,7 +107,7 @@ export default function () {
             // ==================== 步骤3：登录成功处理 ====================
             // 初始化应用状态（设置token、加载用户信息等）
             ElMessage.success(t('auth.login_success') || 'Login successful')
-            await initializeApp(userStore.getAccessToken(), 'login')
+            await initializeApp(userStore.getAccessToken(), 'login', { waitForRoute: '/chat' })
             // ==================== 步骤4：状态更新和导航 ====================
             // 导航到聊天页面
             await router.push('/chat')
@@ -131,12 +131,9 @@ export default function () {
           )
         } finally {
           // ==================== 清理工作 ====================
-          // 确保加载状态被正确清除
+          // 确保按钮加载状态被正确清除
           setTimeout(() => {
             isLoading.value = false
-            appStore.isAppLoading = false
-            appStore.showLoadingSpinner = false
-            appStore.loadingText = ''
           }, 300)
         }
       },

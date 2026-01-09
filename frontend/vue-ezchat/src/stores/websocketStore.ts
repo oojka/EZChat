@@ -5,7 +5,6 @@ import { useUserStore } from '@/stores/userStore.ts'
 import { useMessageStore } from '@/stores/messageStore.ts'
 import { useRoomStore } from '@/stores/roomStore.ts'
 import { ElMessage } from 'element-plus'
-import router from '@/router'
 import type { Image, Message, ChatMember } from '@/type'
 import { useConfigStore } from '@/stores/configStore.ts'
 import { useImageStore } from '@/stores/imageStore.ts'
@@ -32,6 +31,8 @@ export const useWebsocketStore = defineStore('websocket', () => {
   const { status, connect, send, close } = useWebsocket()
   const isInitialized = ref(false)
   const { t } = i18n.global
+  const authRetryCount = ref(0)
+  const maxAuthRetry = 1
 
   /**
    * 给 UI 展示用的连接状态（含颜色/徽标类型）
@@ -56,6 +57,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
    */
   const initWS = (token: string) => {
     if (!token || isInitialized.value) return
+    authRetryCount.value = 0
 
     const configStore = useConfigStore()
     const { websocketUrl } = storeToRefs(configStore)
@@ -64,7 +66,8 @@ export const useWebsocketStore = defineStore('websocket', () => {
     const userStore = useUserStore()
 
     // 拼接 Token 到 URL
-    const fullUrl = `${websocketUrl.value}/${token}`
+    const buildWsUrl = (nextToken: string) => `${websocketUrl.value}/${nextToken}`
+    const fullUrl = buildWsUrl(token)
 
     connect(fullUrl, {
       onMessage: (data: any) => {
@@ -92,10 +95,16 @@ export const useWebsocketStore = defineStore('websocket', () => {
         }
         roomStore.addRoomMember(member)
       },
-      onAck: (tempId: string) => {
+      onAck: (data: any) => {
         // 系统消息：服务端 ACK，标记本地“发送中”消息为 sent
+        // data 结构: { tempId: string, seqId: number }
         const messageStore = useMessageStore()
-        messageStore.handleAck(tempId)
+        if (data && data.tempId && data.seqId) {
+          messageStore.handleAck(data.tempId, data.seqId)
+        } else {
+          // 兼容旧格式或是出错
+          console.warn('[WebSocket] Invalid ACK format:', data)
+        }
       },
       getHeartbeatPayload: () => {
         // 心跳携带 chatCode：让后端在断线时能记录 lastSeenAt
@@ -105,12 +114,33 @@ export const useWebsocketStore = defineStore('websocket', () => {
         isInitialized.value = false
         // 认证失败/过期：不再重连，直接退出登录并回到首页
         if (event.code === 4001 || event.code === 4002) {
+          if (authRetryCount.value < maxAuthRetry) {
+            authRetryCount.value += 1
+            const refreshedToken = await userStore.refreshAccessToken()
+            if (refreshedToken) {
+              initWS(refreshedToken)
+              return
+            }
+          }
           close()
-          ElMessage.error(t('auth.session_expired'))
-          userStore.logout()
-          return router.replace('/')
+          await userStore.logout({ showDialog: true })
+          return
         }
       },
+      onReconnect: async () => {
+        // 重连成功后同步当前房间的消息
+        console.log('[WebSocket] Reconnected, syncing messages...')
+        const messageStore = useMessageStore()
+        await messageStore.syncAfterReconnect()
+      },
+      getReconnectUrl: async () => {
+        const refreshedToken = await userStore.refreshAccessToken()
+        if (!refreshedToken) {
+          await userStore.logout({ showDialog: true })
+          return null
+        }
+        return buildWsUrl(refreshedToken)
+      }
     })
 
     isInitialized.value = true

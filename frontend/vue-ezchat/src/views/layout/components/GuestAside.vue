@@ -6,12 +6,12 @@ import { useUserStore } from '@/stores/userStore'
 import ChatItem from './ChatItem.vue'
 import Avatar from '@/components/Avatar.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
-import { Star, Trophy, Check, Plus, Camera, Close } from '@element-plus/icons-vue'
+import { Trophy, Check, Close } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules, type UploadProps } from 'element-plus'
 import { upgradeUserApi } from '@/api/User'
 import { uploadAvatarApi } from '@/api/Auth'
-import type { RegisterInfo, Image } from '@/type'
+import type { RegisterInfo } from '@/type'
 import { isValidUsername, isValidNickname, isValidPassword } from '@/utils/validators'
 
 const { t } = useI18n()
@@ -20,13 +20,13 @@ const userStore = useUserStore()
 const { roomList, currentRoomCode } = storeToRefs(roomStore)
 
 // 权益文案配置
-const benefits = [
-    '创建专属聊天频道',
-    '聊天室加入无限制',
-    '消息云端永久保存',
-    '多端实时同步',
-    '头像昵称自定义',
-]
+const benefits = computed(() => [
+    t('upgrade.benefits.create_chat'),
+    t('upgrade.benefits.unlimited_join'),
+    t('upgrade.benefits.cloud_storage'),
+    t('upgrade.benefits.multi_device'),
+    t('upgrade.benefits.custom_profile'),
+])
 
 const currentRoom = computed(() => {
     // 优先取当前选中的房间
@@ -63,12 +63,17 @@ const form = reactive<RegisterInfo>({
     }
 })
 
+const emptyAvatar = {
+    imageUrl: '',
+    imageThumbUrl: ''
+}
+
 // 校验规则
 const validatePass2 = (rule: any, value: any, callback: any) => {
     if (value === '') {
-        callback(new Error('请再次输入密码'))
+        callback(new Error(t('validation.confirm_password_required')))
     } else if (value !== form.password) {
-        callback(new Error('两次输入密码不一致!'))
+        callback(new Error(t('validation.password_mismatch')))
     } else {
         callback()
     }
@@ -76,11 +81,11 @@ const validatePass2 = (rule: any, value: any, callback: any) => {
 
 const rules = reactive<FormRules>({
     username: [
-        { required: true, message: '请输入用户名', trigger: 'blur' },
+        { required: true, message: t('validation.username_required'), trigger: 'blur' },
         {
             validator: (rule: any, value: any, callback: any) => {
                 if (!isValidUsername(value)) {
-                    callback(new Error('用户名格式不正确 (字母开头，2-20位)'))
+                    callback(new Error(t('validation.username_format')))
                 } else {
                     callback()
                 }
@@ -88,11 +93,11 @@ const rules = reactive<FormRules>({
         }
     ],
     password: [
-        { required: true, message: '请输入密码', trigger: 'blur' },
+        { required: true, message: t('validation.password_required'), trigger: 'blur' },
         {
             validator: (rule: any, value: any, callback: any) => {
                 if (!isValidPassword(value)) {
-                    callback(new Error('密码格式不正确 (8-20位)'))
+                    callback(new Error(t('validation.password_format')))
                 } else {
                     callback()
                 }
@@ -103,11 +108,11 @@ const rules = reactive<FormRules>({
         { validator: validatePass2, trigger: 'blur' }
     ],
     nickname: [
-        { required: true, message: '请输入昵称', trigger: 'blur' },
+        { required: true, message: t('validation.nickname_required'), trigger: 'blur' },
         {
             validator: (rule: any, value: any, callback: any) => {
                 if (!isValidNickname(value)) {
-                    callback(new Error('昵称格式不正确 (2-20位)'))
+                    callback(new Error(t('validation.nickname_format')))
                 } else {
                     callback()
                 }
@@ -118,12 +123,12 @@ const rules = reactive<FormRules>({
 
 const handleUpgrade = () => {
     // 回显当前访客信息
-    if (userStore.loginUserInfo) {
-        form.nickname = userStore.loginUserInfo.nickname
-        if (userStore.loginUserInfo.avatar) {
-            form.avatar = { ...userStore.loginUserInfo.avatar }
-        }
-    }
+    form.username = ''
+    form.password = ''
+    form.confirmPassword = ''
+    form.nickname = userStore.loginUserInfo?.nickname || ''
+    form.bio = userStore.loginUserInfo?.bio || ''
+    form.avatar = userStore.loginUserInfo?.avatar ? { ...userStore.loginUserInfo.avatar } : { ...emptyAvatar }
     upgradeDialogVisible.value = true
 }
 
@@ -134,13 +139,13 @@ const submitUpgrade = async (formEl: FormInstance | undefined) => {
             loading.value = true
             try {
                 const res = await upgradeUserApi(form)
-                if (res.code === 0) { // SUCCESS
-                    ElMessage.success('升级成功，欢迎成为正式用户！')
+                if (res.status === 1 && res.data) {
+                    ElMessage.success(t('upgrade.success'))
                     // 更新本地登录态
                     userStore.setLoginUser(res.data)
                     upgradeDialogVisible.value = false
                 } else {
-                    ElMessage.error(res.message || '升级失败')
+                    ElMessage.error(res.message || t('upgrade.failed'))
                 }
             } catch (error: any) {
                 console.error(error)
@@ -155,21 +160,21 @@ const submitUpgrade = async (formEl: FormInstance | undefined) => {
 }
 
 // 头像上传
-const handleAvatarSuccess: UploadProps['onSuccess'] = (response, uploadFile) => {
-    if (response.code === 0) {
+const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
+    if (response?.data) {
         form.avatar = response.data
-        ElMessage.success('头像上传成功')
-    } else {
-        ElMessage.error('头像上传失败')
+        ElMessage.success(t('upgrade.avatar_upload_success'))
+        return
     }
+    ElMessage.error(t('upgrade.avatar_upload_failed'))
 }
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
     if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
-        ElMessage.error('Avatar picture must be JPG or PNG format!')
+        ElMessage.error(t('upgrade.avatar_format_error'))
         return false
     } else if (rawFile.size / 1024 / 1024 > 2) {
-        ElMessage.error('Avatar picture size can not exceed 2MB!')
+        ElMessage.error(t('upgrade.avatar_size_error'))
         return false
     }
     return true
@@ -212,7 +217,7 @@ const customUploadRequest = async (options: any) => {
                     </el-icon>
                 </div>
                 <div class="text-content">
-                    <div class="upgrade-title">解锁完整功能体验</div>
+                    <div class="upgrade-title">{{ t('upgrade.title') }}</div>
                     <ul class="benefit-list">
                         <li class="benefit-item" v-for="(item, index) in benefits" :key="index">
                             <el-icon class="check-icon">
@@ -223,7 +228,7 @@ const customUploadRequest = async (options: any) => {
                     </ul>
                 </div>
                 <el-button type="primary" class="upgrade-btn" @click="handleUpgrade">
-                    成为正式用户
+                    {{ t('upgrade.button') }}
                 </el-button>
             </div>
         </div>
@@ -252,18 +257,18 @@ const customUploadRequest = async (options: any) => {
                             <Avatar :thumb-url="form.avatar?.imageThumbUrl" :url="form.avatar?.imageUrl"
                                 :text="form.nickname" :size="150" shape="square" editable :icon-size="48" />
                         </el-upload>
-                        <p class="avatar-tip">支持 JPG/PNG，小于 2MB</p>
+                        <p class="avatar-tip">{{ t('upgrade.avatar_tip') }}</p>
                     </div>
 
                     <!-- Moved Profile Inputs -->
                     <div class="left-col-inputs">
                         <el-form-item prop="nickname">
                             <span class="input-label">昵称</span>
-                            <el-input v-model="form.nickname" placeholder="设置昵称" size="large" />
+                            <el-input v-model="form.nickname" :placeholder="t('upgrade.nickname_placeholder')" size="large" />
                         </el-form-item>
                         <el-form-item prop="bio">
                             <span class="input-label">个人简介</span>
-                            <el-input v-model="form.bio" type="textarea" :rows="3" placeholder="一句话介绍自己..."
+                            <el-input v-model="form.bio" type="textarea" :rows="3" :placeholder="t('upgrade.bio_placeholder')"
                                 resize="none" size="large" />
                         </el-form-item>
                     </div>
@@ -272,8 +277,8 @@ const customUploadRequest = async (options: any) => {
                 <!-- RIGHT COLUMN: Auth Fields -->
                 <div class="dialog-right-col">
                     <div class="dialog-header-right">
-                        <h3>升级正式账号</h3>
-                        <p class="subtitle">解锁完整功能体验</p>
+                        <h3>{{ t('upgrade.dialog_title') }}</h3>
+                        <p class="subtitle">{{ t('upgrade.dialog_subtitle') }}</p>
                     </div>
 
                     <div class="upgrade-form-fields">
@@ -281,25 +286,25 @@ const customUploadRequest = async (options: any) => {
 
                         <el-form-item prop="username">
                             <span class="input-label">账号</span>
-                            <el-input v-model="form.username" placeholder="设置登录账号" size="large" />
+                            <el-input v-model="form.username" :placeholder="t('upgrade.username_placeholder')" size="large" />
                         </el-form-item>
 
                         <el-form-item prop="password">
                             <span class="input-label">密码</span>
-                            <PasswordInput v-model="form.password" placeholder="设置登录密码（6-20位）" size="large" />
+                            <PasswordInput v-model="form.password" :placeholder="t('upgrade.password_placeholder')" size="large" />
                         </el-form-item>
                         <el-form-item prop="confirmPassword">
                             <span class="input-label">确认密码</span>
-                            <PasswordInput v-model="form.confirmPassword" placeholder="再次输入密码" size="large" />
+                            <PasswordInput v-model="form.confirmPassword" :placeholder="t('upgrade.confirm_password_placeholder')" size="large" />
                         </el-form-item>
                     </div>
 
                     <div class="dialog-actions">
                         <el-button @click="upgradeDialogVisible = false" class="action-btn cancel-btn"
-                            size="large">取消</el-button>
+                            size="large">{{ t('upgrade.cancel_button') }}</el-button>
                         <el-button type="primary" :loading="loading" @click="submitUpgrade(formRef)"
                             class="action-btn submit-btn" size="large">
-                            立即升级
+                            {{ t('upgrade.submit_button') }}
                         </el-button>
                     </div>
                 </div>
@@ -436,8 +441,8 @@ const customUploadRequest = async (options: any) => {
 
 html.dark :deep(.ez-modern-dialog) {
     background: var(--bg-card) !important;
-    backdrop-filter: blur(24px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .upgrade-dialog-modern :deep(.el-dialog__header) {
@@ -613,9 +618,8 @@ html.dark :deep(.ez-modern-dialog) {
 
 :deep(.el-input__wrapper),
 :deep(.el-textarea__inner) {
-    background-color: var(--bg-fill-0) !important;
-    /* Lighter input bg in right col */
-    box-shadow: 0 0 0 1px var(--el-border-color) inset !important;
+    /* background-color: var(--bg-fill-0) !important; -> Global */
+    /* box-shadow: 0 0 0 1px var(--el-border-color) inset !important; -> Global */
     border-radius: 8px;
     transition: all 0.2s;
     padding-left: 12px;
@@ -628,7 +632,7 @@ html.dark :deep(.ez-modern-dialog) {
 
 :deep(.el-input__wrapper.is-focus),
 :deep(.el-textarea__inner:focus) {
-    background-color: var(--bg-page) !important;
+    /* background-color: var(--bg-page) !important; -> Global handled */
     box-shadow: 0 0 0 2px var(--primary) inset !important;
 }
 

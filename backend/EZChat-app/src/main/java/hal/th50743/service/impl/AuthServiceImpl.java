@@ -1,6 +1,7 @@
 package hal.th50743.service.impl;
 
 import hal.th50743.assembler.LoginAssembler;
+import hal.th50743.config.TokenProperties;
 import hal.th50743.assembler.UserAssembler;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
@@ -8,9 +9,13 @@ import hal.th50743.pojo.*;
 import hal.th50743.service.AuthService;
 import hal.th50743.service.ChatService;
 import hal.th50743.service.FormalUserService;
+import hal.th50743.service.PresenceService;
+import hal.th50743.service.TokenCacheService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.JwtUtils;
 import hal.th50743.utils.PasswordUtils;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,15 +33,47 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    private static final String TOKEN_TYPE_REFRESH = "refresh";
+
     private final JwtUtils jwtUtils;
+    private final TokenProperties tokenProperties;
     private final FormalUserService formalUserService;
     private final UserService userService;
     private final ChatService chatService;
     private final UserAssembler userAssembler;
+    private final TokenCacheService tokenCacheService;
+    private final PresenceService presenceService;
 
     // ============================================================
     // 1. 辅助工具方法 (Helpers)
     // ============================================================
+
+    /**
+     * 构建并缓存双 Token
+     *
+     * @param uid       用户UID
+     * @param username  用户名
+     * @param userId    用户ID
+     * @param isFormal  是否为正式用户
+     * @return LoginVO 登录视图对象
+     */
+    private LoginVO issueTokens(String uid, String username, Integer userId, boolean isFormal) {
+        long refreshExpireMinutes = isFormal
+                ? tokenProperties.getFormalRefreshExpireMinutes()
+                : tokenProperties.getGuestRefreshExpireMinutes();
+        LoginVO loginVO = LoginAssembler.build(uid, username, jwtUtils,
+                tokenProperties.getAccessExpireMinutes(), refreshExpireMinutes);
+
+        tokenCacheService.cacheAccessToken(userId, loginVO.getAccessToken());
+
+        if (isFormal) {
+            formalUserService.updateRefreshToken(userId, loginVO.getRefreshToken());
+        } else {
+            tokenCacheService.cacheGuestRefreshToken(userId, loginVO.getRefreshToken());
+        }
+
+        return loginVO;
+    }
 
     /**
      * 校验注册请求参数的合法性
@@ -65,7 +102,8 @@ public class AuthServiceImpl implements AuthService {
         User res = formalUserService.login(loginReq);
         if (res != null && res.getUid() != null) {
             log.info("User login successful: {}", res.getUid());
-            return LoginAssembler.build(res.getUid(), res.getUsername(), jwtUtils);
+            userService.updateUserType(res.getId(), 1);
+            return issueTokens(res.getUid(), res.getUsername(), res.getId(), true);
         }
 
         log.warn("Login failed: invalid username or password - {}", loginReq.getUsername());
@@ -110,38 +148,38 @@ public class AuthServiceImpl implements AuthService {
             userReq.setLastSeenAt(LocalDateTime.now());
             userReq.setCreateTime(LocalDateTime.now());
             userReq.setUpdateTime(LocalDateTime.now());
+            userReq.setUserType(1);
+            userReq.setIsDeleted(0);
 
             User userRes = userService.add(userReq);
 
             // 2. 创建关联的 FormalUser 账号（使用 BCrypt 加密密码）
             String passwordHash = PasswordUtils.encode(req.getPassword());
-            FormalUser formalUserReq = new FormalUser(
-                    userRes.getId(),
-                    req.getUsername(),
-                    passwordHash,
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    null);
+            FormalUser formalUserReq = new FormalUser();
+            formalUserReq.setUserId(userRes.getId());
+            formalUserReq.setUsername(req.getUsername());
+            formalUserReq.setPasswordHash(passwordHash);
+            formalUserReq.setCreateTime(LocalDateTime.now());
+            formalUserReq.setUpdateTime(LocalDateTime.now());
+            formalUserReq.setLastLoginTime(LocalDateTime.now());
             formalUserService.add(formalUserReq);
 
             log.info("New formal user registration successful: uid={}, username={}", userRes.getUid(),
                     req.getUsername());
-            return LoginAssembler.build(userRes.getUid(), req.getUsername(), jwtUtils);
+            return issueTokens(userRes.getUid(), req.getUsername(), userRes.getId(), true);
 
         }
         // 情况 B: 临时用户转为正式用户 (已有临时 userId)
         else {
             // 使用 BCrypt 加密密码
             String passwordHash = PasswordUtils.encode(req.getPassword());
-            FormalUser formalUserReq = new FormalUser(
-                    req.getUserId(),
-                    req.getUsername(),
-                    passwordHash,
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    null);
+            FormalUser formalUserReq = new FormalUser();
+            formalUserReq.setUserId(req.getUserId());
+            formalUserReq.setUsername(req.getUsername());
+            formalUserReq.setPasswordHash(passwordHash);
+            formalUserReq.setCreateTime(LocalDateTime.now());
+            formalUserReq.setUpdateTime(LocalDateTime.now());
+            formalUserReq.setLastLoginTime(LocalDateTime.now());
 
             formalUserService.addByUserId(formalUserReq);
 
@@ -174,10 +212,11 @@ public class AuthServiceImpl implements AuthService {
                 userService.update(updateReq);
                 log.info("Updated user profile during upgrade: userId={}", req.getUserId());
             }
+            userService.updateUserType(req.getUserId(), 1);
 
             log.info("Temporary user converted to formal user successfully: userId={}, newUsername={}",
                     req.getUserId(), req.getUsername());
-            return LoginAssembler.build(user.getUid(), req.getUsername(), jwtUtils);
+            return issueTokens(user.getUid(), req.getUsername(), user.getId(), true);
         }
     }
 
@@ -226,23 +265,25 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 2. 处理头像
-        Integer objectId = null;
+        Integer assetId = null;
         if (req.getAvatar().getAssetId() != null) {
-            objectId = req.getAvatar().getAssetId();
+            assetId = req.getAvatar().getAssetId();
         } else {
-            objectId = userAssembler.resolveAvatarId(req.getAvatar().getImageName());
+            assetId = userAssembler.resolveAvatarId(req.getAvatar().getImageName());
         }
 
         // 3. 创建临时访客用户
         User userReq = new User();
         userReq.setNickname(req.getNickName());
-        userReq.setAssetId(objectId);
+        userReq.setAssetId(assetId);
         userReq.setLastSeenAt(LocalDateTime.now());
         userReq.setCreateTime(LocalDateTime.now());
         userReq.setUpdateTime(LocalDateTime.now());
+        userReq.setUserType(0);
+        userReq.setIsDeleted(0);
 
         User user = userService.add(userReq);
-        log.info("Guest user created successfully: uid={}, nickName={}, objectId={}",
+        log.info("Guest user created successfully: uid={}, nickName={}, assetId={}",
                 user.getUid(), user.getNickname(), user.getAssetId());
 
         // 4. 执行加入聊天室逻辑
@@ -267,10 +308,82 @@ public class AuthServiceImpl implements AuthService {
             log.info("Guest joined chat room successfully: uid={}, chatCode={}", user.getUid(), chat.getChatCode());
 
             // 构建 LoginVO：访客无 username，使用 "guest" 作为标识构建 Token
-            return LoginAssembler.build(user.getUid(), "guest", jwtUtils);
+            return issueTokens(user.getUid(), "guest", user.getId(), false);
         } else {
             log.error("Guest failed to join chat room (ChatService returned null)");
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to join chat room");
         }
+    }
+
+    /**
+     * RefreshToken 兑换 AccessToken
+     *
+     * @param req RefreshToken 请求对象
+     * @return LoginVO 返回新的 AccessToken
+     */
+    @Override
+    public LoginVO refreshToken(RefreshTokenReq req) {
+        if (req == null || req.getRefreshToken() == null || req.getRefreshToken().isBlank()) {
+            log.warn("RefreshToken 为空，拒绝兑换");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken is required");
+        }
+
+        Claims claims;
+        try {
+            claims = jwtUtils.parseJwt(req.getRefreshToken());
+        } catch (JwtException e) {
+            log.warn("RefreshToken 无效或已过期: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken is invalid");
+        }
+
+        String tokenType = claims.get("tokenType", String.class);
+        if (!TOKEN_TYPE_REFRESH.equals(tokenType)) {
+            log.warn("RefreshToken 类型不匹配: {}", tokenType);
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Invalid token type");
+        }
+
+        String uid = claims.get("uid", String.class);
+        String username = claims.get("username", String.class);
+        Integer userId = userService.getIdByUid(uid);
+        if (userId == null) {
+            log.warn("RefreshToken 兑换失败: 用户不存在 uid={}", uid);
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not found");
+        }
+
+        // 若用户不在线，则必须校验 RefreshToken 是否匹配
+        User user = userService.getUserById(userId);
+        if (user == null) {
+            log.warn("RefreshToken 兑换失败: 用户不存在 userId={}", userId);
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not found");
+        }
+        Integer userType = user.getUserType();
+
+        if (!presenceService.isOnline(userId)) {
+            if (userType != null && userType == 1) {
+                String storedToken = formalUserService.getRefreshTokenByUserId(userId);
+                if (storedToken == null || !storedToken.equals(req.getRefreshToken())) {
+                    log.warn("RefreshToken 兑换失败: 正式用户 token 不一致 userId={}", userId);
+                    throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
+                }
+            } else {
+                String cachedToken = tokenCacheService.getGuestRefreshToken(userId);
+                if (cachedToken == null || !cachedToken.equals(req.getRefreshToken())) {
+                    log.warn("RefreshToken 兑换失败: 访客 token 不一致 userId={}", userId);
+                    throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
+                }
+            }
+        }
+
+        long refreshExpireMinutes = (userType != null && userType == 1)
+                ? tokenProperties.getFormalRefreshExpireMinutes()
+                : tokenProperties.getGuestRefreshExpireMinutes();
+        LoginVO loginVO = LoginAssembler.build(uid, username, jwtUtils,
+                tokenProperties.getAccessExpireMinutes(), refreshExpireMinutes);
+        // 保持原 RefreshToken 不变
+        loginVO.setRefreshToken(req.getRefreshToken());
+
+        tokenCacheService.cacheAccessToken(userId, loginVO.getAccessToken());
+
+        return loginVO;
     }
 }

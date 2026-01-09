@@ -8,16 +8,11 @@ import WelcomeView from '@/views/welcome/index.vue'
 import ErrorView from '@/views/error/500.vue'
 import NotFoundView from '@/views/error/404.vue'
 import { useUserStore } from '@/stores/userStore'
-import { useJoinInput } from '@/hooks/chat/join/useJoinInput'
 import { useAppStore } from '@/stores/appStore'
 import { useWebsocketStore } from '@/stores/websocketStore'
-import { useRoomStore } from '@/stores/roomStore'
-import { isValidInviteUrl } from '@/utils/validators'
 import { processInviteRoute } from '@/services/inviteService'
 import i18n from '@/i18n'
-import { showAlertDialog } from '@/components/dialogs/AlertDialog'
-import { isAppError, ErrorType, ErrorSeverity, createAppError } from '@/error/ErrorTypes'
-import { ElMessage } from 'element-plus'
+
 
 const { t } = i18n.global
 
@@ -112,12 +107,17 @@ router.beforeEach(async (to, from) => {
   }
 
   // 初始化检查（防止页面刷新时丢失状态）
-  // 逻辑：如果去往 /chat 相关页面（需要登录态），且当前 Store 中没有 Token（说明也是刚刷新或未初始化）
+  // 逻辑：如果去往 /chat 相关页面（需要登录态），且当前 Store 或 localStorage 中没有 Token（说明也是刚刷新或未初始化）
   // 则尝试执行“恢复登录态初始化”
-  if (to.path.startsWith('/chat') && !userStore.hasToken()) {
-    // 这里传入 'refresh' 类型，initializeApp 内部会尝试 restoreLoginUserFromStorage
+  // 如果失败，说明 Token 已过期，弹出提示并重定向到首页
+  const isChatTarget = to.name === 'ChatRoom' || to.name === 'Welcome' || to.name === 'GuestChatRoom'
+  const isChatSource = from.name === 'ChatRoom' || from.name === 'Welcome' || from.name === 'GuestChatRoom'
+  if (isChatTarget && !isChatSource) {
+    if (!userStore.restoreLoginStateIfNeeded()) {
+      await userStore.logout({ showDialog: true })
+      return { path: '/' }
+    }
     await appStore.initializeApp(undefined, 'refresh')
-    // 如果初始化后还是没 Token（恢复失败），可能会被后续逻辑重定向或在 initializeApp 内处理
   }
 
   // 如果目标是 /error，显示全白全屏遮蔽（无转圈无文字）
@@ -132,9 +132,7 @@ router.beforeEach(async (to, from) => {
 
   // 逻辑优化：
   // 判断是否在 /chat 体系内部切换（包括欢迎页和具体房间）
-  const isChatSwitch =
-    (from.name === 'ChatRoom' || from.name === 'Welcome')
-    && to.name === 'ChatRoom'
+  const isChatSwitch = from.path.startsWith('/chat') && to.path.startsWith('/chat')
   // 只有在非 /chat 内部切换，且路径确实发生变化时，才显示全局 Loading（错误页已在上面单独处理）
   // 特殊处理：Invite 路由由其内部逻辑独立控制 Loading（区分是否来自 Chat），此处跳过
   if (to.path !== '/error' && to.path !== from.path && !isChatSwitch && to.name !== 'Invite') {

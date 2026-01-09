@@ -51,4 +51,20 @@ public interface FormalUserService {
      * @param formalUser 正式用户对象（包含 userId）
      */
     void addByUserId(FormalUser formalUser);
+
+    /**
+     * 更新正式用户 RefreshToken
+     *
+     * @param userId       用户ID
+     * @param refreshToken RefreshToken
+     */
+    void updateRefreshToken(Integer userId, String refreshToken);
+
+    /**
+     * 获取正式用户 RefreshToken
+     *
+     * @param userId 用户ID
+     * @return RefreshToken
+     */
+    String getRefreshTokenByUserId(Integer userId);
 }

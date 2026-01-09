@@ -29,6 +29,16 @@ public class User {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
+    /**
+     * 逻辑删除标记：0=未删除，1=已删除
+     */
+    private Integer isDeleted;
+
+    /**
+     * 用户类型：0=访客，1=正式用户
+     */
+    private Integer userType;
+
     // 临时用户属性
     private String username;
 

@@ -65,9 +65,7 @@ export const processInviteRoute = async (to: RouteLocationNormalized): Promise<R
         }
 
         // 如果内存中没有 token，则尝试恢复登录信息
-        if (!userStore.hasToken()) {
-            userStore.restoreLoginUserFromStorage() || userStore.restoreLoginGuestFromStorage();
-        }
+        userStore.restoreLoginStateIfNeeded()
 
         // 如果有 token，检查是否为正式用户并尝试直接加入
         if (userStore.hasToken()) {
@@ -91,7 +89,7 @@ export const processInviteRoute = async (to: RouteLocationNormalized): Promise<R
                         // 仅首次加入才提示，避免刷新页面时重复提示
                         ElMessage.success(t('api.join_chat_success') || 'Joined successfully')
                         // 重新初始化 App 状态以拉取最新会话列表
-                        await appStore.initializeApp(userStore.getAccessToken(), 'login')
+                        await appStore.initializeApp(userStore.getAccessToken(), 'login', { waitForRoute: '/chat' })
                     }
                     return { name: 'ChatRoom', params: { chatCode: targetChatCode }, replace: true }
                 }

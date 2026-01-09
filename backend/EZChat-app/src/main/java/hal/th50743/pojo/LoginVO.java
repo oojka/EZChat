@@ -26,8 +26,13 @@ public class LoginVO {
     private String username;
 
     /**
-     * JWT Token（用于后续API请求认证）
+     * AccessToken（用于API请求认证）
      */
-    private String token;
+    private String accessToken;
+
+    /**
+     * RefreshToken（用于刷新 AccessToken）
+     */
+    private String refreshToken;
 
 }

@@ -1,15 +1,23 @@
 package hal.th50743.interceptor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import hal.th50743.exception.ErrorCode;
+import hal.th50743.pojo.Result;
+import hal.th50743.service.TokenCacheService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
 import hal.th50743.utils.JwtUtils;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+
+import java.io.IOException;
 
 /**
  * Token 拦截器，用于在请求到达控制器之前验证用户身份。
@@ -23,6 +31,12 @@ public class TokenInterceptor implements HandlerInterceptor {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private TokenCacheService tokenCacheService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * 在请求处理之前进行调用。
@@ -43,24 +57,49 @@ public class TokenInterceptor implements HandlerInterceptor {
 
         // 2. 检查 Token 是否存在
         if (token == null || token.isEmpty()) {
-            log.info("Token 不存在，来自: {} 的请求被拒绝", request.getRemoteAddr());
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            log.warn("Token 不存在，来自: {} 的请求被拒绝", request.getRemoteAddr());
+            writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Token is required");
             return false;
         }
         // 3. 验证 Token 的合法性
         try {
             // 解析 JWT Token 获取 Claims
             Claims claims = jwtUtils.parseJwt(token);
+            String tokenType = claims.get("tokenType", String.class);
+            if (!"access".equals(tokenType)) {
+                log.warn("Token 类型不合法: {}", tokenType);
+                writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Invalid token type");
+                return false;
+            }
             // 从 Claims 中获取用户唯一标识 (uid)
             String uid = claims.get("uid").toString();
             // 根据 uid 查询数据库获取用户主键 ID
             Integer userId = userService.getIdByUid(uid);
+            if (userId == null) {
+                log.warn("Token 解析成功但用户不存在: uid={}", uid);
+                writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "User not found");
+                return false;
+            }
+            String cachedToken = tokenCacheService.getAccessToken(userId);
+            if (cachedToken == null || !cachedToken.equals(token)) {
+                log.warn("AccessToken 缓存校验失败: userId={}", userId);
+                writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "AccessToken mismatch");
+                return false;
+            }
             // 将当前用户的 ID 存入 ThreadLocal，以便在后续的业务逻辑中直接获取
             CurrentHolder.setCurrentId(userId);
+        } catch (ExpiredJwtException e) {
+            log.warn("AccessToken 已过期: {}", e.getMessage());
+            writeUnauthorizedResponse(response, ErrorCode.TOKEN_EXPIRED, "AccessToken expired");
+            return false;
+        } catch (JwtException e) {
+            log.warn("Token 验证失败: {}", e.getMessage());
+            writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Token is invalid");
+            return false;
         } catch (Exception e) {
             // 如果解析失败（例如 Token 过期、签名不匹配等），则认为 Token 不合法
-            log.info("Token 验证失败: {}, 请求被拒绝", e.getMessage());
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            log.error("Token 验证异常: {}, 请求被拒绝", e.getMessage(), e);
+            writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Unauthorized");
             return false;
         }
 
@@ -79,5 +118,27 @@ public class TokenInterceptor implements HandlerInterceptor {
             throws Exception {
         // 移除当前线程中存储的用户 ID
         CurrentHolder.remove();
+    }
+
+    /**
+     * 写入未授权响应（JSON 格式），供前端识别错误码
+     *
+     * @param response HTTP 响应对象
+     * @param errorCode 业务错误码
+     * @param message 错误消息
+     */
+    private void writeUnauthorizedResponse(HttpServletResponse response, ErrorCode errorCode, String message) {
+        if (response.isCommitted()) {
+            return;
+        }
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json;charset=UTF-8");
+        Result<?> result = Result.error(errorCode, message);
+        try {
+            response.getWriter().write(objectMapper.writeValueAsString(result));
+        } catch (IOException e) {
+            log.error("未授权响应写入失败", e);
+        }
     }
 }

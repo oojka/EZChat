@@ -79,7 +79,7 @@ export const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\
  */
 
 // 类型导入
-import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage } from '@/type'
+import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage, AckPayload } from '@/type'
 
 export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
 
@@ -209,7 +209,8 @@ export const isLoginUser = (data: unknown): data is LoginUser => {
   return (
     typeof d.uid === 'string' &&
     typeof d.username === 'string' &&
-    typeof d.token === 'string'
+    typeof d.accessToken === 'string' &&
+    typeof d.refreshToken === 'string'
   );
 };
 
@@ -387,4 +388,39 @@ export const isValidMessage = (data: any): data is Message => {
     typeof data.type === 'number' &&
     (data.seqId === undefined || typeof data.seqId === 'number') // Optional check
   )
+}
+
+/**
+ * 类型守卫：验证数据是否为 AckPayload 类型
+ *
+ * ## 业务逻辑
+ * - 检查对象是否包含 tempId 和 seqId 字段
+ * - tempId 必须为字符串类型
+ * - seqId 必须为数字类型
+ *
+ * @param data 待验证的数据
+ * @returns 是否为 AckPayload 类型
+ */
+export const isAckPayload = (data: unknown): data is AckPayload => {
+  return (
+    !!data &&
+    typeof data === 'object' &&
+    'tempId' in data &&
+    'seqId' in data &&
+    typeof (data as Record<string, unknown>).tempId === 'string' &&
+    typeof (data as Record<string, unknown>).seqId === 'number'
+  )
+}
+
+export const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null
+}
+
+export const extractErrorCode = (payload: unknown): string | number | null => {
+  if (!isRecord(payload)) return null
+  const code = payload.code
+  if (typeof code === 'string' || typeof code === 'number') {
+    return code
+  }
+  return null
 }

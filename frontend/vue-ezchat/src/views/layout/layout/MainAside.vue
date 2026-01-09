@@ -80,19 +80,26 @@ const websocketStore = useWebsocketStore()
 .segmented-control {
   position: relative;
   display: flex;
-  /* 使用更深一点的容器底色，产生凹陷感 */
-  background-color: var(--el-fill-color-blank);
-  padding: 4px;
+  /* Darker background for light mode contrast */
+  background-color: var(--el-fill-color);
+  padding: 3px;
   border-radius: var(--radius-base);
   height: 36px;
   border: 1px solid var(--el-border-color-extra-light);
   transition: all 0.3s ease;
 }
 
+:global(html.dark) .segmented-control {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
 .control-item {
   position: relative;
   z-index: 2;
-  flex: 1;
+  flex: 1 1 0px;
+  /* Strict 50% width, ignoring content */
+  width: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,10 +125,10 @@ const websocketStore = useWebsocketStore()
 
 .selection-indicator {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
-  height: calc(100% - 8px);
+  top: 3px;
+  left: 3px;
+  width: 152px;
+  height: 34px;
   background: var(--bg-card);
   border-radius: var(--radius-sm);
   /* 强化阴影，使其在深色背景下依然立体 */

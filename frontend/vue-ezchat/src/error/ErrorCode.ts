@@ -13,6 +13,7 @@ export enum ErrorCode {
     // =========================================
     BAD_REQUEST = 40000,
     UNAUTHORIZED = 40100,
+    TOKEN_EXPIRED = 40101,
     FORBIDDEN = 40300,
     NOT_FOUND = 40400,
 

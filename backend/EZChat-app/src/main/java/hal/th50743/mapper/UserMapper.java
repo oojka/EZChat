@@ -3,8 +3,10 @@ package hal.th50743.mapper;
 import hal.th50743.pojo.FormalUser;
 import hal.th50743.pojo.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户 Mapper 接口
@@ -66,6 +68,46 @@ public interface UserMapper {
      * @param u 用户对象
      */
     void update(User u);
+
+    /**
+     * 更新用户逻辑删除标记
+     *
+     * @param userId    用户ID
+     * @param isDeleted 删除标记
+     */
+    void updateUserDeleted(@Param("userId") Integer userId, @Param("isDeleted") Integer isDeleted);
+
+    /**
+     * 更新用户类型
+     *
+     * @param userId   用户ID
+     * @param userType 用户类型
+     */
+    void updateUserType(@Param("userId") Integer userId, @Param("userType") Integer userType);
+
+    /**
+     * 更新正式用户 RefreshToken
+     *
+     * @param userId 用户ID
+     * @param token  RefreshToken
+     */
+    void updateFormalUserToken(@Param("userId") Integer userId, @Param("token") String token);
+
+    /**
+     * 获取正式用户 RefreshToken
+     *
+     * @param userId 用户ID
+     * @return RefreshToken
+     */
+    String selectFormalUserTokenByUserId(@Param("userId") Integer userId);
+
+    /**
+     * 查询需要清理的访客用户ID列表
+     *
+     * @param cutoff 离线截止时间
+     * @return 访客用户ID列表
+     */
+    List<Integer> selectGuestCandidatesForCleanup(@Param("cutoff") LocalDateTime cutoff);
 
     /**
      * 根据 ID 获取用户视图对象（已废弃，建议使用 selectUserByUid）

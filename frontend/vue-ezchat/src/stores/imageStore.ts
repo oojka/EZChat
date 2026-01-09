@@ -25,7 +25,13 @@ export const useImageStore = defineStore('image', () => {
   const fetchBlobUrl = async (url: string): Promise<string | undefined> => {
     if (!url) return undefined
     try {
-      const response = await axios.get(url, { responseType: 'blob' })
+      const response = await axios.get(url, {
+        responseType: 'blob',
+        // 绕过 CDN 304 缓存导致 axios blob 请求失败的问题
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       return URL.createObjectURL(response.data)
     } catch {
       return undefined
@@ -39,6 +45,19 @@ export const useImageStore = defineStore('image', () => {
     if (!img) return undefined
     if (img.blobThumbUrl) return img.blobThumbUrl
     if (!img.imageName && !img.imageThumbUrl && !img.imageUrl) return undefined
+
+    // GIF 特殊处理：直接使用原图（缩略图通常是静态第一帧，失去动画效果）
+    const isGif = /\.gif($|\?)/i.test(img.imageName || img.imageUrl || '')
+    if (isGif) {
+      const originalBlob = await ensureOriginalBlobUrl(img)
+      if (originalBlob) {
+        // 同步设置 blobThumbUrl，使列表/头像场景可以直接使用
+        img.blobThumbUrl = originalBlob
+
+        // console.log('[ImageStore] GIF cached:', { blobUrl: img.blobUrl, blobThumbUrl: img.blobThumbUrl })
+        return originalBlob
+      }
+    }
 
     const key = `${img.imageName || img.imageThumbUrl || img.imageUrl}:thumb`
     const existing = thumbPromiseMap.get(key)
@@ -174,7 +193,7 @@ export const useImageStore = defineStore('image', () => {
   const prefetchThumbs = (images: Array<Image | undefined>, limit = 6) => {
     const uniqueImages = deduplicateImages(images)
     const tasks = uniqueImages.map((img) => () => ensureThumbBlobUrl(img))
-    runWithConcurrency(tasks, limit).then(() => {})
+    runWithConcurrency(tasks, limit).then(() => { })
   }
 
   // =========================

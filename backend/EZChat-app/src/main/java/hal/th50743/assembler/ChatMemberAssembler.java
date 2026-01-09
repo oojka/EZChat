@@ -63,8 +63,19 @@ public class ChatMemberAssembler {
         vo.setOnline(isOnline);
         vo.setLastSeenAt(member.getLastSeenAt());
 
-        if (member.getAvatarAssetName() != null) {
-            vo.setAvatar(buildAvatar(member.getAvatarAssetName(), null));
+        // 优先使用 JOIN 查询出的 assetName，如果为空则尝试使用 assetId 回退
+        String assetName = member.getAvatarAssetName();
+        if (assetName == null && member.getAssetId() != null) {
+            // Fallback: JOIN failed (e.g. Asset cleaned up or timing issue), verify with
+            // AssetService
+            Asset asset = assetService.findById(member.getAssetId());
+            if (asset != null) {
+                assetName = asset.getAssetName();
+            }
+        }
+
+        if (assetName != null || member.getAssetId() != null) {
+            vo.setAvatar(buildAvatar(assetName, member.getAssetId()));
         }
 
         return vo;

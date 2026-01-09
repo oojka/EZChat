@@ -8,8 +8,8 @@
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
-        INSERT INTO users (uid, nickname, asset_id, bio, last_seen_at, create_time, update_time)
-        VALUES (#{uid}, #{nickname}, #{assetId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime})
+        INSERT INTO users (uid, nickname, asset_id, bio, last_seen_at, create_time, update_time, is_deleted, user_type)
+        VALUES (#{uid}, #{nickname}, #{assetId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime}, #{isDeleted}, #{userType})
     </insert>
 
     <insert id="insertFormalUser">
@@ -23,9 +23,26 @@
             <if test="nickname != null and nickname != ''">nickname = #{nickname},</if>
             <if test="assetId != null">asset_id = #{assetId},</if>
             <if test="bio != null and bio != ''">bio = #{bio},</if>
+            <if test="isDeleted != null">is_deleted = #{isDeleted},</if>
+            <if test="userType != null">user_type = #{userType},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </set>
         WHERE id = #{id}
+    </update>
+    <update id="updateUserDeleted">
+        UPDATE users
+        SET is_deleted = #{isDeleted}
+        WHERE id = #{userId}
+    </update>
+    <update id="updateUserType">
+        UPDATE users
+        SET user_type = #{userType}
+        WHERE id = #{userId}
+    </update>
+    <update id="updateFormalUserToken">
+        UPDATE formal_users
+        SET token = #{token}
+        WHERE user_id = #{userId}
     </update>
     <update id="updateLastSeenAt">
         UPDATE users
@@ -37,6 +54,7 @@
         SELECT user_id as userId,
                username,
                password_hash as passwordHash,
+               token as refreshToken,
                create_time as createTime,
                update_time as updateTime,
                last_login_time as lastLoginTime
@@ -50,6 +68,8 @@
                u.nickname,
                u.asset_id,
                u.bio,
+               u.is_deleted,
+               u.user_type,
                u.last_seen_at,
                u.create_time,
                u.update_time,
@@ -64,6 +84,8 @@
                u.nickname,
                u.asset_id,
                u.bio,
+               u.is_deleted,
+               u.user_type,
                u.last_seen_at,
                u.create_time,
                u.update_time,
@@ -82,6 +104,8 @@
                u.nickname,
                u.asset_id,
                u.bio,
+               u.is_deleted,
+               u.user_type,
                u.last_seen_at,
                u.create_time,
                u.update_time,
@@ -97,6 +121,8 @@
                u.nickname,
                u.asset_id,
                u.bio,
+               u.is_deleted,
+               u.user_type,
                u.last_seen_at,
                u.create_time,
                u.update_time,
@@ -109,7 +135,7 @@
     <!-- 根据 UID 查询用户信息（JOIN assets 表获取头像 asset_name） -->
     <select id="selectByUidWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
-            u.id, u.uid, u.nickname, u.asset_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
+            u.id, u.uid, u.nickname, u.asset_id, u.bio, u.is_deleted, u.user_type, u.last_seen_at, u.create_time, u.update_time,
             a.asset_name as avatarObjectName
         FROM users u
         LEFT JOIN assets a ON u.asset_id = a.id
@@ -120,12 +146,17 @@
     <!-- 根据 ID 查询用户信息（JOIN assets 表） -->
     <select id="selectByIdWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
-            u.id, u.uid, u.nickname, u.asset_id, u.bio, u.last_seen_at, u.create_time, u.update_time,
+            u.id, u.uid, u.nickname, u.asset_id, u.bio, u.is_deleted, u.user_type, u.last_seen_at, u.create_time, u.update_time,
             a.asset_name as avatarObjectName
         FROM users u
         LEFT JOIN assets a ON u.asset_id = a.id
         WHERE u.id = #{id}
         LIMIT 1
+    </select>
+    <select id="selectFormalUserTokenByUserId" resultType="java.lang.String">
+        SELECT token
+        FROM formal_users
+        WHERE user_id = #{userId}
     </select>
 
     <select id="selectUsernameByUserId" resultType="java.lang.String">
@@ -140,6 +171,8 @@
                u.nickname,
                u.asset_id,
                u.bio,
+               u.is_deleted,
+               u.user_type,
                u.last_seen_at,
                u.create_time,
                u.update_time,
@@ -147,6 +180,15 @@
         FROM users u
                  LEFT JOIN formal_users f ON u.id = f.user_id
         WHERE u.id = #{userId}
+    </select>
+    <select id="selectGuestCandidatesForCleanup" resultType="java.lang.Integer">
+        SELECT u.id
+        FROM users u
+        LEFT JOIN formal_users f ON u.id = f.user_id
+        WHERE u.user_type = 0
+          AND u.is_deleted = 0
+          AND u.last_seen_at &lt; #{cutoff}
+          AND f.user_id IS NULL
     </select>
 
 </mapper>

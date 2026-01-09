@@ -53,6 +53,20 @@ public class UserController {
     }
 
     /**
+     * 修改用户个人信息（不包含账号与密码）
+     *
+     * @param userReq 个人资料更新请求对象
+     * @return 操作结果
+     */
+    @PostMapping("/profile")
+    public Result<Void> updateProfile(@RequestBody UserReq userReq) {
+        userReq.setUserId(CurrentHolder.getCurrentId());
+        log.info("update user profile, user={}", userReq);
+        userService.update(userReq);
+        return Result.success();
+    }
+
+    /**
      * Guest用户升级为正式用户
      * <p>
      * 将当前登录的Guest用户升级为正式用户，创建用户名和密码账号。

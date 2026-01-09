@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import {ref, watch, onMounted, onUnmounted} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
-import {storeToRefs} from 'pinia'
-import {useAppStore} from '@/stores/appStore.ts'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore.ts'
 import AppLogo from '@/components/AppLogo.vue'
 import LeftCard from '@/views/index/components/LeftCard.vue'
 import RightCard from '@/views/index/components/RightCard.vue'
-import {useI18n} from 'vue-i18n'
-import {Moon, Sunny} from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+import { Moon, Sunny } from '@element-plus/icons-vue'
 
 const { locale, t } = useI18n()
 const route = useRoute()
@@ -43,7 +43,7 @@ const handleGuestFlip = () => {
   if (activeCard.value === 'guest') isGuestFlipped.value = true
   else {
     activeCard.value = 'guest'
-    setTimeout(() => { if (activeCard.value === 'guest') isGuestFlipped.value = true }, 600)
+    setTimeout(() => { if (activeCard.value === 'guest') isGuestFlipped.value = true }, 500)
   }
 }
 const handleGuestUnflip = () => { isGuestFlipped.value = false }
@@ -52,7 +52,7 @@ const handleLoginFlip = () => {
   if (activeCard.value === 'login') isLoginFlipped.value = true
   else {
     activeCard.value = 'login'
-    setTimeout(() => { if (activeCard.value === 'login') isLoginFlipped.value = true }, 600)
+    setTimeout(() => { if (activeCard.value === 'login') isLoginFlipped.value = true }, 500)
   }
 }
 const handleLoginUnflip = () => { isLoginFlipped.value = false }
@@ -68,7 +68,7 @@ watch(() => route.query.register, (newVal) => {
       }
       // 清除查询参数
       router.replace({ path: '/', query: {} })
-    }, 600)
+    }, 500)
   }
 }, { immediate: true })
 
@@ -90,7 +90,8 @@ onUnmounted(() => {
         <el-dropdown trigger="click" @command="appStore.changeLanguage" placement="bottom-end">
           <div class="action-icon-btn">
             <Transition name="el-fade-in-linear" mode="out-in">
-              <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode] }}</span>
+              <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode]
+              }}</span>
             </Transition>
           </div>
           <template #dropdown>
@@ -106,7 +107,10 @@ onUnmounted(() => {
 
         <div class="action-icon-btn" @click="appStore.toggleTheme">
           <div class="theme-toggle-inner" :class="{ 'is-dark': isDark }">
-            <el-icon><Sunny v-if="!isDark" /><Moon v-else /></el-icon>
+            <el-icon>
+              <Sunny v-if="!isDark" />
+              <Moon v-else />
+            </el-icon>
           </div>
         </div>
       </div>
@@ -127,20 +131,18 @@ onUnmounted(() => {
         </div>
 
         <div class="container" :class="{ 'has-active-card': activeCard !== null }">
-          <div
-            class="item guest-card flip-card"
+          <div class="item guest-card flip-card"
             :class="{ 'is-active': activeCard === 'guest', 'is-inactive': activeCard === 'login', 'is-flipped': isGuestFlipped }"
-            @click.stop="toggleCard('guest')"
-          >
-            <LeftCard :active="activeCard === 'guest'" :flipped="isGuestFlipped" @flip="handleGuestFlip" @unflip="handleGuestUnflip" />
+            @click.stop="toggleCard('guest')">
+            <LeftCard :active="activeCard === 'guest'" :flipped="isGuestFlipped" @flip="handleGuestFlip"
+              @unflip="handleGuestUnflip" />
           </div>
 
-          <div
-            class="item login-card flip-card"
+          <div class="item login-card flip-card"
             :class="{ 'is-active': activeCard === 'login', 'is-inactive': activeCard === 'guest', 'is-flipped': isLoginFlipped }"
-            @click.stop="toggleCard('login')"
-          >
-            <RightCard :active="activeCard === 'login'" :flipped="isLoginFlipped" @flip="handleLoginFlip" @unflip="handleLoginUnflip" />
+            @click.stop="toggleCard('login')">
+            <RightCard :active="activeCard === 'login'" :flipped="isLoginFlipped" @flip="handleLoginFlip"
+              @unflip="handleLoginUnflip" />
           </div>
         </div>
       </div>
@@ -149,13 +151,27 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.index-root { width: 100%; min-height: 100vh; user-select: none; }
-.index-root :deep(input), .index-root :deep(textarea) { user-select: text; }
+.index-root {
+  width: 100%;
+  min-height: 100vh;
+  user-select: none;
+}
+
+.index-root :deep(input),
+.index-root :deep(textarea) {
+  user-select: text;
+}
 
 .page-wrapper {
-  position: relative; min-height: 100vh;
+  position: relative;
+  min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; perspective: 2000px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  perspective: 2000px;
   transition: background 0.8s var(--ease-out-expo);
 }
 
@@ -166,44 +182,130 @@ html.dark .page-wrapper {
     radial-gradient(circle at 100% 100%, var(--primary-light) 0%, transparent 70%);
 }
 
-.index-actions { position: absolute; top: 24px; right: 24px; z-index: 100; display: flex; gap: 12px; align-items: center; }
+.index-actions {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
 
 .action-icon-btn {
-  cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-base); background: var(--bg-glass);
-  backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass);
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-base);
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
   transition: all 0.4s var(--ease-out-expo);
-  color: var(--text-700); border: 1px solid var(--border-glass);
+  color: var(--text-700);
+  border: 1px solid var(--border-glass);
   outline: none;
 }
+
 .action-icon-btn:hover {
-  background-color: var(--bg-card); transform: translateY(-1px);
-  color: var(--primary); border-color: var(--primary);
+  background-color: var(--bg-card);
+  transform: translateY(-1px);
+  color: var(--primary);
+  border-color: var(--primary);
   box-shadow: var(--shadow-glass);
 }
 
-.lang-code-text { font-size: 12px; font-weight: 900; font-family: 'Inter', sans-serif; }
-.theme-toggle-inner { display: flex; align-items: center; justify-content: center; transition: transform 0.5s var(--ease-out-expo); }
-.theme-toggle-inner.is-dark { transform: rotate(360deg); }
+.lang-code-text {
+  font-size: 12px;
+  font-weight: 900;
+  font-family: 'Inter', sans-serif;
+}
 
-.bg-blobs { position: absolute; inset: -50%; z-index: 0; pointer-events: none; animation: global-rotate 150s linear infinite; }
+.theme-toggle-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.5s var(--ease-out-expo);
+}
+
+.theme-toggle-inner.is-dark {
+  transform: rotate(360deg);
+}
+
+.bg-blobs {
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  pointer-events: none;
+  animation: global-rotate 150s linear infinite;
+}
+
 .blob {
-  position: absolute; filter: blur(120px); opacity: 0.4;
+  position: absolute;
+  filter: blur(120px);
+  opacity: 0.4;
   transition: all 1s var(--ease-out-expo);
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   animation: blob-breathe 20s ease-in-out infinite;
 }
-.blob-1 { background: #60a5fa; width: 600px; height: 600px; top: 25%; left: 25%; }
-.blob-2 { background: #93c5fd; width: 700px; height: 700px; bottom: 25%; right: 25%; animation-delay: -10s; }
 
-:deep(.dark) .blob { filter: blur(180px); }
-:deep(.dark) .blob-1 { background: #080808; opacity: 0.02; }
-:deep(.dark) .blob-2 { background: #0a0a0a; opacity: 0.02; }
+.blob-1 {
+  background: #60a5fa;
+  width: 600px;
+  height: 600px;
+  top: 25%;
+  left: 25%;
+}
 
-@keyframes global-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.blob-2 {
+  background: #93c5fd;
+  width: 700px;
+  height: 700px;
+  bottom: 25%;
+  right: 25%;
+  animation-delay: -10s;
+}
+
+:deep(.dark) .blob {
+  filter: blur(180px);
+}
+
+:deep(.dark) .blob-1 {
+  background: #080808;
+  opacity: 0.02;
+}
+
+:deep(.dark) .blob-2 {
+  background: #0a0a0a;
+  opacity: 0.02;
+}
+
+@keyframes global-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes blob-breathe {
-  0%, 100% { transform: scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; opacity: 0.3; }
-  50% { transform: scale(1.5); border-radius: 60% 40% 30% / 70% 50% 60% 40%; opacity: 0.7; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.5);
+    border-radius: 60% 40% 30% / 70% 50% 60% 40%;
+    opacity: 0.7;
+  }
 }
 
 /* --- 核心修改：整体上移 12% --- */
@@ -212,28 +314,106 @@ html.dark .page-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translateY(-5%); /* 整体上移 */
-  transition: transform 0.8s var(--ease-out-expo);
+  transform: translateY(-5%);
+  /* 整体上移 */
+  /* transition: transform 0.8s var(--ease-out-expo); Optimized: */
+  transition: transform 0.7s var(--ease-out-expo);
 }
 
-.mainVisual { transition: all 0.8s var(--ease-out-expo); text-align: center; }
-.mainVisual.is-dimmed { opacity: 0.05; transform: scale(0.8) translateY(-50px); filter: blur(12px); }
-.app-subtitle { font-size: 18px; color: var(--text-500); letter-spacing: 0.1em; font-weight: 600; margin-top: 20px; transition: all 0.6s var(--ease-out-expo); }
-html.dark .app-subtitle { color: #5f6368; text-shadow: 0 0 20px rgba(255, 255, 255, 0.05); }
+.mainVisual {
+  transition: all 0.7s var(--ease-out-expo);
+  text-align: center;
+}
 
-.container { position: relative; z-index: 2; max-width: 1000px; width: 100%; display: flex; justify-content: center; gap: 32px; min-height: 450px; margin-top: 25px; transition: all 0.8s var(--ease-out-expo); }
+.mainVisual.is-dimmed {
+  opacity: 0.05;
+  transform: scale(0.8) translateY(-50px);
+  filter: blur(12px);
+}
+
+.app-subtitle {
+  font-size: 18px;
+  color: var(--text-500);
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  margin-top: 20px;
+  transition: all 0.6s var(--ease-out-expo);
+}
+
+html.dark .app-subtitle {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.container {
+  position: relative;
+  z-index: 2;
+  max-width: 1000px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  min-height: 450px;
+  margin-top: 25px;
+  transition: all 0.7s var(--ease-out-expo);
+}
 
 .item {
-  width: 460px; height: 420px; transition: all 0.8s var(--ease-out-expo);
-  cursor: pointer; transform-style: preserve-3d; outline: none; border-radius: var(--radius-xl); -webkit-tap-highlight-color: transparent;
-  background: transparent !important; box-shadow: none !important;
+  width: 460px;
+  height: 420px;
+  transition: all 0.7s var(--ease-out-expo);
+  cursor: pointer;
+  transform-style: preserve-3d;
+  outline: none;
+  border-radius: var(--radius-xl);
+  -webkit-tap-highlight-color: transparent;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-.item.is-active { z-index: 10; transform: scale(1.05); cursor: default; }
-.guest-card.is-active { transform: translateX(calc(50% + 16px)) scale(1.05); }
-.login-card.is-active { transform: translateX(calc(-50% - 16px)) scale(1.05); }
-.item.is-inactive { opacity: 0.15; filter: blur(12px) grayscale(0.5); pointer-events: none; transform: scale(0.9); }
-html.dark .item.is-inactive { opacity: 0.08; filter: blur(20px) grayscale(1); }
+.item.is-active {
+  z-index: 10;
+  transform: scale(1.05);
+  cursor: default;
+}
 
-@media (max-width: 768px) { .container { flex-direction: column; align-items: center; } .item { width: 100%; max-width: 450px; } .item.is-active { transform: scale(1.05); } .guest-card.is-active, .login-card.is-active { transform: scale(1.05); } }
+.guest-card.is-active {
+  transform: translateX(calc(50% + 16px)) scale(1.05);
+}
+
+.login-card.is-active {
+  transform: translateX(calc(-50% - 16px)) scale(1.05);
+}
+
+.item.is-inactive {
+  opacity: 0.15;
+  filter: blur(12px) grayscale(0.5);
+  pointer-events: none;
+  transform: scale(0.9);
+}
+
+html.dark .item.is-inactive {
+  opacity: 0.08;
+  filter: blur(20px) grayscale(1);
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .item {
+    width: 100%;
+    max-width: 450px;
+  }
+
+  .item.is-active {
+    transform: scale(1.05);
+  }
+
+  .guest-card.is-active,
+  .login-card.is-active {
+    transform: scale(1.05);
+  }
+}
 </style>

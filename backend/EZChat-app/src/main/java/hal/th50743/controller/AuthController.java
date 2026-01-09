@@ -122,4 +122,16 @@ public class AuthController {
         LoginVO res = authService.joinChat(req);
         return Result.success(res);
     }
+
+    /**
+     * RefreshToken 兑换 AccessToken
+     *
+     * @param req RefreshToken 请求对象
+     * @return 兑换成功后的登录信息
+     */
+    @PostMapping("/refresh")
+    public Result<LoginVO> refreshToken(@RequestBody RefreshTokenReq req) {
+        LoginVO res = authService.refreshToken(req);
+        return Result.success(res);
+    }
 }

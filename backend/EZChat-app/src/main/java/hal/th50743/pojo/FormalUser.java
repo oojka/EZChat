@@ -48,6 +48,11 @@ public class FormalUser {
     private LocalDateTime lastLoginTime;
 
     /**
+     * RefreshToken（正式用户）
+     */
+    private String refreshToken;
+
+    /**
      * 用户对外ID（通过连表查询获取 users.uid）
      */
     private String userUid;

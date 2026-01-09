@@ -25,8 +25,6 @@ public class JwtUtils {
     @Value("${jwt.secret}")
     private String secret; // JWT密钥
 
-    @Value("${jwt.expiration}")
-    private long expiration; // 默认过期时间（分钟）
 
     private Key key; // 签名密钥
 
@@ -42,15 +40,6 @@ public class JwtUtils {
             throw new IllegalArgumentException("JWT secret key is too short. It must be at least 32 bytes (256 bits) long.");
         }
         this.key = Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    /**
-     * 根据给定的claims生成JWT，使用默认过期时间
-     * @param claims 包含在JWT中的数据
-     * @return 生成的JWT字符串
-     */
-    public String generateJwt(Map<String, Object> claims) {
-        return generateJwt(claims, expiration);
     }
 
     /**

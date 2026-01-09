@@ -86,6 +86,35 @@ public class FormalUserServiceImpl implements FormalUserService {
     }
 
     /**
+     * 更新正式用户 RefreshToken
+     *
+     * @param userId       用户ID
+     * @param refreshToken RefreshToken
+     */
+    @Override
+    public void updateRefreshToken(Integer userId, String refreshToken) {
+        if (userId == null || refreshToken == null) {
+            log.warn("更新正式用户 RefreshToken 失败: userId 或 refreshToken 为空");
+            return;
+        }
+        userMapper.updateFormalUserToken(userId, refreshToken);
+    }
+
+    /**
+     * 获取正式用户 RefreshToken
+     *
+     * @param userId 用户ID
+     * @return RefreshToken
+     */
+    @Override
+    public String getRefreshTokenByUserId(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userMapper.selectFormalUserTokenByUserId(userId);
+    }
+
+    /**
      * 用户登录
      * <p>
      * 使用 BCrypt 密码哈希验证，确保密码安全性。

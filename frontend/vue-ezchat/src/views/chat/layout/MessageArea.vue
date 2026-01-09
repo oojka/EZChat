@@ -12,7 +12,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll.ts'
 
 const { t } = useI18n()
 const messageStore = useMessageStore()
-const { currentMessageList, loadingMessages, noMoreMessages } = storeToRefs(messageStore)
+const { currentMessageList, loadingMessages, noMoreMessages, isSyncing } = storeToRefs(messageStore)
 const { loadMoreHistory } = messageStore
 
 const roomStore = useRoomStore()
@@ -74,6 +74,16 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
 <template>
   <div class="message-area">
     <ul class="list" ref="listRef">
+      <!-- 底部 Sync Loading (因 column-reverse，所以在 DOM 最前面) -->
+      <li class="load-indicator" v-if="isSyncing">
+        <div class="loading-wrapper">
+          <el-icon class="is-loading" :size="16">
+            <Loading />
+          </el-icon>
+          <span>{{ t('common.loading') }}</span>
+        </div>
+      </li>
+
       <template v-for="msg in currentMessageList" :key="msg.tempId || msg.seqId || `${msg.sender}_${msg.createTime}`">
         <SystemMessageItem v-if="msg.type >= 10" :msg="msg" :current-chat="currentRoom" />
         <MessageItem v-else :msg="msg" :current-chat="currentRoom" />

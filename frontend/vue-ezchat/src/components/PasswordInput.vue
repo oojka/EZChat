@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {Hide, Lock, View} from '@element-plus/icons-vue'
+import { computed, ref } from 'vue'
+import { Hide, Lock, View } from '@element-plus/icons-vue'
 
 defineOptions({
   inheritAttrs: false
@@ -31,30 +31,18 @@ const showPassword = ref(false)
 </script>
 
 <template>
-  <el-input
-    v-bind="$attrs"
-    v-model="internalValue"
-    :type="showPassword ? 'text' : 'password'"
-    :placeholder="placeholder"
-    :size="size"
-    class="password-input-wrapper"
-    @copy.prevent
-    @cut.prevent
-    @contextmenu.prevent
-    @keydown.enter="emit('enter')"
-  >
+  <el-input v-bind="$attrs" v-model="internalValue" :type="showPassword ? 'text' : 'password'"
+    :placeholder="placeholder" :size="size" class="password-input-wrapper" @copy.prevent @cut.prevent
+    @contextmenu.prevent @keydown.enter="emit('enter')">
     <template #prefix>
-      <el-icon><component :is="prefixIcon" /></el-icon>
+      <el-icon>
+        <component :is="prefixIcon" />
+      </el-icon>
     </template>
     <template #suffix>
-      <el-icon
-        class="pwd-view-icon"
-        @mousedown="showPassword = true"
-        @mouseup="showPassword = false"
-        @mouseleave="showPassword = false"
-        @touchstart.prevent="showPassword = true"
-        @touchend.prevent="showPassword = false"
-      >
+      <el-icon class="pwd-view-icon" @mousedown="showPassword = true" @mouseup="showPassword = false"
+        @mouseleave="showPassword = false" @touchstart.prevent="showPassword = true"
+        @touchend.prevent="showPassword = false">
         <View v-if="showPassword" />
         <Hide v-else />
       </el-icon>
@@ -70,10 +58,7 @@ const showPassword = ref(false)
   -ms-user-select: none !important;
 }
 
-/* 正常状态的背景色 */
-.password-input-wrapper :deep(.el-input__wrapper) {
-  background-color: var(--bg-page) !important;
-}
+/* 正常状态的背景色 - 已由 main.css 全局托管 */
 
 /* 禁用状态的深度定制样式 - 玻璃拟态锁定效果 */
 .password-input-wrapper :deep(.el-input.is-disabled .el-input__wrapper),
@@ -115,7 +100,7 @@ const showPassword = ref(false)
 /* 黑夜模式：禁用状态样式 */
 html.dark .password-input-wrapper :deep(.el-input.is-disabled .el-input__wrapper),
 html.dark .password-input-wrapper :deep(.el-input__wrapper.is-disabled) {
-  /* 黑夜模式：更深的灰色，与 --bg-glass 有明显层级区分 */
+  /* Dark Mode: Disabled input background */
   background-color: #1d1e1f !important;
   cursor: not-allowed !important;
   box-shadow: 0 0 0 1px var(--el-border-color-light) inset !important;

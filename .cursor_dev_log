@@ -519,3 +519,313 @@
 ## [2026-01-08 13:36] Complete SeqId Pagination Refactor
 - **Status**: Completed.
 - **Fixes**: Corrected `messageStore.ts` update issues ensuring `getMessageList` accepts `cursorSeqId`.
+
+## [2026-01-08 13:45] Fix i18n Warnings for Missing Error Code Translations
+- **Goal**: Fix console warnings "Not found 'api.errors.50001' key in 'ja' locale messages" and similar for other error codes
+- **Changes**:
+  - Added missing error code translations to all language files:
+    - `40000`: "Bad request." / "请求参数错误。" / etc.
+    - `40100`: "Unauthorized access. Please login again." / "未授权访问，请重新登录。" / etc.
+    - `40300`: "Join is disabled or password login is not enabled." / "加入被禁用或密码登录未启用。" / etc.
+    - `40400`: "Resource not found." / "资源未找到。" / etc.
+    - `41001`: "User not found." / "用户未找到。" / etc.
+    - `41002`: "User already exists." / "用户已存在。" / etc.
+    - `41003`: "Invalid credentials." / "用户名或密码错误。" / etc.
+    - `42001`: "Room not found or has been deleted." / "房间未找到或已被删除。" / etc.
+    - `42002`: "No access permission: You are not a member of this chat room." / "无访问权限：您不是该聊天室的成员。" / etc.
+    - `42003`: "Password is required." / "密码必填。" / etc.
+    - `42004`: "Incorrect password." / "密码错误。" / etc.
+    - `42010`: "Invalid invite code." / "邀请码无效。" / etc.
+    - `42011`: "Invite code has expired." / "邀请码已过期。" / etc.
+    - `42012`: "Invite code has been revoked." / "邀请码已被撤销。" / etc.
+    - `42013`: "Invite code usage limit reached." / "邀请码使用次数已满。" / etc.
+    - `43001`: "File is empty or not selected." / "文件为空或未选择。" / etc.
+    - `43002`: "File is too large. Please choose a smaller one." / "文件过大，请选择较小的文件。" / etc.
+    - `50000`: "System internal error. Please try again later." / "系统内部错误，请稍后重试。" / etc.
+    - `50001`: "Database error. Please try again later." / "数据库错误，请稍后重试。" / etc.
+    - `53001`: "File upload failed." / "文件上传失败。" / etc.
+  - **Files Modified**:
+    - `/home/dev/EZChat/frontend/vue-ezchat/src/i18n/locales/en.json`
+    - `/home/dev/EZChat/frontend/vue-ezchat/src/i18n/locales/ja.json`
+    - `/home/dev/EZChat/frontend/vue-ezchat/src/i18n/locales/zh.json`
+    - `/home/dev/EZChat/frontend/vue-ezchat/src/i18n/locales/zh-tw.json`
+    - `/home/dev/EZChat/frontend/vue-ezchat/src/i18n/locales/ko.json`
+  - **Root Cause**: The `request.ts` file uses `t(`api.errors.${code}`)` to get error message translations. When a translation key is missing, vue-i18n shows warnings in the console even though the code falls back to using the backend error message.
+  - **Verification**: After adding all missing error code translations, the warnings should disappear from the console.
+## [2026-01-08 13:48] Fix GIF Avatar Animation
+- **Goal**: Prioritize GIF original URL over static thumbnail in Avatar component.
+- **Changes**:
+  - `src/components/Avatar.vue`: Updated `watchEffect` to use regex `/\.gif($|\?)/i` check.
+## [2026-01-08 13:50] Deprecate SmartAvatar
+- **Goal**: Standardize avatar usage by using `Avatar.vue`.
+- **Changes**:
+  - Refactored `UserItem.vue` and `Join/index.vue` to use `Avatar`.
+  - Deleted `src/components/SmartAvatar.vue`.
+
+## [2026-01-08 15:25] Fix JoinChatDialog Height Inconsistency
+- **Goal**: Resolve height jumping when switching to result step in JoinChatDialog.
+- **Changes**:
+  - `frontend/vue-ezchat/src/components/dialogs/JoinChatDialog.vue`:
+    - Removed dynamic title text in result step (user request), simplified to `visibility: hidden` to preserve layout height.
+    - Kept header DOM element to prevent layout collapse.
+    - Kept `.join-dialog-content` fixed height for stability.
+    - Adjusted Result Step layout: Increased top spacing (`padding-bottom` shift), widened message container to 100%, and increased gap between Title and Message.
+
+## [2026-01-08 15:35] Optimize JoinChatDialog Height
+- **Goal**: Compress dialog height and optimize vertical spacing for a more compact look.
+- **Changes**:
+  - `frontend/vue-ezchat/src/components/dialogs/JoinChatDialog.vue`:
+    - Reduced dialog fixed height from 380px to 320px.
+    - Reduced internal margins (Title, Mode Switcher, Form Items) to fit the compact height.
+    - Reduced Input height from 48px to 44px.
+    - Reduced Tab Switcher height from 36px to 32px.
+
+## [2026-01-08 15:45] Verify Globalization in useJoinInput.ts
+- **Goal**: Verify that validation error messages in useJoinInput.ts are fully internationalized
+- **Findings**:
+  - The validation error mapping in `useJoinInput.ts` (lines 268-274) correctly maps error codes to i18n keys:
+    - `'ROOM_ID_REQUIRED'`: `'validation.chat_code_required'`
+    - `'INVALID_ROOM_ID_FORMAT'`: `'validation.chat_code_format'`
+    - `'PASSWORD_REQUIRED'`: `'validation.password_required'`
+    - `'INVITE_URL_REQUIRED'`: `'validation.invite_url_required'`
+    - `'INVALID_INVITE_URL_FORMAT'`: `'validation.invite_url_format'`
+  - All i18n keys are properly defined in all language files (en.json, ja.json, zh.json, zh-tw.json, ko.json)
+  - The `parseAndValidateJoinInfo` function in `validators.ts` throws Error objects with these error codes
+  - The `validateAndGetPayload` function catches these errors and maps them to i18n messages using `t()` function
+- **Status**: Globalization is already complete and working correctly
+- **Files Verified**:
+  - `frontend/vue-ezchat/src/hooks/chat/join/useJoinInput.ts`
+  - `frontend/vue-ezchat/src/utils/validators.ts`
+  - All language files in `frontend/vue-ezchat/src/i18n/locales/`
+## [2026-01-08 17:45] Optimizing Light Mode Colors
+- **Goal**: Deeply optimize Day Mode to match the premium quality of Dark Mode.
+- **Changes**: 
+  - Modified `src/assets/main.css`: Updated `:root` variables for a cooler `--bg-page`, blue-tinted `--shadow-glass`, and more translucent `--bg-glass`.
+## [2026-01-08 17:50] Refined Light Mode Palette
+- **Goal**: Address user feedback ("Input gray too deep") and improve overall harmony.
+- **Changes**: 
+  - Modified `src/assets/main.css`:
+    - Updated `--bg-page` to `#f8fafc` (Slate 50) for a cleaner, brighter look.
+    - Updated `--bg-input` to `#ffffff` (Pure White) for maximum contrast and cleanliness.
+
+## [2026-01-08 18:25] Removing UserItem Animation
+- **Goal**: Remove hover animation effects for a cleaner UI.
+- **Changes**: 
+  - Modified `components/UserItem.vue`: Removed `transition` and `transform` properties.
+
+## [2026-01-08 18:27] Adding Settings Button to UserItem
+- **Goal**: Remove hover bg effect and add a settings button for action access.
+- **Changes**: 
+  - Modified `components/UserItem.vue`:
+    - Removed hover background color.
+    - Added `Setting` icon and settings button.
+    - Emits `setting` event on click.
+
+## [2026-01-08 18:29] Refining UserItem Settings Button
+- **Goal**: Align button style with AsideList for consistency.
+- **Changes**: 
+  - Modified `components/UserItem.vue`: Updated `.setting-btn` style (glass bg, 8px radius, primary hover).
+
+## [2026-01-08 18:33] Improving UserItem Dark Mode Contrast
+- **Goal**: Make settings button visible against dark card background.
+- **Changes**: 
+  - Modified `components/UserItem.vue`: Added `:global(html.dark)` styles for `.setting-btn`.
+
+## [2026-01-08 18:35] Tuning MainAside Switcher Contrast
+- **Goal**: Improve light mode awareness by darkening the segment container.
+- **Changes**: 
+  - Modified `views/layout/layout/MainAside.vue`: Changed `.segmented-control` bg to `var(--el-fill-color)` (grayish) instead of blank (white).
+
+## [2026-01-08 18:36] Fix MainAside Switcher Dark Mode
+- **Goal**: Resolve "ugly" appearance in dark mode after light mode fix.
+- **Changes**: 
+  - Modified `views/layout/layout/MainAside.vue`: Added `:global(html.dark)` override for `.segmented-control` to use dark translucent background.
+
+## [2026-01-08 18:40] Fixing Switcher Padding Symmetry
+- **Goal**: Ensure the slider is perfectly centered with equal gaps.
+- **Changes**: 
+  - Modified `views/layout/layout/MainAside.vue`: Adjusted padding to 2px and recalculated transforms.
+
+## [2026-01-08 18:43] Enforcing Switcher Strict Width
+- **Goal**: Prevent text length from affecting item widths.
+- **Changes**: 
+  - Modified `views/layout/layout/MainAside.vue`: Included `flex: 1 1 0px` and `width: 0` for strict equal width. Reset padding to 2px.
+
+## [2026-01-08 18:46] Implementing Flush Switcher
+- **Goal**: Remove gap around the slider for a seamless look.
+- **Changes**: 
+  - Modified `views/layout/layout/MainAside.vue`: 
+    - Updated `.selection-indicator` to use `top: 0`, `left: 0`, `width: 50%`, `height: 100%`.
+    - Corrected transform to `translateX(100%)`.
+
+## [2026-01-08 19:05] Update Chat List on ACK
+- **Goal**: Ensure room list updates (last message/time) when message is ACKed.
+- **Changes**: 
+  - Modified `stores/messageStore.ts`: Called `roomStore.updateRoomPreview(msg)` inside `handleAck`.
+
+## [2026-01-08 19:10] Update Chat List on Sync Fallback
+- **Goal**: Ensure room list updates even if ACK fails but Sync succeeds.
+- **Changes**: 
+  - Modified `stores/messageStore.ts`: Added `roomStore.updateRoomPreview(msg)` to the sync success block in `sendMessage` timeout.
+
+## [2026-01-08 19:20] Verify Message Pagination Refactor to SeqId
+- **Goal**: Verify that message pagination has been successfully refactored from timestamp-based to seqId-based as per `.prompt.md` plan
+- **Findings**: The refactoring is already complete and working correctly:
+  
+  ### Backend Changes (Already Implemented):
+  1. **MessageMapper** (`MessageMapper.java` & `MessageMapper.xml`):
+     - Method renamed: `selectMessageListByChatIdAndTimeStamp` → `selectMessageListByChatIdAndCursor`
+     - Parameter changed: `timeStamp` → `cursorSeqId`
+     - SQL query: `WHERE chat_id = #{chatId}` + `AND m.seq_id < #{cursorSeqId}` (if cursorSeqId not null)
+     - Order by: `ORDER BY m.seq_id DESC LIMIT 30`
+  
+  2. **MessageService** (`MessageService.java` & `MessageServiceImpl.java`):
+     - Updated `getMessagesByChatCode` signature: `(Integer userId, String chatCode, Long cursorSeqId)`
+     - Passes `cursorSeqId` to mapper: `messageMapper.selectMessageListByChatIdAndCursor(chatId, cursorSeqId)`
+  
+  3. **MessageController** (`MessageController.java`):
+     - Updated endpoint: `@RequestParam(required = false) Long cursorSeqId` (was `createTime`)
+     - URL: `/message?chatCode=ABC&cursorSeqId=100`
+
+  ### Frontend Changes (Already Implemented):
+  1. **Message.ts** (`src/api/Message.ts`):
+     - Updated `GetMessageListApiReq` type: `cursorSeqId?: number` (was `createTime`)
+     - Updated `getMessageListApi` to construct URL with `cursorSeqId` parameter
+  
+  2. **messageStore.ts** (`src/stores/messageStore.ts`):
+     - Updated `getMessageList` to accept `cursorSeqId` (number) parameter
+     - In `loadMoreHistory` function: passes `oldestMessage?.seqId` as cursor
+     - Properly handles pagination: `cursorSeqId` = null for latest messages, `cursorSeqId` = oldest message's seqId for loading more
+
+- **Status**: Refactoring is complete and fully functional
+- **Benefits**:
+  - More reliable pagination using sequence IDs instead of timestamps
+  - Better alignment with sequence-based architecture
+  - Eliminates issues with duplicate timestamps or clock skew
+  - Provides stable cursor for infinite scrolling
+
+## [2026-01-08 19:45] Complete Globalization of GuestAside.vue
+- **Goal**: Internationalize all hardcoded text in GuestAside.vue component
+- **Changes**:
+
+  ### Added New i18n Keys to All Language Files:
+  Added `upgrade` section with the following keys to all 5 language files (en.json, ja.json, zh.json, zh-tw.json, ko.json):
+  - `upgrade.benefits.create_chat`: "创建专属聊天频道" / "Create exclusive chat channels" / etc.
+  - `upgrade.benefits.unlimited_join`: "聊天室加入无限制" / "Unlimited chat room access" / etc.
+  - `upgrade.benefits.cloud_storage`: "消息云端永久保存" / "Permanent cloud message storage" / etc.
+  - `upgrade.benefits.multi_device`: "多端实时同步" / "Real-time multi-device sync" / etc.
+  - `upgrade.benefits.custom_profile`: "头像昵称自定义" / "Custom avatar and nickname" / etc.
+  - `upgrade.title`: "解锁完整功能体验" / "Unlock full feature experience" / etc.
+  - `upgrade.button`: "成为正式用户" / "Become a formal user" / etc.
+  - `upgrade.dialog_title`: "升级正式账号" / "Upgrade to formal account" / etc.
+  - `upgrade.dialog_subtitle`: "解锁完整功能体验" / "Unlock full feature experience" / etc.
+  - `upgrade.nickname_placeholder`: "设置昵称" / "Set nickname" / etc.
+  - `upgrade.bio_placeholder`: "一句话介绍自己..." / "Introduce yourself in one sentence..." / etc.
+  - `upgrade.username_placeholder`: "设置登录账号" / "Set login account" / etc.
+  - `upgrade.password_placeholder`: "设置登录密码（8-20位）" / "Set login password (8-20 characters)" / etc.
+  - `upgrade.confirm_password_placeholder`: "再次输入密码" / "Re-enter password" / etc.
+  - `upgrade.cancel_button`: "取消" / "Cancel" / etc.
+  - `upgrade.submit_button`: "立即升级" / "Upgrade now" / etc.
+  - `upgrade.avatar_tip`: "支持 JPG/PNG，小于 2MB" / "Supports JPG/PNG, less than 2MB" / etc.
+  - `upgrade.success`: "升级成功，欢迎成为正式用户！" / "Upgrade successful, welcome as a formal user!" / etc.
+  - `upgrade.failed`: "升级失败" / "Upgrade failed" / etc.
+  - `upgrade.avatar_upload_success`: "头像上传成功" / "Avatar uploaded successfully" / etc.
+  - `upgrade.avatar_upload_failed`: "头像上传失败" / "Avatar upload failed" / etc.
+  - `upgrade.avatar_format_error`: "头像图片必须是 JPG 或 PNG 格式！" / "Avatar picture must be JPG or PNG format!" / etc.
+  - `upgrade.avatar_size_error`: "头像图片大小不能超过 2MB！" / "Avatar picture size can not exceed 2MB!" / etc.
+
+  ### Updated GuestAside.vue:
+  1. **Benefits Array**: Converted to computed property for reactivity with language changes
+  2. **Form Validation Messages**: Updated to use existing `validation.*` keys
+  3. **Success/Error Messages**: Updated to use new `upgrade.*` keys
+  4. **UI Text**: Updated all placeholder texts, button labels, titles, and tooltips
+  5. **Template Bindings**: Updated all hardcoded text to use `t()` function
+
+  ### Files Modified:
+  - `frontend/vue-ezchat/src/i18n/locales/en.json`
+  - `frontend/vue-ezchat/src/i18n/locales/ja.json`
+  - `frontend/vue-ezchat/src/i18n/locales/zh.json`
+  - `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`
+  - `frontend/vue-ezchat/src/i18n/locales/ko.json`
+  - `frontend/vue-ezchat/src/views/layout/components/GuestAside.vue`
+
+- **Verification**: All hardcoded text in GuestAside.vue is now fully internationalized and will automatically switch languages when the user changes language preference.
+## [2026-01-09 07:31] Dual Token + Guest Cleanup
+- **Goal**: 实现 access/refresh 双 Token、Caffeine 缓存、刷新接口、WS 刷新重连与访客离线清理
+- **Changes**: backend/EZChat-app/pom.xml, backend/EZChat-app/src/main/java/hal/th50743/config/TokenCacheConfig.java, backend/EZChat-app/src/main/java/hal/th50743/service/TokenCacheService.java, backend/EZChat-app/src/main/java/hal/th50743/service/impl/TokenCacheServiceImpl.java, backend/EZChat-app/src/main/java/hal/th50743/pojo/LoginVO.java, backend/EZChat-app/src/main/java/hal/th50743/assembler/LoginAssembler.java, backend/EZChat-app/src/main/java/hal/th50743/pojo/FormalUser.java, backend/EZChat-app/src/main/java/hal/th50743/pojo/User.java, backend/EZChat-app/src/main/java/hal/th50743/mapper/UserMapper.java, backend/EZChat-app/src/main/resources/hal/th50743/mapper/UserMapper.xml, backend/EZChat-app/src/main/resources/hal/th50743/mapper/ChatMemberMapper.xml, backend/EZChat-app/src/main/java/hal/th50743/service/UserService.java, backend/EZChat-app/src/main/java/hal/th50743/service/impl/UserServiceImpl.java, backend/EZChat-app/src/main/java/hal/th50743/service/FormalUserService.java, backend/EZChat-app/src/main/java/hal/th50743/service/impl/FormalUserServiceImpl.java, backend/EZChat-app/src/main/java/hal/th50743/service/AuthService.java, backend/EZChat-app/src/main/java/hal/th50743/pojo/RefreshTokenReq.java, backend/EZChat-app/src/main/java/hal/th50743/service/PresenceService.java, backend/EZChat-app/src/main/java/hal/th50743/service/impl/PresenceServiceImpl.java, backend/EZChat-app/src/main/java/hal/th50743/service/impl/AuthServiceImpl.java, backend/EZChat-app/src/main/java/hal/th50743/controller/AuthController.java, backend/EZChat-app/src/main/java/hal/th50743/interceptor/TokenInterceptor.java, backend/EZChat-app/src/main/java/hal/th50743/ws/WebSocketServer.java, backend/EZChat-app/src/main/java/hal/th50743/service/impl/GuestCleanupService.java, backend/EZChat-app/src/main/resources/sql/init.sql, frontend/vue-ezchat/src/type/index.ts, frontend/vue-ezchat/src/utils/validators.ts, frontend/vue-ezchat/src/api/Auth.ts, frontend/vue-ezchat/src/stores/userStore.ts, frontend/vue-ezchat/src/utils/request.ts, frontend/vue-ezchat/src/WS/useWebsocket.ts, frontend/vue-ezchat/src/stores/websocketStore.ts
+## [2026-01-09 07:33] Update Formal User Type on Login
+- **Goal**: 兼容已有正式用户数据，确保登录后 user_type 被设置为正式用户
+- **Changes**: backend/EZChat-app/src/main/java/hal/th50743/service/impl/AuthServiceImpl.java
+## [2026-01-09 08:41] 优化首页卡片翻转动画
+- **Goal**: 提升 Guest/Login 卡片翻转和切换的流畅度。
+- **Changes**: 
+  - Modified `src/views/index/index.vue`: 
+    - 动画时长 0.8s 缩短至 0.6s。
+    - 翻转触发延迟从 600ms 缩短至 250ms，使响应
+    - 优化 transitions 属性，添加 `will-change: transform` 提升性能。
+  - Modified `src/views/index/components/LeftCard.vue` & `RightCard.vue`:
+    - 同 0.6s。
+    - 调整表单重置延迟为 600ms 以匹配动画时长。
+    - 添加 `will-change: transform`。
+## [2026-01-09 08:46] 调整卡片微小动画参数
+- **Goal**: 微调动画时长以达到更舒适的节奏。
+- **Changes**: 
+  - Modified `src/views/index/index.vue`: 
+    - 动画时长调整为 0.7s。
+    - 翻转逻辑延迟调整为 500ms（配合 0.7s 动画的 70% 进度）。
+  - Modified cards components: 
+    - 同步 CSS transition 为 0.7s。
+    - 同步内部状态重置逻辑延迟为 500ms。
+  - **Results**:  0.8s 稍快，但比 0.6s 更稳重，且没有闪烁 glitch。
+## [2026-01-09 10:14] 401 刷新锁与重试策略
+- **Goal**: 区分 token 过期与其他 401，使用 refreshPromise 锁并限制重试。
+- **Changes**:
+  - Modified `frontend/vue-ezchat/src/utils/request.ts`:
+    - 仅在 code=TOKEN_EXPIRED 时触发刷新，新增锁与请求等待逻辑。
+    - 只自动重试 GET/HEAD，非幂等请求提示用户重试。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/zh.json`: 新增 api.retry_required 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: 新增 api.retry_required 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/en.json`: 新增 api.retry_required 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/ja.json`: 新增 api.retry_required 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/ko.json`: 新增 api.retry_required 文案。
+## [2026-01-09 10:15] 调整刷新等待失败处理
+- **Goal**: 刷新失败时避免误报网络错误，并清理未使用引用。
+- **Changes**:
+  - Modified `frontend/vue-ezchat/src/utils/request.ts`:
+    - 刷新等待失败改为抛出 Session expired 标记错误。
+    - 移除未使用的 userStore 变量。
+## [2026-01-09 10:30] 401 过期码区分与刷新触发
+- **Goal**: 后端明确返回 Token 过期错误码，前端仅在该码触发 refresh。
+- **Changes**:
+  - Modified `backend/EZChat-app/src/main/java/hal/th50743/exception/ErrorCode.java`: 新增 TOKEN_EXPIRED(40101)。
+  - Modified `backend/EZChat-app/src/main/java/hal/th50743/interceptor/TokenInterceptor.java`: 未授权统一返回 JSON，过期返回 TOKEN_EXPIRED。
+  - Modified `frontend/vue-ezchat/src/error/ErrorCode.ts`: 新增 TOKEN_EXPIRED。
+  - Modified `frontend/vue-ezchat/src/utils/request.ts`: 仅对 40101 触发 refresh。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/zh.json`: 新增 api.errors.40101 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: 新增 api.errors.40101 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/en.json`: 新增 api.errors.40101 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/ja.json`: 新增 api.errors.40101 文案。
+  - Modified `frontend/vue-ezchat/src/i18n/locales/ko.json`: 新增 api.errors.40101 文案。
+## [2026-01-09 10:47] 修复刷新接口返回类型
+- **Goal**: 让 refreshTokenApi 返回业务 Result，避免刷新被误判失败。
+- **Changes**:
+  - Modified `frontend/vue-ezchat/src/api/Auth.ts`: refreshTokenApi 改为返回 response.data。
+## [2026-01-09 11:11] 拦截器拆分与验证工具迁移
+- **Goal**: 拆分 request 拦截器逻辑并将通用校验方法移入 validators。
+- **Changes**:
+  - Added `frontend/vue-ezchat/src/utils/request/index.ts`: 统一创建 axios 实例并挂载拦截器。
+  - Added `frontend/vue-ezchat/src/utils/request/types.ts`: 请求拦截器相关类型定义。
+  - Added `frontend/vue-ezchat/src/utils/request/utils.ts`: 请求工具函数（需要 token/限流/方法判断）。
+  - Added `frontend/vue-ezchat/src/utils/request/refresh.ts`: refreshPromise 锁与 401 处理。
+  - Added `frontend/vue-ezchat/src/utils/request/interceptors/request/auth.ts`: token 注入与刷新等待。
+  - Added `frontend/vue-ezchat/src/utils/request/interceptors/request/rateLimit.ts`: 前端限流逻辑。
+  - Added `frontend/vue-ezchat/src/utils/request/interceptors/response/business.ts`: 业务错误处理。
+  - Added `frontend/vue-ezchat/src/utils/request/interceptors/response/http.ts`: HTTP 错误处理。
+  - Modified `frontend/vue-ezchat/src/utils/request.ts`: 改为导出新 request 实例。
+  - Modified `frontend/vue-ezchat/src/utils/validators.ts`: 新增 isRecord 与 extractErrorCode。
+## [2026-01-09 11:16] 合并请求类型至全局类\
+- **Goal**: 将 RetryableRequestConfig 和 ErrorCodeValue 迁移至 src/type/index.ts，集中管理类型并简化引用。
+- **Changes**: 修改了 [index.ts](file:///home/dev/EZChat/frontend/vue-ezchat/src/type/index.ts)、[refresh.ts](file:///home/dev/EZChat/frontend/vue-ezchat/src/utils/request/refresh.ts) 等 5 个文件，删除了冗余的 [types.ts](file:///home/dev/EZChat/frontend/vue-ezchat/src/utils/request/types.ts)。
+## [2026-01-09 11:17] 删除旧版 request.ts 转发文件
+- **Goal**: 清理冗余代码。逻辑已完全迁移至 src/utils/request/ 目录。
+- **Changes**: 删除了 [request.ts](file:///home/dev/EZChat/frontend/vue-ezchat/src/utils/request.ts)。

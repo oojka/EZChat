@@ -106,7 +106,7 @@ export const useLoginJoin = () => {
                 // 5.2 初始化应用状态（登录后必须）
                 // 登录成功后需要初始化应用：拉取用户信息、房间列表、权限等
                 // 这是关键步骤，确保应用状态与服务器同步
-                await appStore.initializeApp(userStore.getAccessToken(), 'login')
+                await appStore.initializeApp(userStore.getAccessToken(), 'login', { waitForRoute: '/chat' })
 
                 // 6. 导航到目标聊天室
                 if (shouldNavigate) {

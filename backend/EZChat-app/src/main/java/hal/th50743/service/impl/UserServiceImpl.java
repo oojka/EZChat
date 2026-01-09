@@ -82,6 +82,12 @@ public class UserServiceImpl implements UserService {
     @Transactional(rollbackFor = Exception.class)
     public User add(User user) {
         log.info("开始注册新用户: {}", user.getNickname());
+        if (user.getIsDeleted() == null) {
+            user.setIsDeleted(0);
+        }
+        if (user.getUserType() == null) {
+            user.setUserType(0);
+        }
         // 设置最大重试次数为 5 次
         for (int i = 1; i <= 5; i++) {
             // 生成 10 位随机公开 UId
@@ -142,6 +148,36 @@ public class UserServiceImpl implements UserService {
         u.setUpdateTime(LocalDateTime.now());
         log.info("更新用户资料: {}", u);
         userMapper.update(u);
+    }
+
+    /**
+     * 更新用户类型
+     *
+     * @param userId   用户ID
+     * @param userType 用户类型
+     */
+    @Override
+    public void updateUserType(Integer userId, Integer userType) {
+        if (userId == null || userType == null) {
+            log.warn("更新用户类型失败: userId 或 userType 为空");
+            return;
+        }
+        userMapper.updateUserType(userId, userType);
+    }
+
+    /**
+     * 更新用户删除标记
+     *
+     * @param userId    用户ID
+     * @param isDeleted 删除标记
+     */
+    @Override
+    public void updateUserDeleted(Integer userId, Integer isDeleted) {
+        if (userId == null || isDeleted == null) {
+            log.warn("更新用户删除标记失败: userId 或 isDeleted 为空");
+            return;
+        }
+        userMapper.updateUserDeleted(userId, isDeleted);
     }
 
     /**

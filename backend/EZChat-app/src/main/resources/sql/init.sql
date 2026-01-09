@@ -53,6 +53,8 @@ CREATE TABLE `users` (
                          `nickname`     VARCHAR(20) NOT NULL,
                          `asset_id`     INT UNSIGNED NULL COMMENT '头像ID (关联 assets.id)',
                          `bio`          VARCHAR(255) NULL,
+                         `is_deleted`   TINYINT DEFAULT 0 NOT NULL COMMENT '是否删除 (0=否, 1=是)',
+                         `user_type`    TINYINT DEFAULT 0 NOT NULL COMMENT '用户类型 (0=访客, 1=正式用户)',
                          `last_seen_at` DATETIME NOT NULL,
                          `create_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
                          `update_time`  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -257,7 +259,7 @@ BEGIN
             -- 随机选取一个种子对象 (ID 1-30)
             SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-            INSERT INTO users (id, uid, nickname, asset_id, bio, last_seen_at, create_time)
+            INSERT INTO users (id, uid, nickname, asset_id, bio, last_seen_at, create_time, is_deleted, user_type)
             VALUES (
                        i,
                        CONCAT('1000', LPAD(i, 6, '0')),
@@ -265,7 +267,9 @@ BEGIN
                        v_seed_id,
                        'Hello World!',
                        DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 1440) MINUTE),
-                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
+                       DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY),
+                       0,
+                       1
                    );
             SET i = i + 1;
         END WHILE;

@@ -237,7 +237,11 @@ export const useAppStore = defineStore('app', () => {
    * @param token 可选：登录成功后直接传入 token，减少一次读取
    * @param type 初始化触发来源（login/refresh）用于控制 Loading 表现
    */
-  const initializeApp = async (token?: string, type: 'login' | 'refresh' | 'guest' = 'refresh') => {
+  const initializeApp = async (
+    token?: string,
+    type: 'login' | 'refresh' | 'guest' = 'refresh',
+    options?: { waitForRoute?: string; maxWaitMs?: number }
+  ) => {
     const userStore = useUserStore()
     const roomStore = useRoomStore()
     const websocketStore = useWebsocketStore()
@@ -259,18 +263,19 @@ export const useAppStore = defineStore('app', () => {
       roomStore.resetState()
       messageStore.resetState()
       if (type != 'guest') {
-        userStore.resetState()
+        const keepAuth = !!token && userStore.hasToken()
+        userStore.resetState({ keepAuth })
       }
       // 1) refresh 场景“关键链路”：仅同步恢复 token，让页面尽快可用
       // 用户详情/房间列表等慢请求放到后台，避免黑屏转圈时间被拉长
       // 如果访客，则不恢复登录态
-      if (!userStore.hasToken()) userStore.restoreLoginGuestFromStorage() || userStore.restoreLoginUserFromStorage();
+      userStore.restoreLoginStateIfNeeded('guest')
       const finalToken = token || userStore.getAccessToken()
       finalTokenForWs = finalToken
 
       if (!finalToken) {
-        // 未登录：强制回到首页
-        if (router.currentRoute.value.path !== '/') await router.replace('/')
+        // 未登录：统一走 logout 弹窗逻辑
+        await userStore.logout({ showDialog: true })
         return
       }
       await roomStore.initRoomList()
@@ -281,45 +286,67 @@ export const useAppStore = defineStore('app', () => {
       const elapsed = Date.now() - refreshLoadingStartAt
       const remain = Math.max(0, MIN_REFRESH_LOADING_MS - elapsed)
       setTimeout(() => {
-        if (type === 'refresh') {
-          isAppLoading.value = false
-          showLoadingSpinner.value = false
-          loadingText.value = ''
-          // 2) 遮蔽撤掉后再解除"初始化中"，允许 chatView/消息开始加载
-          isAppInitializing.value = false
-        } else if (type === 'login' || type === 'guest') {
-          // login 和 guest 场景也需要清除加载状态
-          isAppLoading.value = false
-          showLoadingSpinner.value = false
-          loadingText.value = ''
-          isAppInitializing.value = false
-        }
+        const waitForRoute = options?.waitForRoute
+        const maxWaitMs = options?.maxWaitMs ?? 1500
 
-        // 3) 初始化完成后再连接 WS（不等待握手完成）
-        if (finalTokenForWs) {
-          websocketStore.initWS(finalTokenForWs)
-        }
-        // 4) login 场景显示欢迎通知（使用 watch 监听用户信息加载）
-        if (type === 'login') {
-          // 如果已经加载完成，直接显示
-          if (userStore.loginUserInfo?.avatar.blobThumbUrl || userStore.loginUserInfo?.avatar.blobUrl) {
-            showWelcomeNotification(userStore.loginUserInfo)
-          } else {
-            // 否则监听用户信息变化，加载完成后自动显示
-            watch(
-              () => userStore.loginUserInfo,
-              (newInfo) => {
-                if (newInfo) {
-                  showWelcomeNotification(newInfo)
-                }
-              },
-              {
-                once: true,
-                deep: true,
-              } // 只触发一次，深度监听
-            )
+        const finalizeInitialization = () => {
+          if (type === 'refresh' || type === 'login' || type === 'guest') {
+            isAppLoading.value = false
+            showLoadingSpinner.value = false
+            loadingText.value = ''
+            // 2) 遮蔽撤掉后再解除"初始化中"，允许 chatView/消息开始加载
+            isAppInitializing.value = false
+          }
+
+          // 3) 初始化完成后再连接 WS（不等待握手完成）
+          if (finalTokenForWs) {
+            websocketStore.initWS(finalTokenForWs)
+          }
+          // 4) login 场景显示欢迎通知（使用 watch 监听用户信息加载）
+          if (type === 'login') {
+            // 如果已经加载完成，直接显示
+            if (userStore.loginUserInfo?.avatar?.blobThumbUrl || userStore.loginUserInfo?.avatar?.blobUrl) {
+              showWelcomeNotification(userStore.loginUserInfo)
+            } else {
+              // 否则监听用户信息变化，加载完成后自动显示
+              watch(
+                () => userStore.loginUserInfo,
+                (newInfo) => {
+                  if (newInfo) {
+                    showWelcomeNotification(newInfo)
+                  }
+                },
+                {
+                  once: true,
+                  deep: true,
+                } // 只触发一次，深度监听
+              )
+            }
           }
         }
+
+        if (!waitForRoute || router.currentRoute.value.path.startsWith(waitForRoute)) {
+          finalizeInitialization()
+          return
+        }
+
+        let finished = false
+        const stop = watch(
+          () => router.currentRoute.value.path,
+          (path) => {
+            if (finished || !path.startsWith(waitForRoute)) return
+            finished = true
+            stop()
+            finalizeInitialization()
+          },
+        )
+
+        setTimeout(() => {
+          if (finished) return
+          finished = true
+          stop()
+          finalizeInitialization()
+        }, maxWaitMs)
       }, remain);
     }
   }

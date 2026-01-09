@@ -116,6 +116,7 @@
   "api": {
     "too_many_requests": "Requests are coming in too fast. Please slow down a bit.",
     "unexpected_error": "An unexpected error occurred.",
+    "retry_required": "Action not completed. Please retry.",
     "already_exists": "'{info}' is already taken.",
     "data_already_exists": "This data already exists.",
     "you_have_already_in_this_room": "You have already joined this room. Please do not join again.",
@@ -150,16 +151,27 @@
     "http_503": "Service temporarily unavailable",
     "http_504": "Gateway timeout",
     "errors": {
-      "42001": "Room not found or has been deleted.",
+      "40000": "Bad request.",
+      "40100": "Unauthorized access. Please login again.",
+      "40101": "Session expired. Please login again.",
       "40300": "Join is disabled or password login is not enabled.",
+      "40400": "Resource not found.",
+      "41001": "User not found.",
+      "41002": "User already exists.",
+      "41003": "Invalid credentials.",
+      "42001": "Room not found or has been deleted.",
+      "42002": "No access permission: You are not a member of this chat room.",
       "42003": "Password is required.",
       "42004": "Incorrect password.",
-      "40000": "Bad request.",
       "42010": "Invalid invite code.",
       "42011": "Invite code has expired.",
       "42012": "Invite code has been revoked.",
       "42013": "Invite code usage limit reached.",
-      "50001": "Database error. Please try again later."
+      "43001": "File is empty or not selected.",
+      "43002": "File is too large. Please choose a smaller one.",
+      "50000": "System internal error. Please try again later.",
+      "50001": "Database error. Please try again later.",
+      "53001": "File upload failed."
     }
   },
   "error_pages": {
@@ -362,6 +374,33 @@
     "no_account": "No account yet?",
     "register": "「Register」",
     "validation_expired": "Invitation information has expired. Please verify again"
+  },
+  "upgrade": {
+    "benefits": {
+      "create_chat": "Create exclusive chat channels",
+      "unlimited_join": "Unlimited chat room access",
+      "cloud_storage": "Permanent cloud message storage",
+      "multi_device": "Real-time multi-device sync",
+      "custom_profile": "Custom avatar and nickname"
+    },
+    "title": "Unlock full feature experience",
+    "button": "Become a formal user",
+    "dialog_title": "Upgrade to formal account",
+    "dialog_subtitle": "Unlock full feature experience",
+    "nickname_placeholder": "Set nickname",
+    "bio_placeholder": "Introduce yourself in one sentence...",
+    "username_placeholder": "Set login account",
+    "password_placeholder": "Set login password (8-20 characters)",
+    "confirm_password_placeholder": "Re-enter password",
+    "cancel_button": "Cancel",
+    "submit_button": "Upgrade now",
+    "avatar_tip": "Supports JPG/PNG, less than 2MB",
+    "success": "Upgrade successful, welcome as a formal user!",
+    "failed": "Upgrade failed",
+    "avatar_upload_success": "Avatar uploaded successfully",
+    "avatar_upload_failed": "Avatar upload failed",
+    "avatar_format_error": "Avatar picture must be JPG or PNG format!",
+    "avatar_size_error": "Avatar picture size can not exceed 2MB!"
   },
   "system": {
     "room_created": "Room created",
