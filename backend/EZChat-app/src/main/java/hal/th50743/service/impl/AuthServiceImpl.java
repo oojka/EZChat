@@ -57,10 +57,10 @@ public class AuthServiceImpl implements AuthService {
     /**
      * 构建并缓存双 Token
      *
-     * @param uid       用户UID
-     * @param username  用户名
-     * @param userId    用户ID
-     * @param isFormal  是否为正式用户
+     * @param uid      用户UID
+     * @param username 用户名
+     * @param userId   用户ID
+     * @param isFormal 是否为正式用户
      * @return LoginVO 登录视图对象
      */
     private LoginVO issueTokens(String uid, String username, Integer userId, boolean isFormal) {
@@ -84,20 +84,20 @@ public class AuthServiceImpl implements AuthService {
     /**
      * 登录前强制下线已在线的同账号会话
      *
-     * @param userId  用户ID
-     * @param uid     用户UID
+     * @param userId   用户ID
+     * @param uid      用户UID
      * @param isFormal 是否正式用户
      */
     private void forceLogoutIfOnline(Integer userId, String uid, boolean isFormal) {
         if (userId == null || uid == null || uid.isBlank()) {
-            log.warn("强制下线失败: userId 或 uid 为空");
+            log.warn("Force logout failed: userId or uid is null");
             return;
         }
         if (!presenceService.isOnline(userId)) {
             return;
         }
 
-        log.info("检测到账号在线，准备强制下线: userId={}, uid={}", userId, uid);
+        log.info("Account is online, initiating force logout: userId={}, uid={}", userId, uid);
 
         // 1) 删除旧 Token
         tokenCacheService.evictAccessToken(userId);
@@ -118,7 +118,7 @@ public class AuthServiceImpl implements AuthService {
             try {
                 session.close(new CloseReason(() -> 4003, "FORCE_LOGOUT"));
             } catch (IOException e) {
-                log.warn("强制下线关闭 WS 失败: userId={}, msg={}", userId, e.getMessage());
+                log.warn("Failed to close WS for force logout: userId={}, msg={}", userId, e.getMessage());
             }
         }
     }
@@ -376,7 +376,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginVO refreshToken(RefreshTokenReq req) {
         if (req == null || req.getRefreshToken() == null || req.getRefreshToken().isBlank()) {
-            log.warn("RefreshToken 为空，拒绝兑换");
+            log.warn("RefreshToken is empty, refusing exchange");
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken is required");
         }
 
@@ -384,13 +384,13 @@ public class AuthServiceImpl implements AuthService {
         try {
             claims = jwtUtils.parseJwt(req.getRefreshToken());
         } catch (JwtException e) {
-            log.warn("RefreshToken 无效或已过期: {}", e.getMessage());
+            log.warn("RefreshToken invalid or expired: {}", e.getMessage());
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken is invalid");
         }
 
         String tokenType = claims.get("tokenType", String.class);
         if (!TOKEN_TYPE_REFRESH.equals(tokenType)) {
-            log.warn("RefreshToken 类型不匹配: {}", tokenType);
+            log.warn("RefreshToken type mismatch: {}", tokenType);
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "Invalid token type");
         }
 
@@ -398,14 +398,14 @@ public class AuthServiceImpl implements AuthService {
         String username = claims.get("username", String.class);
         Integer userId = userService.getIdByUid(uid);
         if (userId == null) {
-            log.warn("RefreshToken 兑换失败: 用户不存在 uid={}", uid);
+            log.warn("RefreshToken exchange failed: User not found uid={}", uid);
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not found");
         }
 
         // 若用户不在线，则必须校验 RefreshToken 是否匹配
         User user = userService.getUserById(userId);
         if (user == null) {
-            log.warn("RefreshToken 兑换失败: 用户不存在 userId={}", userId);
+            log.warn("RefreshToken exchange failed: User not found userId={}", userId);
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not found");
         }
         Integer userType = user.getUserType();
@@ -414,13 +414,13 @@ public class AuthServiceImpl implements AuthService {
             if (userType != null && userType == 1) {
                 String storedToken = formalUserService.getRefreshTokenByUserId(userId);
                 if (storedToken == null || !storedToken.equals(req.getRefreshToken())) {
-                    log.warn("RefreshToken 兑换失败: 正式用户 token 不一致 userId={}", userId);
+                    log.warn("RefreshToken exchange failed: Formal user token mismatch userId={}", userId);
                     throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
                 }
             } else {
                 String cachedToken = tokenCacheService.getGuestRefreshToken(userId);
                 if (cachedToken == null || !cachedToken.equals(req.getRefreshToken())) {
-                    log.warn("RefreshToken 兑换失败: 访客 token 不一致 userId={}", userId);
+                    log.warn("RefreshToken exchange failed: Guest token mismatch userId={}", userId);
                     throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
                 }
             }

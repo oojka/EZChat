@@ -58,7 +58,7 @@ const handleAvatarClick = () => {
         try {
             // Upload immediately
             const result = await uploadAvatarApi(file)
-            if (result.code === 0 && result.data) {
+            if (result.status === 1 && result.data) {
                 const uploadedImage = result.data
                 ElMessage.success(t('upgrade.avatar_upload_success'))
 
@@ -72,6 +72,8 @@ const handleAvatarClick = () => {
                     blobThumbUrl: previewUrl,
                 }
                 uploadedAvatarAssetId.value = uploadedImage.assetId
+            } else {
+                ElMessage.error(result.message || t('upgrade.avatar_upload_failed'))
             }
         } catch (err) {
             ElMessage.error(t('upgrade.avatar_upload_failed'))
@@ -107,7 +109,7 @@ const handleSubmit = async () => {
         }
 
         const res = await updateProfileApi(payload)
-        if (res.code === 0) {
+        if (res.status === 1) {
             ElMessage.success(t('user_settings.profile_saved'))
             // Refresh user info
             await userStore.syncLoginUserInfo()

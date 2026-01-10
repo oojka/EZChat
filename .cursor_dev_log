@@ -1134,3 +1134,6 @@
   - Refactored `ProfileTab.vue` to use `<el-form>` and `<el-form-item>`.
   - Refactored `SecurityTab.vue` to use `<el-form>` and `<el-form-item>` with error prop binding.
   - Removed custom CSS hacks for form items.
+## [2026-01-10 14:20] Sync login member info in member list
+- **Goal**: Keep chatMemberList aligned with updated LoginUserInfo after profile changes.
+- **Changes**: frontend/vue-ezchat/src/stores/roomStore.ts (syncLoginMemberInfo), frontend/vue-ezchat/src/stores/userStore.ts (syncUserState call)

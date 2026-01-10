@@ -120,7 +120,7 @@ public class UserController {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not authenticated");
         }
 
-        log.info("用户修改密码: userId={}", currentUserId);
+        log.info("User changed password: userId={}", currentUserId);
         formalUserService.updatePassword(currentUserId, req.getOldPassword(), req.getNewPassword());
 
         return Result.success();

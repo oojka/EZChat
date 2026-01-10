@@ -28,7 +28,7 @@ public class TokenCacheServiceImpl implements TokenCacheService {
     @Override
     public void cacheAccessToken(Integer userId, String token) {
         if (userId == null || token == null) {
-            log.warn("缓存 AccessToken 失败: userId 或 token 为空");
+            log.warn("Failed to cache AccessToken: userId or token is null");
             return;
         }
         accessTokenCache.put(userId, token);
@@ -70,7 +70,7 @@ public class TokenCacheServiceImpl implements TokenCacheService {
     @Override
     public void cacheGuestRefreshToken(Integer userId, String token) {
         if (userId == null || token == null) {
-            log.warn("缓存访客 RefreshToken 失败: userId 或 token 为空");
+            log.warn("Failed to cache Guest RefreshToken: userId or token is null");
             return;
         }
         guestRefreshTokenCache.put(userId, token);

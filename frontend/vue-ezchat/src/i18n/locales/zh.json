@@ -505,6 +505,8 @@
     "confirm_password": "确认密码",
     "confirm_password_placeholder": "请再次输入新密码",
     "change_password": "修改密码",
-    "password_changed_relogin": "密码修改成功，请使用新密码重新登录。"
+    "password_changed_relogin": "密码修改成功，请使用新密码重新登录。",
+    "incorrect_old_password": "当前密码不正确。",
+    "password_change_failed": "密码修改失败。"
   }
 }

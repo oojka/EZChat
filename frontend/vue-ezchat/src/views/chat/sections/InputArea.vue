@@ -134,6 +134,34 @@ onMounted(() => editorRef.value?.focus())
 .preview-area { flex-shrink: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--el-border-color-light); margin-bottom: 4px; }
 .preview-item { position: relative; width: 56px; height: 56px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--el-border-color-light); flex-shrink: 0; }
 .preview-item img { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--bg-page); }
+.preview-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+  z-index: 1;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.preview-item:hover .preview-delete {
+  opacity: 1;
+  transform: scale(1);
+}
+@media (hover: none) {
+  .preview-delete {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .input-wrapper { flex: 1; min-height: 40px; overflow-y: auto; }
 .input-wrapper::-webkit-scrollbar { width: 4px; }
 .input-wrapper::-webkit-scrollbar-thumb { background: var(--text-400); border-radius: var(--radius-round); opacity: 0.2; }

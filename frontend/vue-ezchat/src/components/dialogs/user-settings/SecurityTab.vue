@@ -6,6 +6,9 @@ import { updatePasswordApi } from '@/api/User'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { isValidPassword } from '@/utils/validators'
+import { ErrorCode } from '@/error/ErrorCode'
+import { isAppError } from '@/error/ErrorTypes'
+import type { Result } from '@/type'
 
 const emit = defineEmits<{
     (e: 'close'): void
@@ -57,7 +60,7 @@ const handleSubmit = async () => {
             newPassword: newPassword.value,
         })
 
-        if (res.code === 0) {
+        if (res.status) {
             // Show alert and force logout
             emit('close')
             await showAlertDialog({
@@ -68,6 +71,36 @@ const handleSubmit = async () => {
             // Force logout
             await userStore.logout()
         }
+    } catch (error) {
+        let errorCode: number | undefined
+        let errorMessage: string | undefined
+
+        if (isAppError(error) && error.originalError && typeof error.originalError === 'object') {
+            const original = error.originalError as Partial<Result<unknown>>
+            if (typeof original.code === 'number') {
+                errorCode = original.code
+            }
+            if (typeof original.message === 'string') {
+                errorMessage = original.message
+            }
+        } else if (error instanceof Error) {
+            errorMessage = error.message
+        }
+
+        if (errorCode === ErrorCode.INVALID_CREDENTIALS) {
+            await showAlertDialog({
+                title: t('common.error'),
+                message: t('user_settings.incorrect_old_password'),
+                confirmText: t('common.confirm'),
+            })
+            return
+        }
+
+        await showAlertDialog({
+            title: t('common.error'),
+            message: errorMessage || t('user_settings.password_change_failed'),
+            confirmText: t('common.confirm'),
+        })
     } finally {
         isSubmitting.value = false
     }

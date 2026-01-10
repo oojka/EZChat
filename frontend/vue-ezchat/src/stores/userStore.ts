@@ -987,6 +987,7 @@ export const useUserStore = defineStore('user', () => {
             avatar: resolvedAvatar || result.data.avatar,
             userType: type
           }
+          useRoomStore().syncLoginMemberInfo(loginUserInfo.value)
           // Store 更新后：预取自己的头像缩略图 blob（不阻塞初始化）
           if (loginUserInfo.value?.avatar) {
             imageStore.ensureThumbBlobUrl(loginUserInfo.value.avatar).then(() => { })

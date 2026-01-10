@@ -162,7 +162,8 @@ export const createBusinessResponseHandler = (request: AxiosInstance) => {
         {
           severity: ErrorSeverity.ERROR,
           component: 'responseInterceptor',
-          action: 'handleResponse'
+          action: 'handleResponse',
+          originalError: response.data
         }
       )
     }

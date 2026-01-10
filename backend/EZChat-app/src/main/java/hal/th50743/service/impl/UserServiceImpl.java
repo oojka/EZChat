@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
         boolean isColleague = chatMemberMapper.isValidGetInfoReq(reqId, targetId);
 
         if (!isSelf && !isColleague) {
-            log.warn("[越权访问] 用户 {} 尝试获取非好友/非群员 {} 的信息", reqId, uid);
+            log.warn("[Unauthorized Access] User {} attempted to access info of non-friend/non-member {}", reqId, uid);
             throw new BusinessException(ErrorCode.FORBIDDEN,
                     "Permission denied: You do not have permission to view this user's profile");
         }
@@ -81,7 +81,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public User add(User user) {
-        log.info("开始注册新用户: {}", user.getNickname());
+        log.info("Starting new user registration: {}", user.getNickname());
         if (user.getIsDeleted() == null) {
             user.setIsDeleted(0);
         }
@@ -96,14 +96,14 @@ public class UserServiceImpl implements UserService {
 
             try {
                 userMapper.insertUser(user);
-                log.info("用户注册成功: uid={}, internalId={}", user.getUid(), user.getId());
+                log.info("User registration successful: uid={}, internalId={}", user.getUid(), user.getId());
                 return user; // 插入成功，直接返回结果，结束方法
             } catch (DuplicateKeyException e) {
-                log.warn("UId 冲突: {}, 正在进行第 {} 次重试", randomUid, i);
+                log.warn("UId conflict: {}, retrying attempt {}", randomUid, i);
 
                 // 如果是最后一次尝试仍然失败，则抛出异常
                 if (i == 5) {
-                    log.error("UId 生成严重冲突，已达重试上限");
+                    log.error("Severe UId generation conflict, max retries reached");
                     throw new IllegalStateException("Failed to generate unique user ID after multiple attempts");
                 }
             }
@@ -146,7 +146,7 @@ public class UserServiceImpl implements UserService {
         }
         u.setBio(userReq.getBio());
         u.setUpdateTime(LocalDateTime.now());
-        log.info("更新用户资料: {}", u);
+        log.info("Updating user profile: {}", u);
         userMapper.update(u);
     }
 
@@ -159,7 +159,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updateUserType(Integer userId, Integer userType) {
         if (userId == null || userType == null) {
-            log.warn("更新用户类型失败: userId 或 userType 为空");
+            log.warn("Failed to update user type: userId or userType is null");
             return;
         }
         userMapper.updateUserType(userId, userType);
@@ -174,7 +174,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updateUserDeleted(Integer userId, Integer isDeleted) {
         if (userId == null || isDeleted == null) {
-            log.warn("更新用户删除标记失败: userId 或 isDeleted 为空");
+            log.warn("Failed to update user deleted flag: userId or isDeleted is null");
             return;
         }
         userMapper.updateUserDeleted(userId, isDeleted);

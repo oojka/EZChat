@@ -505,6 +505,8 @@
     "confirm_password": "Confirm Password",
     "confirm_password_placeholder": "Re-enter new password",
     "change_password": "Change Password",
-    "password_changed_relogin": "Password changed successfully. Please log in again with your new password."
+    "password_changed_relogin": "Password changed successfully. Please log in again with your new password.",
+    "incorrect_old_password": "The current password is incorrect.",
+    "password_change_failed": "Failed to change password."
   }
 }

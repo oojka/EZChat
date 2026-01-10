@@ -94,7 +94,7 @@ public class FormalUserServiceImpl implements FormalUserService {
     @Override
     public void updateRefreshToken(Integer userId, String refreshToken) {
         if (userId == null || refreshToken == null) {
-            log.warn("更新正式用户 RefreshToken 失败: userId 或 refreshToken 为空");
+            log.warn("Failed to update formal user RefreshToken: userId or refreshToken is null");
             return;
         }
         userMapper.updateFormalUserToken(userId, refreshToken);
@@ -122,7 +122,7 @@ public class FormalUserServiceImpl implements FormalUserService {
     @Override
     public void clearRefreshToken(Integer userId) {
         if (userId == null) {
-            log.warn("清空正式用户 RefreshToken 失败: userId 为空");
+            log.warn("Failed to clear formal user RefreshToken: userId is null");
             return;
         }
         userMapper.updateFormalUserToken(userId, null);
@@ -143,25 +143,25 @@ public class FormalUserServiceImpl implements FormalUserService {
         String username = loginReq.getUsername() != null ? loginReq.getUsername().toLowerCase() : null;
         FormalUser formalUser = userMapper.selectFormalUserByUsername(username);
         if (formalUser == null) {
-            log.warn("登录失败: 用户名不存在 - {}", username);
+            log.warn("Login failed: Username does not exist - {}", username);
             return null;
         }
 
         // 2. 使用 PasswordUtils 验证密码
         boolean passwordMatches = PasswordUtils.matches(loginReq.getPassword(), formalUser.getPasswordHash());
         if (!passwordMatches) {
-            log.warn("登录失败: 密码错误 - {}", loginReq.getUsername());
+            log.warn("Login failed: Incorrect password - {}", loginReq.getUsername());
             return null;
         }
 
         // 3. 密码验证通过，查询并返回用户信息
         User user = userMapper.selectUserByUsername(username);
         if (user == null) {
-            log.error("登录异常: 用户名存在但用户信息缺失 - {}", username);
+            log.error("Login exception: Username exists but user info is missing - {}", username);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "User data inconsistency");
         }
 
-        log.info("登录成功: username={}, uid={}", loginReq.getUsername(), user.getUid());
+        log.info("Login successful: username={}, uid={}", loginReq.getUsername(), user.getUid());
         return user;
     }
 
@@ -180,21 +180,21 @@ public class FormalUserServiceImpl implements FormalUserService {
         // 1. 获取当前密码哈希
         String currentHash = getPasswordHashByUserId(userId);
         if (currentHash == null) {
-            log.warn("修改密码失败: 用户不是正式用户 - userId={}", userId);
+            log.warn("Password update failed: User is not a formal user - userId={}", userId);
             throw new BusinessException(ErrorCode.BAD_REQUEST, "User is not a formal user");
         }
 
         // 2. 验证旧密码
         boolean passwordMatches = PasswordUtils.matches(oldPassword, currentHash);
         if (!passwordMatches) {
-            log.warn("修改密码失败: 旧密码错误 - userId={}", userId);
+            log.warn("Password update failed: Incorrect old password - userId={}", userId);
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Old password is incorrect");
         }
 
         // 3. 生成新密码哈希并更新
         String newHash = PasswordUtils.encode(newPassword);
         userMapper.updateFormalUserPassword(userId, newHash);
-        log.info("密码修改成功: userId={}", userId);
+        log.info("Password updated successfully: userId={}", userId);
 
         // 4. 清除 RefreshToken 强制重新登录
         clearRefreshToken(userId);

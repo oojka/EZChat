@@ -76,7 +76,8 @@ public class MessageAssembler {
                 }
                 m.setImages(images);
             } catch (JsonProcessingException e) {
-                log.error("反序列化图片对象ID列表失败: msgId={}, assetIds={}", m.getSeqId(), assetIdsJson, e);
+                log.error("Failed to deserialize image object ID list: msgId={}, assetIds={}", m.getSeqId(),
+                        assetIdsJson, e);
                 m.setImages(Collections.emptyList());
             }
             // 清理掉原始的JSON字符串，不需要返回给前端

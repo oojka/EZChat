@@ -4,8 +4,8 @@ import { storeToRefs } from 'pinia'
 import { Close, EditPen, Lock } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/appStore'
-import ProfileTab from './ProfileTab.vue'
-import SecurityTab from './SecurityTab.vue'
+import ProfileTab from '@/components/dialogs/user-settings/ProfileTab.vue'
+import SecurityTab from '@/components/dialogs/user-settings/SecurityTab.vue'
 
 const appStore = useAppStore()
 const { userSettingsDialogVisible } = storeToRefs(appStore)

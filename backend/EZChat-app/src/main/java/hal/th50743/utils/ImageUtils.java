@@ -52,19 +52,21 @@ public final class ImageUtils {
     /**
      * 从存储在数据库中的 JSON 字符串构建 Image 对象列表。
      *
-     * @param imageObjectsJson  包含图片对象名列表的 JSON 字符串
+     * @param imageObjectsJson 包含图片对象名列表的 JSON 字符串
      * @param objectMapper     用于反序列化的 ObjectMapper 实例
      * @param minioOperator    用于生成 URL 的 MinioOSSOperator 实例
      * @return 包含完整 URL 的 Image 对象列表
      */
-    public static List<Image> buildImagesFromJson(String imageObjectsJson, ObjectMapper objectMapper, MinioOSSOperator minioOperator) {
+    public static List<Image> buildImagesFromJson(String imageObjectsJson, ObjectMapper objectMapper,
+            MinioOSSOperator minioOperator) {
         if (imageObjectsJson == null || imageObjectsJson.isEmpty()) {
             return Collections.emptyList();
         }
 
         try {
             // 1. 将 JSON 字符串反序列化为图片对象名列表
-            List<String> imageObjects = objectMapper.readValue(imageObjectsJson, new TypeReference<List<String>>() {});
+            List<String> imageObjects = objectMapper.readValue(imageObjectsJson, new TypeReference<List<String>>() {
+            });
 
             // 2. 使用 getImageUrls() 方法获取图片 URL（自动处理 public/private 分流）
             // 有效期设置为 30 分钟，与之前保持一致
@@ -77,7 +79,7 @@ public final class ImageUtils {
                     .collect(Collectors.toList());
 
         } catch (JsonProcessingException e) {
-            log.error("反序列化图片对象名称JSON失败: {}", imageObjectsJson, e);
+            log.error("Failed to deserialize image object names JSON: {}", imageObjectsJson, e);
             // 抛出运行时异常，以便全局异常处理器可以捕获
             throw new RuntimeException("Failed to deserialize image objects JSON: " + e.getMessage());
         }
@@ -86,8 +88,8 @@ public final class ImageUtils {
     /**
      * 根据单个对象名构建 Image 对象。
      *
-     * @param objectName     单个对象名
-     * @param minioOperator  用于生成 URL 的 MinioOSSOperator 实例
+     * @param objectName    单个对象名
+     * @param minioOperator 用于生成 URL 的 MinioOSSOperator 实例
      * @return 包含完整 URL 的 Image 对象
      */
     public static Image buildImage(String objectName, MinioOSSOperator minioOperator) {
@@ -95,7 +97,8 @@ public final class ImageUtils {
             return null;
         }
         // 统一走 getImageUrls：能自动区分 public/private，且在缩略图不存在时会回退到原图，避免前端必 404
-        MinioOSSResult result = minioOperator.getImageUrls(objectName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES, TimeUnit.MINUTES);
+        MinioOSSResult result = minioOperator.getImageUrls(objectName, DEFAULT_IMAGE_URL_EXPIRY_MINUTES,
+                TimeUnit.MINUTES);
         // 注意：buildImage 方法无法获取 objectId，传 null（向后兼容）
         return new Image(result.getObjectName(), result.getUrl(), result.getThumbUrl(), null);
     }
@@ -120,7 +123,8 @@ public final class ImageUtils {
      * @return 规范化结果（bytes/extension/contentType）
      * @throws IOException 读取文件 bytes 可能抛出
      */
-    public static NormalizedFile normalizeIfImage(MultipartFile file, int maxDimension, double quality) throws IOException {
+    public static NormalizedFile normalizeIfImage(MultipartFile file, int maxDimension, double quality)
+            throws IOException {
         if (file == null || file.isEmpty()) {
             return new NormalizedFile(new byte[0], "", "");
         }
@@ -153,7 +157,7 @@ public final class ImageUtils {
 
         // 2) 使用 Thumbnailator 重编码输出 JPEG：达到“旋转修正 + 去元数据 + 统一格式”
         try (ByteArrayInputStream input = new ByteArrayInputStream(inputBytes);
-             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream output = new ByteArrayOutputStream()) {
 
             var builder = Thumbnails.of(input)
                     // 关键：根据 EXIF Orientation 自动旋转
@@ -173,7 +177,8 @@ public final class ImageUtils {
             return new NormalizedFile(outBytes, NORMALIZED_IMAGE_EXTENSION, NORMALIZED_IMAGE_CONTENT_TYPE);
         } catch (Exception e) {
             // 任何处理失败都不应该阻断上传：回退原图（但记录日志方便定位）
-            log.warn("图片规范化失败，回退原文件。name={}", file.getOriginalFilename(), e);
+            log.warn("Image normalization failed, falling back to original file. name={}", file.getOriginalFilename(),
+                    e);
             return new NormalizedFile(inputBytes, guessExtension(file.getOriginalFilename()), contentType);
         }
     }
@@ -183,13 +188,15 @@ public final class ImageUtils {
      * <p>
      * 业务目的：当图片被规范化为 JPEG 时，确保对象名后缀与实际内容一致（避免按后缀判断类型时出现偏差）。
      *
-     * @param fileName   原始文件名
-     * @param extension  目标扩展名（例如 ".jpg"）
+     * @param fileName  原始文件名
+     * @param extension 目标扩展名（例如 ".jpg"）
      * @return 替换后文件名
      */
     public static String forceExtension(String fileName, String extension) {
-        if (fileName == null || fileName.isBlank()) return "file" + (extension == null ? "" : extension);
-        if (extension == null || extension.isBlank()) return fileName;
+        if (fileName == null || fileName.isBlank())
+            return "file" + (extension == null ? "" : extension);
+        if (extension == null || extension.isBlank())
+            return fileName;
         int dot = fileName.lastIndexOf('.');
         String base = dot == -1 ? fileName : fileName.substring(0, dot);
         return base + extension;
@@ -202,9 +209,11 @@ public final class ImageUtils {
      * @return 扩展名（包含 "."），无法推断则返回空串
      */
     public static String guessExtension(String filename) {
-        if (filename == null || filename.isBlank()) return "";
+        if (filename == null || filename.isBlank())
+            return "";
         int dot = filename.lastIndexOf('.');
-        if (dot == -1 || dot == filename.length() - 1) return "";
+        if (dot == -1 || dot == filename.length() - 1)
+            return "";
         return filename.substring(dot).toLowerCase();
     }
 

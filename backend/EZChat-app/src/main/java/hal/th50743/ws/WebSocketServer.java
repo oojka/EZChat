@@ -181,10 +181,10 @@ public class WebSocketServer {
      * <b>线程安全</b>：静态变量，所有连接共享同一服务实例
      * </p>
      * 
-     * @param jwtUtils       JWT 工具类实例
-     * @param userService    用户服务实例
-     * @param chatService    聊天服务实例
-     * @param messageService 消息服务实例
+     * @param jwtUtils          JWT 工具类实例
+     * @param userService       用户服务实例
+     * @param chatService       聊天服务实例
+     * @param messageService    消息服务实例
      * @param tokenCacheService Token 缓存服务实例
      */
     @Autowired
@@ -236,7 +236,7 @@ public class WebSocketServer {
         try {
             String token = resolveToken(session);
             if (token == null || token.isBlank()) {
-                log.warn("WS连接拒绝: Token 缺失");
+                log.warn("WS Connection Rejected: Missing Token");
                 closeSession(session, 4002, "Authentication Failed");
                 return;
             }
@@ -245,7 +245,7 @@ public class WebSocketServer {
             Claims claims = jwtUtils.parseJwt(token);
             String tokenType = claims.get("tokenType", String.class);
             if (!"access".equals(tokenType)) {
-                log.warn("WS连接拒绝: Token 类型不合法 tokenType={}", tokenType);
+                log.warn("WS Connection Rejected: Invalid Token Type tokenType={}", tokenType);
                 closeSession(session, 4002, "Authentication Failed");
                 return;
             }
@@ -254,7 +254,7 @@ public class WebSocketServer {
 
             String cachedToken = tokenCacheService.getAccessToken(this.userId);
             if (cachedToken == null || !cachedToken.equals(token)) {
-                log.warn("WS连接拒绝: AccessToken 缓存校验失败 userId={}", this.userId);
+                log.warn("WS Connection Rejected: AccessToken Cache Validation Failed userId={}", this.userId);
                 closeSession(session, 4002, "Authentication Failed");
                 return;
             }
@@ -273,7 +273,9 @@ public class WebSocketServer {
                 // cancel(false) 参数说明：false 表示如果任务已经开始执行，则不中断
                 if (pendingTask.cancel(false)) {
                     isReconnection = true; // 标记为网络波动重连
-                    log.info("用户 {} 在缓冲期内重连 (网络波动)，取消下线广播", this.userId);
+                    log.info(
+                            "User {} Reconnected within buffer period (Network Fluctuation), Cancelled Offline Broadcast",
+                            this.userId);
                 }
             }
 
@@ -294,11 +296,11 @@ public class WebSocketServer {
 
         } catch (ExpiredJwtException e) {
             // Token 过期异常处理：记录日志并关闭连接，返回特定状态码
-            log.warn("WS连接拒绝: Token已过期", e);
+            log.warn("WS Connection Rejected: Token Expired", e);
             closeSession(session, 4001, "Token Expired");
         } catch (Exception e) {
             // 其他认证或业务异常处理
-            log.error("WS连接异常", e);
+            log.error("WS Connection Exception", e);
             closeSession(session, 4002, "Authentication Failed");
         }
     }
@@ -361,12 +363,12 @@ public class WebSocketServer {
             // ========== 步骤3: 消息有效性验证 ==========
             // 验证消息的发送者、聊天室和内容是否有效
             if (!isValidMessage(msg)) {
-                log.warn("收到无效消息: uid={}, content={}", this.uid, rowMessage);
+                log.warn("Received invalid message: uid={}, content={}", this.uid, rowMessage);
                 return; // 无效消息直接丢弃，不处理
             }
 
             // 记录消息接收日志，用于监控和调试
-            log.info("收到消息: sender={}, chatCode={}", this.uid, msg.getChatCode());
+            log.info("Message received: sender={}, chatCode={}", this.uid, msg.getChatCode());
 
             // ========== 步骤4: 业务逻辑处理 ==========
             // 调用消息服务处理业务逻辑，返回处理结果（包含用户列表和 seqId）
@@ -408,11 +410,11 @@ public class WebSocketServer {
 
         } catch (JsonProcessingException e) {
             // JSON 解析异常：客户端发送了非法格式的消息
-            log.error("JSON解析失败: {}", rowMessage);
+            log.error("JSON parsing failed: {}", rowMessage);
             // 可考虑给客户端发送错误响应，但当前设计是静默丢弃
         } catch (Exception e) {
             // 其他业务异常处理
-            log.error("消息处理异常", e);
+            log.error("Message processing exception", e);
             // 优化建议：可以在此给前端发送 ERROR 类型的消息，通知处理失败
         }
     }
@@ -465,11 +467,11 @@ public class WebSocketServer {
     public void onError(Session session, Throwable error) {
         // 忽略 EOFException，通常是客户端强制断开连接导致
         if (error instanceof EOFException) {
-            log.debug("WebSocket EOFException (客户端断开): uid={}", this.uid);
+            log.debug("WebSocket EOFException (Client Disconnected): uid={}", this.uid);
             return;
         }
 
-        log.error("WebSocket 发生错误: uid={}, error={}", this.uid, error.getMessage());
+        log.error("WebSocket Error: uid={}, error={}", this.uid, error.getMessage());
     }
 
     @OnClose
@@ -477,7 +479,7 @@ public class WebSocketServer {
         // ========== 步骤1: 安全检查 ==========
         // 处理未认证的连接（可能在 onOpen 阶段认证失败）
         if (this.userId == null) {
-            log.warn("未认证连接关闭");
+            log.warn("Unauthenticated connection closed");
             return; // 未认证连接无需执行下线逻辑
         }
 
@@ -492,7 +494,8 @@ public class WebSocketServer {
         final String finalUid = this.uid; // 用户唯一标识
         final String finalChatCode = this.currentChatCode; // 最后活跃聊天室
 
-        log.info("用户 {} 断开连接，启动 {}秒 缓冲倒计时...", finalUserId, OFFLINE_BROADCAST_DELAY_SECONDS);
+        log.info("User {} disconnected, starting {}s buffer countdown...", finalUserId,
+                OFFLINE_BROADCAST_DELAY_SECONDS);
 
         // ========== 步骤4: 定义延迟下线任务 ==========
         // Runnable 任务：30秒后执行真正的下线逻辑
@@ -521,11 +524,11 @@ public class WebSocketServer {
                     // 注意：广播方法会过滤不在线的用户，只发送给在线好友
                     broadcast(msg, friends);
                 }
-                log.info("用户 {} 缓冲期结束，确认为下线。", finalUserId);
+                log.info("User {} buffer period ended, confirmed offline.", finalUserId);
 
             } catch (Exception e) {
                 // 延迟任务异常处理：记录日志但不影响其他用户
-                log.error("延迟下线任务异常: {}", finalUserId, e);
+                log.error("Delayed offline task exception: {}", finalUserId, e);
             } finally {
                 // 4.4 任务结束，清理任务映射表
                 // 无论成功与否，都需要移除任务记录，避免内存泄漏
@@ -598,7 +601,7 @@ public class WebSocketServer {
                 } catch (IOException e) {
                     // 容错处理：单个用户发送失败只记录日志，不中断循环
                     // 可能原因：用户突然断开连接、网络异常等
-                    log.error("消息发送失败: receiver={}, error={}", targetId, e.getMessage());
+                    log.error("Message send failure: receiver={}, error={}", targetId, e.getMessage());
                 }
             }
             // 注意：如果用户不在线，消息会被静默丢弃
@@ -641,7 +644,7 @@ public class WebSocketServer {
                 }
             } catch (IOException e) {
                 // 自发送失败：通常意味着连接已异常断开
-                log.error("自发送失败: uid={}, msg={}", this.uid, message);
+                log.error("Self-send failure: uid={}, msg={}", this.uid, message);
             }
         }
         // 如果会话无效，消息被静默丢弃

@@ -61,8 +61,8 @@ public class AssetCleanupTask {
      */
     @Scheduled(cron = "${app.gc.cron:0 0 2 * * ?}")
     public void cleanupPendingFiles() {
-        log.info("========== 开始文件 GC 任务 ==========");
-        log.info("配置参数: batchSize={}, gcHoursOld={}h, maxDeleteCount={}, maxDurationMs={}ms",
+        log.info("========== Asset GC Task Started ==========");
+        log.info("Config: batchSize={}, gcHoursOld={}h, maxDeleteCount={}, maxDurationMs={}ms",
                 batchSize, gcHoursOld, maxDeleteCount, maxDurationMs);
 
         long startTime = System.currentTimeMillis();
@@ -76,12 +76,12 @@ public class AssetCleanupTask {
                 List<Asset> pendingFiles = assetService.findPendingFilesForGC(gcHoursOld, batchSize, 0);
 
                 if (pendingFiles.isEmpty()) {
-                    log.info("没有更多待清理文件，退出循环");
+                    log.info("No more files to clean, exiting loop");
                     break;
                 }
 
                 batchCount++;
-                log.debug("处理第 {} 批: 查询到 {} 条待删除记录", batchCount, pendingFiles.size());
+                log.debug("Processing batch {}: found {} pending files", batchCount, pendingFiles.size());
 
                 // 2. 批量处理本批次
                 processBatch(pendingFiles, totalDeleted, totalFailed);
@@ -90,7 +90,7 @@ public class AssetCleanupTask {
                 sleepBetweenBatches();
             }
         } catch (Exception e) {
-            log.error("GC 任务执行异常", e);
+            log.error("Asset GC task failed", e);
         }
 
         // 4. 输出汇总日志
@@ -104,19 +104,19 @@ public class AssetCleanupTask {
         // 检查超时
         long elapsed = System.currentTimeMillis() - startTime;
         if (elapsed >= maxDurationMs) {
-            log.warn("达到最大执行时间限制 ({}ms)，提前退出", maxDurationMs);
+            log.warn("Max duration limit reached ({}ms), stopping early", maxDurationMs);
             return false;
         }
 
         // 检查最大删除数
         if (currentDeleted >= maxDeleteCount) {
-            log.warn("达到最大删除数限制 ({})，提前退出", maxDeleteCount);
+            log.warn("Max delete count limit reached ({}), stopping early", maxDeleteCount);
             return false;
         }
 
         // 检查线程中断
         if (Thread.currentThread().isInterrupted()) {
-            log.warn("任务被中断，退出");
+            log.warn("Task interrupted, stopping");
             return false;
         }
 
@@ -137,7 +137,7 @@ public class AssetCleanupTask {
                 successIds.add(file.getId());
                 totalDeleted.incrementAndGet();
             } catch (Exception e) {
-                log.error("删除文件失败: id={}, assetName={}, error={}",
+                log.error("Failed to delete file: id={}, assetName={}, error={}",
                         file.getId(), file.getAssetName(), e.getMessage());
                 totalFailed.incrementAndGet();
             }
@@ -147,9 +147,9 @@ public class AssetCleanupTask {
         if (!successIds.isEmpty()) {
             try {
                 int deletedRows = assetMapper.deleteByIds(successIds);
-                log.debug("批量删除数据库记录: 预期={}, 实际={}", successIds.size(), deletedRows);
+                log.debug("Batch deleted DB records: expected={}, actual={}", successIds.size(), deletedRows);
             } catch (Exception e) {
-                log.error("批量删除数据库记录失败: ids={}", successIds, e);
+                log.error("Failed to batch delete DB records: ids={}", successIds, e);
                 // 注意：这里 MinIO 已删除但 DB 未删除，下次 GC 会重新处理
                 // 由于 MinIO 已删除，下次删除时会报对象不存在，可以安全忽略
             }
@@ -165,7 +165,7 @@ public class AssetCleanupTask {
                 Thread.sleep(batchSleepMs);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("GC 任务休眠被中断");
+                log.warn("GC task sleep interrupted");
             }
         }
     }
@@ -177,12 +177,12 @@ public class AssetCleanupTask {
         long duration = System.currentTimeMillis() - startTime;
         double avgSpeed = duration > 0 ? (totalDeleted * 1000.0 / duration) : 0;
 
-        log.info("========== 文件 GC 任务完成 ==========");
-        log.info("统计: 批次数={}, 成功删除={}, 失败={}", batchCount, totalDeleted, totalFailed);
-        log.info("耗时: {}ms, 平均速度: {}/s", duration, String.format("%.1f", avgSpeed));
+        log.info("========== Asset GC Task Finished ==========");
+        log.info("Stats: batches={}, deleted={}, failed={}", batchCount, totalDeleted, totalFailed);
+        log.info("Duration: {}ms, Avg speed: {}/s", duration, String.format("%.1f", avgSpeed));
 
         if (totalFailed > 0) {
-            log.warn("存在 {} 个文件删除失败，请检查错误日志", totalFailed);
+            log.warn("{} files failed to delete, check error logs", totalFailed);
         }
     }
 }

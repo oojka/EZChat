@@ -55,13 +55,14 @@ public class MessageServiceImpl implements MessageService {
         // 1. 通过聊天代码获取内部chatId
         Integer chatId = chatMapper.selectChatIdByChatCode(messageReq.getChatCode());
         if (chatId == null) {
-            log.warn("handleWSMessage: 收到未知聊天室的消息, chatCode={}", messageReq.getChatCode());
+            log.warn("handleWSMessage: Received message for unknown chat room, chatCode={}", messageReq.getChatCode());
             return new WSMessageResult(Collections.emptyList(), null); // 如果聊天不存在，返回空列表
         }
         // 2. 验证用户是否是该聊天室成员，并获取所有成员列表用于消息推送
         List<Integer> senList = chatMemberMapper.selectChatMembersByUserIdAndChatId(userId, chatId);
         if (senList == null || senList.isEmpty()) {
-            log.warn("handleWSMessage: 用户 {} 不是聊天室 {} 的成员，拒绝发送消息", userId, chatId);
+            log.warn("handleWSMessage: User {} is not a member of chat room {}, refusing to send message", userId,
+                    chatId);
             return new WSMessageResult(Collections.emptyList(), null);
         }
 
@@ -100,7 +101,7 @@ public class MessageServiceImpl implements MessageService {
                 try {
                     assetIdsJson = objectMapper.writeValueAsString(objectIds);
                 } catch (JsonProcessingException e) {
-                    log.error("序列化图片对象ID列表失败: ", e);
+                    log.error("Failed to serialize image object ID list: ", e);
                     throw new BusinessException(ErrorCode.SYSTEM_ERROR,
                             "Failed to serialize image object IDs list: " + e.getMessage());
                 }
@@ -147,8 +148,8 @@ public class MessageServiceImpl implements MessageService {
     /**
      * 根据聊天代码获取未读消息列表
      * 
-     * @param userId    当前用户ID
-     * @param chatCode  聊天室的公开代码
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室的公开代码
      * @return 经过处理的消息视图对象列表
      */
     @Override
@@ -157,10 +158,10 @@ public class MessageServiceImpl implements MessageService {
 
         // 使用 cursorSeqId 进行分页查询
         List<MessageVO> messageList = messageMapper.selectMessageListByChatIdAndCursor(chatId, cursorSeqId);
-//        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
+        // log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
-//        log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
+        // log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
         // 4. 使用 Assembler 填充附件信息

@@ -149,7 +149,7 @@ public class ChatAssembler {
                     }
                     lastMsg.setImages(images);
                 } catch (JsonProcessingException e) {
-                    log.error("反序列化最后消息的图片对象ID列表失败: {}", objectIdsJson, e);
+                    log.error("Failed to deserialize last message image object ID list: {}", objectIdsJson, e);
                     lastMsg.setImages(Collections.emptyList());
                 }
             }

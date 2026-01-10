@@ -49,7 +49,7 @@ public class GuestCleanupService {
             tokenCacheService.evictAccessToken(userId);
             tokenCacheService.evictGuestRefreshToken(userId);
             userMapper.updateUserDeleted(userId, 1);
-            log.info("已清理离线访客: userId={}", userId);
+            log.info("Cleaned up offline guest: userId={}", userId);
         }
     }
 }

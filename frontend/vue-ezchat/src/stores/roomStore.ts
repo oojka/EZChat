@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore, storeToRefs } from 'pinia'
-import type { ChatRoom, ChatMember, Message, Image, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload } from '@/type'
+import type { ChatRoom, ChatMember, Message, Image, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, LoginUserInfo } from '@/type'
 import { initApi } from '@/api/AppInit.ts'
 import { getChatMembersApi, joinChatApi } from '@/api/Chat'
 import { validateChatJoinApi } from '@/api/Auth'
@@ -373,6 +373,40 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   /**
+   * 同步本人在成员列表中的信息（昵称/头像）
+   */
+  const syncLoginMemberInfo = (info?: LoginUserInfo) => {
+    const source = info ?? loginUserInfo.value
+    if (!source?.uid) return
+
+    const imageStore = useImageStore()
+    const avatarKey = buildUserAvatarKey(source.uid)
+    const resolvedAvatar = source.avatar
+      ? imageStore.resolveAvatarFromCache(avatarKey, source.avatar) || source.avatar
+      : source.avatar
+
+    const updateMember = (member: ChatMember) => {
+      if (member.uid !== source.uid) return
+      member.nickname = source.nickname
+      if (resolvedAvatar) {
+        member.avatar = resolvedAvatar
+      }
+    }
+
+    _roomList.value.forEach((room) => {
+      room.chatMembers?.forEach(updateMember)
+    })
+    for (const room of pendingRoomInfoMap.values()) {
+      room.chatMembers?.forEach(updateMember)
+    }
+
+    if (resolvedAvatar) {
+      imageStore.ensureThumbBlobUrl(resolvedAvatar).then(() => { })
+    }
+    imageStore.pruneAvatarCache(collectAvatarCacheKeys())
+  }
+
+  /**
    * 处理成员退群广播
    *
    * @param payload 退群广播数据
@@ -610,6 +644,7 @@ export const useRoomStore = defineStore('room', () => {
     initRoomList,
     updateRoomInfo,
     updateMemberStatus,
+    syncLoginMemberInfo,
     addRoomMember,
     updateRoomPreview,
     handleMemberLeave,

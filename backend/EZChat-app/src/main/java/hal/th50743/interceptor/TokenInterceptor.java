@@ -57,7 +57,7 @@ public class TokenInterceptor implements HandlerInterceptor {
 
         // 2. 检查 Token 是否存在
         if (token == null || token.isEmpty()) {
-            log.warn("Token 不存在，来自: {} 的请求被拒绝", request.getRemoteAddr());
+            log.warn("Token missing, request from {} rejected", request.getRemoteAddr());
             writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Token is required");
             return false;
         }
@@ -67,7 +67,7 @@ public class TokenInterceptor implements HandlerInterceptor {
             Claims claims = jwtUtils.parseJwt(token);
             String tokenType = claims.get("tokenType", String.class);
             if (!"access".equals(tokenType)) {
-                log.warn("Token 类型不合法: {}", tokenType);
+                log.warn("Invalid token type: {}", tokenType);
                 writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Invalid token type");
                 return false;
             }
@@ -76,35 +76,36 @@ public class TokenInterceptor implements HandlerInterceptor {
             // 根据 uid 查询数据库获取用户主键 ID
             Integer userId = userService.getIdByUid(uid);
             if (userId == null) {
-                log.warn("Token 解析成功但用户不存在: uid={}", uid);
+                log.warn("Token parsed but user not found: uid={}", uid);
                 writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "User not found");
                 return false;
             }
             String cachedToken = tokenCacheService.getAccessToken(userId);
             if (cachedToken == null || !cachedToken.equals(token)) {
-                log.warn("AccessToken 缓存校验失败: userId={}", userId);
+                log.warn("AccessToken cache validation failed: userId={}", userId);
                 writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "AccessToken mismatch");
                 return false;
             }
             // 将当前用户的 ID 存入 ThreadLocal，以便在后续的业务逻辑中直接获取
             CurrentHolder.setCurrentId(userId);
         } catch (ExpiredJwtException e) {
-            log.warn("AccessToken 已过期: {}", e.getMessage());
+            log.warn("AccessToken expired: {}", e.getMessage());
             writeUnauthorizedResponse(response, ErrorCode.TOKEN_EXPIRED, "AccessToken expired");
             return false;
         } catch (JwtException e) {
-            log.warn("Token 验证失败: {}", e.getMessage());
+            log.warn("Token validation failed: {}", e.getMessage());
             writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Token is invalid");
             return false;
         } catch (Exception e) {
             // 如果解析失败（例如 Token 过期、签名不匹配等），则认为 Token 不合法
-            log.error("Token 验证异常: {}, 请求被拒绝", e.getMessage(), e);
+            log.error("Token validation exception: {}, request rejected", e.getMessage(), e);
             writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "Unauthorized");
             return false;
         }
 
         // 4. Token 验证通过，放行请求
-        // log.info("Token 验证通过, 用户ID: {} 请求放行", CurrentHolder.getCurrentId());
+        // log.info("Token validation passed, userID: {} request allowed",
+        // CurrentHolder.getCurrentId());
         return true;
     }
 
@@ -123,9 +124,9 @@ public class TokenInterceptor implements HandlerInterceptor {
     /**
      * 写入未授权响应（JSON 格式），供前端识别错误码
      *
-     * @param response HTTP 响应对象
+     * @param response  HTTP 响应对象
      * @param errorCode 业务错误码
-     * @param message 错误消息
+     * @param message   错误消息
      */
     private void writeUnauthorizedResponse(HttpServletResponse response, ErrorCode errorCode, String message) {
         if (response.isCommitted()) {
@@ -138,7 +139,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         try {
             response.getWriter().write(objectMapper.writeValueAsString(result));
         } catch (IOException e) {
-            log.error("未授权响应写入失败", e);
+            log.error("Failed to write unauthorized response", e);
         }
     }
 }

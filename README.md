@@ -12,6 +12,7 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 - **认证 / Auth**：双 Token 机制（Access/Refresh）+ 自动刷新，支持注册登录与访客加入 / Dual Token (Access/Refresh) + auto-refresh, supports registered/guest access
 - **自动清理 / Auto-Cleanup**：自动清理长期离线的访客账号及其数据 / Auto-cleanup of inactive guest accounts
 - **聊天室 / Rooms**：创建房间（可使用密码加入/邀请链接/一次性链接）、通过 chatCode 获取房间信息并进入聊天 / create rooms (join with password/invite links/one-time links), join rooms via chatCode
+- **用户设置 / User Settings**：更新个人资料（头像/昵称/Bio）、修改密码（仅正式用户） / Update profile (avatar/nickname/bio), change password (formal users only)
 - **消息排序 / Message Ordering**：基于 Sequence ID 的精确消息排序与分页 / Precise message ordering & pagination based on Sequence ID
 - **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
 - **状态防抖 / Presence Debounce**：30s 离线缓冲，防止网络波动造成误报 / 30s offline buffer to prevent status flickering
@@ -986,8 +987,33 @@ If object does not exist, `data` is `null`:
 }
 ```
 
-- **Response**：当前实现返回 **HTTP 200 + 空响应体**（建议后续改为 `Result.success()` 以保持一致性）  
-  Current implementation returns **HTTP 200 with empty body** (recommended to return `Result.success()` for consistency).
+- **Response**：当前实现返回 **HTTP 200 + 空响应体**（`POST /user`）或 **Result<Void>**（`POST /user/profile`）
+  Current implementation returns **HTTP 200 + empty body** (`POST /user`) or **Result<Void>** (`POST /user/profile`).
+
+#### `PUT /user/password`（修改密码 / Change password）
+
+- **业务功能 / Purpose**：修改正式用户密码（需验证旧密码）
+  Change formal user password (verify old password).
+- **Auth**：需要 `token` / requires `token`
+- **Request (JSON)**（字段来自 `UpdatePasswordReq`）：
+
+```json
+{
+  "oldPassword": "oldPassword123",
+  "newPassword": "newPassword456",
+  "confirmNewPassword": "newPassword456"
+}
+```
+
+- **Response**：`Result<Void>`（成功后需重新登录）
+
+#### `POST /user/upgrade`（访客升级 / Guest Upgrade）
+
+- **业务功能 / Purpose**：将当前访客账号升级为正式账号（保留数据）
+  Upgrade current guest account to formal account (preserve data).
+- **Auth**：需要 `token` / requires `token`
+- **Request**：同 `POST /auth/register`
+- **Response**：`LoginVO` (new token)
 
 ---
 
@@ -1364,6 +1390,15 @@ EZChat/
 ---
 
 ## 更新日志 / Changelog
+
+### 2026-01-10
+- **Features & UI**:
+  - **User Settings**: Implemented comprehensive User Settings Dialog (Profile update, Password management for formal users).
+  - **Premium UI**: Refined Dropdown styles (solid background, rounded corners) and centered Loading indicators in MessageArea.
+  - **Guest Experience**: Extended guest cleanup threshold to 2 hours (was 10 min) for better retention.
+- **Backend Refactoring**:
+  - **Log Translation**: Fully internationalized all backend logs to English for better maintainability.
+  - **API Updates**: Added `PUT /user/password` and optimized `POST /user/profile` endpoints.
 
 ### 2026-01-09
 - **Architecture**:

@@ -74,7 +74,7 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
 
 <template>
   <div class="message-area">
-    <ul class="list" ref="listRef">
+    <ul class="list" ref="listRef" :class="{ 'is-empty': currentMessageList.length === 0 }">
       <!-- 底部 Sync Loading (因 column-reverse，所以在 DOM 最前面) -->
       <li class="load-indicator" v-if="isSyncing">
         <div class="loading-wrapper">
@@ -136,6 +136,10 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
   box-sizing: border-box;
   gap: 18px;
   scroll-behavior: smooth;
+}
+
+.list.is-empty {
+  justify-content: center;
 }
 
 .new-message-tip {
