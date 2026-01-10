@@ -9,7 +9,7 @@ import {
   DocumentCopy,
   Picture,
 } from '@element-plus/icons-vue'
-import { useCreateChat } from '@/hooks/useCreateChat.ts'
+import { useCreateChat } from '@/composables/useCreateChat.ts'
 import { storeToRefs } from 'pinia'
 import { useRoomStore } from '@/stores/roomStore.ts'
 import Avatar from '@/components/Avatar.vue'
@@ -17,6 +17,7 @@ import PasswordConfig from '@/components/PasswordConfig.vue'
 import DateTimePicker from '@/components/DateTimePicker.vue'
 import { useI18n } from 'vue-i18n'
 import { useImageStore } from '@/stores/imageStore'
+import type { Image } from '@/type'
 
 const roomStore = useRoomStore()
 const { createChatDialogVisible } = storeToRefs(roomStore)
@@ -52,6 +53,20 @@ const defaultAvatarUrl = ref('') // 用于展示的默认头像 URL（不上传�
 // 组件加载时生成默认头像 URL（仅用于展示）
 onMounted(() => {
   defaultAvatarUrl.value = imageStore.generateDefaultAvatarUrl('room')
+})
+
+const buildAvatarImage = (avatar: Image, fallbackUrl: string): Image => ({
+  imageName: avatar.imageName || '',
+  imageUrl: avatar.imageUrl || fallbackUrl,
+  imageThumbUrl: avatar.imageThumbUrl || fallbackUrl,
+  blobUrl: avatar.blobUrl || '',
+  blobThumbUrl: avatar.blobThumbUrl || '',
+  assetId: avatar.assetId,
+})
+
+const displayAvatar = computed(() => {
+  const fallback = defaultAvatarUrl.value || ''
+  return buildAvatarImage(createChatForm.value.avatar, fallback)
 })
 
 // 进度条百分比计算
@@ -106,9 +121,8 @@ const progressPercentage = computed(() => {
                 <el-upload class="avatar-uploader-large" action="/api/auth/register/upload" :show-file-list="false"
                   :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload">
                   <!-- 统一使用 Avatar 组件 -->
-                  <Avatar :thumb-url="createChatForm.avatar.imageThumbUrl || defaultAvatarUrl"
-                    :url="createChatForm.avatar.imageUrl" :text="createChatForm.chatName" :size="150" shape="square"
-                    editable :icon-size="40" />
+                  <Avatar :image="displayAvatar" :text="createChatForm.chatName" :size="150" shape="square" editable
+                    :icon-size="40" />
                 </el-upload>
                 <div class="avatar-info-area">
                   <!-- 点击上传聊天室头像 -->

@@ -191,4 +191,20 @@
           AND f.user_id IS NULL
     </select>
 
+    <!-- 更新正式用户密码 -->
+    <update id="updateFormalUserPassword">
+        UPDATE formal_users
+        SET password_hash = #{passwordHash},
+            update_time = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 根据用户ID获取密码哈希 -->
+    <select id="selectPasswordHashByUserId" resultType="java.lang.String">
+        SELECT password_hash
+        FROM formal_users
+        WHERE user_id = #{userId}
+    </select>
+
 </mapper>
+

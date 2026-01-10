@@ -3,7 +3,7 @@ import type { JoinChatCredentialsForm, JoinChatReq } from '@/type'
 import IndexView from '@/views/index/index.vue'
 import LayoutView from '@/views/layout/index.vue'
 import ChatView from '@/views/chat/index.vue'
-import JoinView from '@/views/Join/index.vue'
+import JoinView from '@/views/join/index.vue'
 import WelcomeView from '@/views/welcome/index.vue'
 import ErrorView from '@/views/error/500.vue'
 import NotFoundView from '@/views/error/404.vue'
@@ -113,7 +113,7 @@ router.beforeEach(async (to, from) => {
   const isChatTarget = to.name === 'ChatRoom' || to.name === 'Welcome' || to.name === 'GuestChatRoom'
   const isChatSource = from.name === 'ChatRoom' || from.name === 'Welcome' || from.name === 'GuestChatRoom'
   if (isChatTarget && !isChatSource) {
-    if (!userStore.restoreLoginStateIfNeeded()) {
+    if (!userStore.restoreLoginStateIfNeeded('formal', { loadUserInfo: false })) {
       await userStore.logout({ showDialog: true })
       return { path: '/' }
     }

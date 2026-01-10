@@ -905,3 +905,232 @@
   - `frontend/vue-ezchat/src/i18n/locales/ko.json`: Add room_settings password/create invite keys.
   - `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: Add room_settings password/create invite keys.
   - `frontend/vue-ezchat/src/i18n/locales/zh.json`: Add room_settings password/create invite keys.
+
+## [2026-01-09 14:38] Refactor RoomSettingsDialog to Sidebar Layout
+- **Goal**: Implement a sidebar layout for Room Settings.
+- **Changes**: Refactored RoomSettingsDialog.vue to use flex container with Left Sidebar and Right Content.
+
+## [2026-01-09 14:41] Fix RoomSettingsDialog Dimensions
+- **Changes**: Updated dialog width to 800px and body height to 550px.
+
+## [2026-01-09 14:43] Update RoomSettingsDialog Dimensions Again
+- **Changes**: Updated dialog width to 900px and body height to 650px.
+
+## [2026-01-09 14:44] Fix RoomSettingsDialog Corruption
+- **Changes**: Restore file and set dimensions to 900px width and 650px height.
+
+## [2026-01-09 14:45] Fix RoomInviteCreate Footer
+- **Changes**: Updated CSS to fix footer buttons to the bottom using flex-grow and margin-top: auto.
+
+## [2026-01-09 14:46] Fix Syntax Error in RoomInviteCreate
+- **Changes**: Restored missing <style scoped> tag.
+
+## [2026-01-09 14:48] I18n Complete
+- **Changes**: Added missing keys to zh.json/en.json and removed hardcoded fallbacks in RoomSettingsDialog.vue.
+
+## [2026-01-09 14:52] I18n Fixes
+- **Goal**: Complete i18n for all languages and fix title key.
+- **Changes**: 
+  - Updated ja.json, ko.json, zh-tw.json.
+  - Fixed RoomSettingsDialog.vue to use valid key 'chat.room_info'.
+
+## [2026-01-09 14:55] I18n Update
+- **Changes**: Renamed 'Security Settings' to 'Password Settings' in all locale files.
+
+## [2026-01-09 14:58] CSS Cleanup
+- **Goal**: Optimize sidebar menu text colors and remove hardcoding.
+- **Changes**: Replaced invalid vars with --primary, --text-*, --el-fill-color-light. Fixed Dark Mode active state.
+
+## [2026-01-09 15:00] Dark Mode Sidebar
+- **Changes**: Added rounded corners (left: 8px) and optimized background for dark mode.
+
+## [2026-01-09 15:01] Dark Mode Divider
+- **Changes**: Removed border-right from sidebar in dark mode.
+
+## [2026-01-09 15:05] Dark Mode Invert
+- **Changes**: Inverted contrast. Sidebar is now transparent (lighter), content has dark overlay.
+
+## [2026-01-09 15:08] Dark Mode Rounding
+- **Changes**: Added border-radius (8px) and margin (4px) to dialog-content in dark mode.
+
+## [2026-01-09 15:10] Light Mode Divider
+- **Changes**: Removed light mode border. Sidebar is now var(--bg-page) (Gray), Content is var(--bg-card) (White).
+
+## [2026-01-09 15:15] Sidebar Rounding
+- **Changes**: Applied all-around border-radius (8px) and margin (4px) to sidebar.
+
+## [2026-01-09 15:18] I18n Japanese Update
+- **Changes**: Renamed '招待管理' to '招待リンク管理' in ja.json.
+
+## [2026-01-09 15:21] Button Resize
+- **Changes**: Resized 'New' button to 'large' (44px height).
+
+## [2026-01-09 15:23] Button Resize Match
+- **Changes**: Removed size='large' from 'New' button to match 'Save Password' button height.
+## [2026-01-09 15:16] Refresh Token Before 401 on App Refresh
+- **Goal**: Attempt access token refresh once during refresh initialization before showing 401.
+- **Changes**:
+  - `frontend/vue-ezchat/src/composables/useAppRefreshToken.ts`: Return token + hadToken, simplify refresh flow.
+  - `frontend/vue-ezchat/src/stores/appStore.ts`: Pre-refresh accessToken and logout with dialog only if refresh fails.
+
+## [2026-01-09 15:25] GIF Avatar Support
+- **Changes**: Updated ChatItem.vue to use original URL for GIF avatars to support animation.
+
+## [2026-01-09 15:33] Avatar Image Prop Refactor
+- **Goal**: Switch Avatar to accept Image objects and update all usages to pass Image data consistently.
+- **Changes**:
+  - `frontend/vue-ezchat/src/components/dialogs/CreateChatDialog.vue`: Build display avatar Image with default fallback and pass via :image.
+  - `frontend/vue-ezchat/src/components/UserItem.vue`: Convert string avatar to Image and pass via :image.
+  - `frontend/vue-ezchat/src/views/layout/components/UserItem.vue`: Convert string avatar to Image and pass via :image.
+  - `frontend/vue-ezchat/src/views/layout/components/ChatItem.vue`: Remove thumb logic and pass chat.avatar via :image.
+  - `frontend/vue-ezchat/src/views/layout/components/GuestAside.vue`: Pass form.avatar via :image.
+  - `frontend/vue-ezchat/src/views/chat/layout/ChatHeader.vue`: Pass currentRoom.avatar via :image.
+  - `frontend/vue-ezchat/src/views/chat/components/MessageItem.vue`: Pass sender avatar via :image.
+  - `frontend/vue-ezchat/src/views/chat/components/ChatMemberItem.vue`: Pass member.avatar via :image.
+  - `frontend/vue-ezchat/src/views/Join/index.vue`: Build guest avatar Image with default fallback and pass via :image.
+
+## [2026-01-09 15:49] Refresh Flow Token Lock
+- **Goal**: Ensure /chat refresh waits for proactive refresh and uses new accessToken before user info requests.
+- **Changes**:
+  - `frontend/vue-ezchat/src/stores/userStore.ts`: Add loadUserInfo option for restore/sync, expose refresh promise, add syncLoginUserInfo helper.
+  - `frontend/vue-ezchat/src/composables/useAppRefreshToken.ts`: Skip user info load during proactive refresh restore.
+  - `frontend/vue-ezchat/src/router/index.ts`: Skip user info load before refresh on /chat entry.
+  - `frontend/vue-ezchat/src/stores/appStore.ts`: Trigger user info sync after refresh before room list load.
+  - `frontend/vue-ezchat/src/utils/request/refresh.ts`: Use userStore refresh promise as global lock.
+
+## [2026-01-09 15:57] Login Error Feedback
+- **Goal**: Ensure login API business errors (e.g. invalid credentials) show ElMessage on the home page.
+- **Changes**:
+  - `frontend/vue-ezchat/src/hooks/useCooldown.ts`: Make tryExecute async-aware and return execution flag.
+  - `frontend/vue-ezchat/src/hooks/useLogin.ts`: Await tryExecute, handle errors centrally, and always clear loading state.
+
+## [2026-01-09 16:42] Room Settings i18n Completion
+- **Goal**: Complete missing locale strings for room settings and member removal alerts.
+- **Changes**:
+  - `frontend/vue-ezchat/src/i18n/locales/ko.json`: Add room settings tabs/labels, member removal messaging, and error 42005.
+  - `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: Add validation, room settings labels, member removal messaging, and error 42005.
+
+## [2026-01-09 16:51] Room Basic Settings Echo
+- **Goal**: Ensure room basic settings form echoes current room data on dialog open.
+- **Changes**:
+  - `frontend/vue-ezchat/src/composables/useRoomBasicSettings.ts`: Make dialog open sync immediate for default avatar and form fields.
+
+## [2026-01-09 17:04] Room Member Row Actions
+- **Goal**: Add per-member transfer/removal actions and remove the bottom transfer section while keeping batch remove.
+- **Changes**:
+  - `frontend/vue-ezchat/src/composables/useRoomMemberManagement.ts`: Add per-row transfer/kick actions.
+  - `frontend/vue-ezchat/src/components/dialogs/settings/RoomMemberManagement.vue`: Render per-row action buttons and remove transfer section.
+
+## [2026-01-09 17:21] Rename Hooks to Composables
+- **Goal**: Unify hook utilities under the composables naming convention.
+- **Changes**:
+  - `frontend/vue-ezchat/src/hooks/*`: Moved into `frontend/vue-ezchat/src/composables/`.
+  - Import paths updated from `@/hooks/...` to `@/composables/...`.
+
+## [2026-01-09 17:28] Room Password Fake Echo
+- **Goal**: Keep password settings form filled and fake-echo values on dialog reopen.
+- **Changes**:
+  - `frontend/vue-ezchat/src/composables/useRoomPasswordSettings.ts`: Cache per-room password settings and sync on open; keep form values after save.
+
+## [2026-01-09 17:37] Chat Password Enabled Flag
+- **Goal**: Expose room password status to the frontend for accurate switch state.
+- **Changes**:
+  - `backend/EZChat-app/src/main/java/hal/th50743/pojo/ChatVO.java`: Add passwordEnabled field.
+  - `backend/EZChat-app/src/main/resources/hal/th50743/mapper/ChatMapper.xml`: Select password_enabled based on chat_password_hash.
+  - `backend/EZChat-app/src/main/java/hal/th50743/assembler/ChatAssembler.java`: Sanitize passwordEnabled for public responses.
+  - `frontend/vue-ezchat/src/type/index.ts`: Add passwordEnabled to ChatRoom type.
+  - `frontend/vue-ezchat/src/composables/useRoomPasswordSettings.ts`: Initialize switch from currentRoom.passwordEnabled.
+
+## [2026-01-09 17:46] Room Password UI Redesign
+- **Goal**: Make password settings switch-driven with explicit edit flow and hide inputs after save.
+- **Changes**:
+  - `frontend/vue-ezchat/src/composables/useRoomPasswordSettings.ts`: Add edit state, toggle handling, and save flow adjustments.
+  - `frontend/vue-ezchat/src/components/dialogs/settings/RoomPasswordSettings.vue`: Redesign UI with switch row, change button, and conditional inputs.
+  - `frontend/vue-ezchat/src/i18n/locales/zh.json`: Add password change label.
+  - `frontend/vue-ezchat/src/i18n/locales/en.json`: Add password change label.
+  - `frontend/vue-ezchat/src/i18n/locales/ja.json`: Add password change label.
+  - `frontend/vue-ezchat/src/i18n/locales/ko.json`: Add password change label.
+  - `frontend/vue-ezchat/src/i18n/locales/zh-tw.json`: Add password change label.
+
+## [2026-01-09 18:09] Remove AccessToken Persistence
+- **Goal**: Stop persisting accessToken in localStorage while keeping refreshToken-based restore.
+- **Changes**:
+  - `frontend/vue-ezchat/src/stores/userStore.ts`: Sanitize stored login payloads to remove accessToken and update restore/refresh flows.
+  - `frontend/vue-ezchat/src/composables/useGuest.ts`: Persist guest login without accessToken.
+
+## [2026-01-09 17:10] Member List Style
+- **Changes**: Removed border and background from member list in RoomMemberManagement.vue.
+
+## [2026-01-09 17:15] Syntax Fix
+- **Changes**: Fixed missing closing brace in RoomMemberManagement.vue CSS.
+
+## [2026-01-09 17:18] Member Actions Alignment
+- **Changes**: Forced full width on checkbox label to align buttons to the right.
+
+## [2026-01-09 17:21] Member List Typography
+- **Changes**: Matched ChatMemberItem styles (Avatar 40px, UID badge, Fonts).
+
+## [2026-01-09 17:28] List Height Optimization
+- **Changes**: Configured member list and invite list to fill available vertical space.
+
+## [2026-01-09 17:31] Zebra Striping
+- **Changes**: Added alternating background colors to member list.
+
+## [2026-01-09 17:52] Password UI Polish
+- **Changes**: Enhanced input and button styles in RoomPasswordSettings.vue.
+
+## [2026-01-09 17:55] Revert UI Changes
+- **Changes**: Reverted visual styles in RoomPasswordSettings.vue to previous version.
+
+## [2026-01-09 17:58] Fix Style Loss
+- **Changes**: Restored CSS styles that were accidentally deleted during revert.
+
+## [2026-01-09 17:58] Refine Room Settings UI
+- **Goal**: Update "Change Password" button style to match "Save" button.
+- **Changes**: frontend/vue-ezchat/src/components/dialogs/settings/RoomPasswordSettings.vue
+
+## [2026-01-09 17:59] Refine Room Settings UI
+- **Goal**: Reorder and right-align Save/Cancel buttons.
+- **Changes**: frontend/vue-ezchat/src/components/dialogs/settings/RoomPasswordSettings.vue
+
+## [2026-01-09 18:03] Update Documentation
+- **Goal**: Sync README with recent architectural changes (Dual Token, SeqId, Audit Logs).
+- **Changes**: README.md (Updated Features, Schema, API examples, Changelog).
+
+## [2026-01-09 18:05] Update Documentation (Missing Features)
+- **Goal**: Add missing items (Security, Composables, Room Settings) to Changelog.
+- **Changes**: README.md
+
+## [2026-01-09 18:32] RefreshToken Storage Only
+- **Goal**: Persist only refreshToken in localStorage and rebuild login state from it.
+- **Changes**: frontend/vue-ezchat/src/stores/userStore.ts; frontend/vue-ezchat/src/utils/request/interceptors/request/auth.ts; frontend/vue-ezchat/src/utils/request/interceptors/request/rateLimit.ts; frontend/vue-ezchat/src/composables/useGuest.ts
+
+## [2026-01-09 18:56] Force Logout On Duplicate Login
+- **Goal**: Enforce single-session login by forcing online users to logout on new login.
+- **Changes**: backend/EZChat-app/src/main/java/hal/th50743/service/impl/AuthServiceImpl.java; backend/EZChat-app/src/main/java/hal/th50743/service/FormalUserService.java; backend/EZChat-app/src/main/java/hal/th50743/service/impl/FormalUserServiceImpl.java; backend/EZChat-app/src/main/java/hal/th50743/pojo/ForceLogoutBroadcastVO.java; frontend/vue-ezchat/src/WS/useWebsocket.ts; frontend/vue-ezchat/src/stores/websocketStore.ts; frontend/vue-ezchat/src/stores/userStore.ts; frontend/vue-ezchat/src/utils/validators.ts; frontend/vue-ezchat/src/type/index.ts; frontend/vue-ezchat/src/i18n/locales/en.json; frontend/vue-ezchat/src/i18n/locales/ja.json; frontend/vue-ezchat/src/i18n/locales/ko.json; frontend/vue-ezchat/src/i18n/locales/zh.json; frontend/vue-ezchat/src/i18n/locales/zh-tw.json
+
+## [2026-01-09 19:15] Avatar LRU Cache
+- **Goal**: Cache avatars by user/chat key to avoid repeated fetches while limiting memory.
+- **Changes**: frontend/vue-ezchat/src/stores/imageStore.ts; frontend/vue-ezchat/src/stores/roomStore.ts; frontend/vue-ezchat/src/stores/userStore.ts
+
+## [2026-01-09 19:18] Frontend Type Check
+- **Goal**: Run frontend type-check.
+- **Changes**: npm run type-check (failed with TS errors in notification.ts and useRoomBasicSettings.ts)
+
+## [2026-01-09 19:19] Fix Type Check Errors
+- **Goal**: Resolve TypeScript errors without changing behavior.
+- **Changes**: frontend/vue-ezchat/src/components/notification.ts; frontend/vue-ezchat/src/composables/useRoomBasicSettings.ts
+
+## [2026-01-09 19:23] Views Structure Cleanup
+- **Goal**: Normalize views directory structure and import paths.
+- **Changes**: frontend/vue-ezchat/src/views/layout/index.vue; frontend/vue-ezchat/src/views/chat/index.vue; frontend/vue-ezchat/src/router/index.ts; moved folders: frontend/vue-ezchat/src/views/layout/layout -> frontend/vue-ezchat/src/views/layout/sections; frontend/vue-ezchat/src/views/chat/layout -> frontend/vue-ezchat/src/views/chat/sections; frontend/vue-ezchat/src/views/Join -> frontend/vue-ezchat/src/views/join
+
+## [2026-01-09 19:25] Room Settings Dialog Consolidation
+- **Goal**: Consolidate room settings dialog and subviews into a single folder.
+- **Changes**: frontend/vue-ezchat/src/components/dialogs/room-settings/index.vue; frontend/vue-ezchat/src/components/dialogs/room-settings/RoomInviteList.vue; frontend/vue-ezchat/src/components/dialogs/room-settings/RoomMemberManagement.vue; frontend/vue-ezchat/src/components/dialogs/room-settings/RoomBasicSettings.vue; frontend/vue-ezchat/src/components/dialogs/room-settings/RoomInviteCreate.vue; frontend/vue-ezchat/src/components/dialogs/room-settings/RoomPasswordSettings.vue; frontend/vue-ezchat/src/views/chat/sections/ChatHeader.vue; moved folder frontend/vue-ezchat/src/components/dialogs/settings -> frontend/vue-ezchat/src/components/dialogs/room-settings; moved frontend/vue-ezchat/src/components/dialogs/RoomSettingsDialog.vue -> frontend/vue-ezchat/src/components/dialogs/room-settings/index.vue
+## [2026-01-10 09:04] User Settings Style Unification
+- **Goal**: Unify User Settings input styles with Room Settings by adopting proper ELForm structure.
+- **Changes**:
+  - Refactored `ProfileTab.vue` to use `<el-form>` and `<el-form-item>`.
+  - Refactored `SecurityTab.vue` to use `<el-form>` and `<el-form-item>` with error prop binding.
+  - Removed custom CSS hacks for form items.

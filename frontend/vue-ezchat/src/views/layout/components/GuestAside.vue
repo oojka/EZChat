@@ -254,8 +254,8 @@ const customUploadRequest = async (options: any) => {
                         <el-upload class="avatar-uploader-large" action="#" :http-request="customUploadRequest"
                             :show-file-list="false" :on-success="handleAvatarSuccess"
                             :before-upload="beforeAvatarUpload">
-                            <Avatar :thumb-url="form.avatar?.imageThumbUrl" :url="form.avatar?.imageUrl"
-                                :text="form.nickname" :size="150" shape="square" editable :icon-size="48" />
+                            <Avatar :image="form.avatar" :text="form.nickname" :size="150" shape="square" editable
+                                :icon-size="48" />
                         </el-upload>
                         <p class="avatar-tip">{{ t('upgrade.avatar_tip') }}</p>
                     </div>

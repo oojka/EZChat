@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { ChatInvite, ChatInviteCreateReq, ChatMember, ChatRoom, ChatPasswordUpdateReq, CreateChatVO, Image, JoinChatReq, LoginUser, Result } from '@/type'
+import type { ChatInvite, ChatInviteCreateReq, ChatMember, ChatRoom, ChatPasswordUpdateReq, ChatBasicUpdateReq, ChatKickReq, ChatOwnerTransferReq, CreateChatVO, Image, JoinChatReq, LoginUser, Result } from '@/type'
 
 
 /**
@@ -70,6 +70,30 @@ export const disbandChatApi = (chatCode: string): Promise<Result<null>> =>
  */
 export const updateChatPasswordApi = (chatCode: string, payload: ChatPasswordUpdateReq): Promise<Result<null>> =>
   request.post(`/chat/${chatCode}/password`, payload)
+
+/**
+ * 更新聊天室基础信息（群主）
+ *
+ * - 后端接口：POST `/chat/{chatCode}/basic`
+ */
+export const updateChatBasicInfoApi = (chatCode: string, payload: ChatBasicUpdateReq): Promise<Result<ChatRoom>> =>
+  request.post(`/chat/${chatCode}/basic`, payload)
+
+/**
+ * 批量移除聊天室成员（群主）
+ *
+ * - 后端接口：POST `/chat/{chatCode}/members/kick`
+ */
+export const kickChatMembersApi = (chatCode: string, payload: ChatKickReq): Promise<Result<null>> =>
+  request.post(`/chat/${chatCode}/members/kick`, payload)
+
+/**
+ * 转让群主（群主）
+ *
+ * - 后端接口：POST `/chat/{chatCode}/owner/transfer`
+ */
+export const transferChatOwnerApi = (chatCode: string, payload: ChatOwnerTransferReq): Promise<Result<null>> =>
+  request.post(`/chat/${chatCode}/owner/transfer`, payload)
 
 /**
  * 获取聊天室有效邀请链接列表（群主）

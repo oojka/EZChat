@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import {useChatMemberList} from '@/hooks/useChatMemberList.ts'
+import {useChatMemberList} from '@/composables/useChatMemberList.ts'
 import ChatMemberItem from '@/views/chat/components/ChatMemberItem.vue'
 import {useI18n} from 'vue-i18n'
 

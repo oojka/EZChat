@@ -7,7 +7,7 @@ import { storeToRefs } from 'pinia'
 import { Cooldown } from '@/utils/cooldown.ts'
 import { showAppNotification, showWelcomeNotification } from '@/components/notification.ts'
 import { useI18n } from 'vue-i18n'
-import { useCooldown } from '@/hooks/useCooldown.ts'
+import { useCooldown } from '@/composables/useCooldown.ts'
 import { type PasswordOptions, isValidUsername, isValidPassword } from '@/utils/validators.ts'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 import { ElMessage } from 'element-plus'
@@ -95,13 +95,11 @@ export default function () {
     // ==================== 步骤2：执行登录请求 ====================
     // 使用冷却机制包装登录逻辑，防止频繁尝试
     isLoading.value = true
-    tryExecute(
-      async () => {
-        // 开始加载，显示加载状态
-        try {
+    try {
+      const executed = await tryExecute(
+        async () => {
           // 调用用户Store的登录方法
           const data = await userStore.loginRequest(loginForm.username, loginForm.password)
-
 
           if (data) {
             // ==================== 步骤3：登录成功处理 ====================
@@ -112,36 +110,36 @@ export default function () {
             // 导航到聊天页面
             await router.push('/chat')
           }
-        } catch (e) {
-          // ==================== 错误处理 ====================
-          if (isAppError(e)) {
-            // 如果是已知的AppError，直接抛出
-            throw e
-          }
-          // 未知错误，包装为AppError
-          throw createAppError(
-            ErrorType.UNKNOWN,
-            'Login process failed',
-            {
-              severity: ErrorSeverity.ERROR,
-              component: 'useLogin',
-              action: 'login',
-              originalError: e
-            }
-          )
-        } finally {
-          // ==================== 清理工作 ====================
-          // 确保按钮加载状态被正确清除
-          setTimeout(() => {
-            isLoading.value = false
-          }, 300)
+        },
+        // 冷却机制回调：当请求过于频繁时触发
+        (sec) => {
+          showAppNotification(t('auth.too_fast', { sec }), t('common.warning'), 'warning')
         }
-      },
-      // 冷却机制回调：当请求过于频繁时触发
-      (sec) => {
-        showAppNotification(t('auth.too_fast', { sec }), t('common.warning'), 'warning')
+      )
+      if (!executed) {
+        return
       }
-    )
+    } catch (e) {
+      // ==================== 错误处理 ====================
+      const appError = isAppError(e) ? e : createAppError(
+        ErrorType.UNKNOWN,
+        'Login process failed',
+        {
+          severity: ErrorSeverity.ERROR,
+          component: 'useLogin',
+          action: 'login',
+          originalError: e
+        }
+      )
+      const message = appError.message || t('api.unexpected_error')
+      ElMessage.error(message)
+    } finally {
+      // ==================== 清理工作 ====================
+      // 确保按钮加载状态被正确清除
+      setTimeout(() => {
+        isLoading.value = false
+      }, 300)
+    }
   }
 
   /**

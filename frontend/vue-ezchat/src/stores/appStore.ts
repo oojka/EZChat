@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { nextTick, ref, watch } from 'vue'
 import { useUserStore } from '@/stores/userStore.ts'
+import { useAppRefreshToken } from '@/composables/useAppRefreshToken'
 import { useRoomStore } from '@/stores/roomStore.ts'
 import { useWebsocketStore } from '@/stores/websocketStore.ts'
 import { useMessageStore } from '@/stores/messageStore.ts'
@@ -163,6 +164,7 @@ export const useAppStore = defineStore('app', () => {
 
   const createRoomVisible = ref(false)
   const joinDialogVisible = ref(false)
+  const userSettingsDialogVisible = ref(false)
 
   /**
    * 设置 favicon
@@ -246,6 +248,7 @@ export const useAppStore = defineStore('app', () => {
     const roomStore = useRoomStore()
     const websocketStore = useWebsocketStore()
     const messageStore = useMessageStore()
+    const { refreshOnceIfNeeded } = useAppRefreshToken()
     const refreshLoadingStartAt = type === 'refresh' ? Date.now() : 0
     let finalTokenForWs: string | undefined
 
@@ -266,11 +269,20 @@ export const useAppStore = defineStore('app', () => {
         const keepAuth = !!token && userStore.hasToken()
         userStore.resetState({ keepAuth })
       }
-      // 1) refresh 场景“关键链路”：仅同步恢复 token，让页面尽快可用
+      // 1) refresh 场景“关键链路”：优先尝试刷新 accessToken，再恢复 token
       // 用户详情/房间列表等慢请求放到后台，避免黑屏转圈时间被拉长
       // 如果访客，则不恢复登录态
+      let refreshedToken: string | null = null
+      if (type === 'refresh') {
+        const refreshResult = await refreshOnceIfNeeded()
+        refreshedToken = refreshResult.token
+        if (refreshResult.hadToken && !refreshedToken) {
+          await userStore.logout({ showDialog: true })
+          return
+        }
+      }
       userStore.restoreLoginStateIfNeeded('guest')
-      const finalToken = token || userStore.getAccessToken()
+      const finalToken = token || refreshedToken || userStore.getAccessToken()
       finalTokenForWs = finalToken
 
       if (!finalToken) {
@@ -278,6 +290,7 @@ export const useAppStore = defineStore('app', () => {
         await userStore.logout({ showDialog: true })
         return
       }
+      void userStore.syncLoginUserInfo()
       await roomStore.initRoomList()
 
     } catch (error) {
@@ -363,6 +376,7 @@ export const useAppStore = defineStore('app', () => {
     changeLanguage,
     createRoomVisible,
     joinDialogVisible,
+    userSettingsDialogVisible,
     initializeApp,
     setFavicon,
     removeFavicon,

@@ -22,7 +22,8 @@
     "copy": "複製",
     "copied": "已複製",
     "copy_failed": "複製失敗",
-    "verifying_invitation": "驗證邀請中..."
+    "verifying_invitation": "驗證邀請中...",
+    "save": "儲存"
   },
   "dialog": {
     "tip": "提示",
@@ -86,7 +87,8 @@
     "too_fast": "操作過於頻繁。請等待 {sec} 秒。",
     "guest": "訪客",
     "login_failed": "登入失敗，請檢查您的憑證。",
-    "session_expired": "登入已過期，請重新登入。"
+    "session_expired": "登入已過期，請重新登入。",
+    "force_logout": "帳號已在其他裝置登入，請重新登入。"
   },
   "validation": {
     "nickname_required": "請輸入暱稱。",
@@ -111,7 +113,10 @@
     "chat_code_format": "房間代碼必須是8位數字。",
     "invite_url_required": "請輸入邀請連結。",
     "invite_url_format": "不合法的邀請連結格式。",
-    "image_upload_limit": "圖片上傳數量已達到上限。"
+    "image_upload_limit": "圖片上傳數量已達到上限。",
+    "chat_max_members_required": "請輸入成員上限。",
+    "chat_max_members_range": "成員上限需在 2-200 之間。",
+    "chat_announcement_length": "公告內容不得超過 500 個字元。"
   },
   "api": {
     "too_many_requests": "請求太快了，請稍慢一點。",
@@ -163,6 +168,7 @@
       "42002": "無訪問權限：您不是該聊天室的成員。",
       "42003": "密碼必填。",
       "42004": "密碼錯誤。",
+      "42005": "房間人數已滿。",
       "42010": "邀請碼無效。",
       "42011": "邀請碼已過期。",
       "42012": "邀請碼已被撤銷。",
@@ -299,7 +305,8 @@
     "leave_owner_confirm": "你是群主，退出後群主將轉讓給最早加入的成員。確定退出嗎？",
     "disband_confirm": "解散後所有成員將被移出，且無法恢復。確定解散嗎？",
     "owner_transfer_alert": "你已成為「{0}」的群主。",
-    "room_disband_alert": "「{0}」已被群主解散。"
+    "room_disband_alert": "「{0}」已被群主解散。",
+    "member_removed_alert": "你已被 {1} 從「{0}」移出。"
   },
   "room_settings": {
     "invite_section_title": "邀請連結管理",
@@ -322,9 +329,46 @@
     "revoke": "撤銷",
     "password_section_title": "群密碼設定",
     "password_section_desc": "啟用後可用房間ID+密碼加入，停用會清除密碼。",
+    "password_change": "修改密碼",
     "password_save": "儲存密碼設定",
     "password_update_success": "群密碼已更新",
-    "password_update_failed": "群密碼更新失敗"
+    "password_update_failed": "群密碼更新失敗",
+    "invites_tab": "邀請管理",
+    "security_tab": "密碼設定",
+    "room_password": "房間密碼",
+    "basic_tab": "基本",
+    "members_tab": "成員",
+    "basic_title": "房間資訊",
+    "member_title": "成員管理",
+    "basic_section_title": "基本資訊",
+    "basic_section_desc": "更新名稱、頭像、成員上限與公告。",
+    "basic_save": "儲存",
+    "basic_chat_name": "房間名稱",
+    "basic_chat_name_placeholder": "請輸入房間名稱",
+    "basic_max_members": "成員上限",
+    "basic_max_members_hint": "範圍 2-200",
+    "basic_announcement": "公告",
+    "basic_announcement_placeholder": "輸入規則或重要訊息",
+    "basic_avatar_tip": "點擊更換頭像",
+    "basic_update_success": "房間資訊已更新",
+    "basic_update_failed": "房間資訊更新失敗",
+    "basic_avatar_upload_failed": "頭像上傳失敗",
+    "member_section_title": "成員管理",
+    "member_section_desc": "可批次移除成員或轉讓群主。",
+    "member_kick": "移除成員",
+    "member_kick_confirm": "確定移除 {0} 位成員？",
+    "member_kick_success": "成員已移除",
+    "member_kick_failed": "移除失敗",
+    "member_kick_empty": "請選擇要移除的成員",
+    "member_empty": "暫無成員",
+    "member_owner_tag": "群主",
+    "member_transfer_title": "轉讓群主",
+    "member_transfer_placeholder": "選擇新的群主",
+    "member_transfer_action": "確認轉讓",
+    "member_transfer_confirm": "確定將群主轉讓給 {0}？",
+    "member_transfer_success": "群主已轉讓",
+    "member_transfer_failed": "轉讓失敗",
+    "member_transfer_empty": "請選擇新的群主"
   },
   "create_chat": {
     "title": "建立新房間",
@@ -415,6 +459,29 @@
     "room_created": "房間已建立",
     "member_joined": "{0} 加入了群聊",
     "guest_joined": "{0} 以訪客身份加入了群聊",
-    "member_left": "{0} 退出了群聊"
+    "member_left": "{0} 退出了群聊",
+    "member_removed": "{1} 已將 {0} 移出群聊"
+  },
+  "user_settings": {
+    "title": "設定",
+    "profile_tab": "個人資料",
+    "security_tab": "安全設定",
+    "profile_title": "編輯資料",
+    "security_title": "修改密碼",
+    "avatar": "頭像",
+    "avatar_hint": "支援 JPG/PNG/GIF，小於 2MB",
+    "nickname": "暱稱",
+    "nickname_placeholder": "請輸入暱稱",
+    "bio": "個人簡介",
+    "bio_placeholder": "介紹一下自己...",
+    "profile_saved": "資料更新成功",
+    "old_password": "目前密碼",
+    "old_password_placeholder": "請輸入目前密碼",
+    "new_password": "新密碼",
+    "new_password_placeholder": "請輸入新密碼（8-20位）",
+    "confirm_password": "確認密碼",
+    "confirm_password_placeholder": "請再次輸入新密碼",
+    "change_password": "修改密碼",
+    "password_changed_relogin": "密碼修改成功，請使用新密碼重新登入。"
   }
 }

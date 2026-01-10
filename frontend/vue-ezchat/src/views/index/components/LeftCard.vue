@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { ChatLineRound, Connection, Right, Search, Ticket, Close } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { useJoinInput } from '@/hooks/chat/join/useJoinInput.ts'
+import { useJoinInput } from '@/composables/chat/join/useJoinInput.ts'
 import { useUserStore } from '@/stores/userStore'
 import { useI18n } from 'vue-i18n'
 import PasswordInput from '@/components/PasswordInput.vue'

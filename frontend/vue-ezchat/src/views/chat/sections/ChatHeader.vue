@@ -5,7 +5,7 @@ import { InfoFilled, MoreFilled } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'
 import { useI18n } from 'vue-i18n'
 import { useChatRoomActions } from '@/composables/useChatRoomActions'
-import RoomSettingsDialog from '@/components/dialogs/RoomSettingsDialog.vue'
+import RoomSettingsDialog from '@/components/dialogs/room-settings/index.vue'
 
 const { t } = useI18n()
 const roomStore = useRoomStore()
@@ -17,8 +17,8 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
   <div class="chat-header-container">
     <div class="header-left">
       <div class="room-info" v-if="currentRoom">
-        <Avatar :size="40" :url="currentRoom.avatar?.imageUrl" :thumbUrl="currentRoom.avatar?.imageThumbUrl"
-          :text="currentRoom.chatName" :border-radius-ratio="0.3" class="room-avatar" />
+        <Avatar :size="40" :image="currentRoom.avatar" :text="currentRoom.chatName" :border-radius-ratio="0.3"
+          class="room-avatar" />
         <div class="text-info">
           <div class="name-row">
             <h2 class="room-name">{{ currentRoom.chatName }}</h2>
@@ -34,13 +34,8 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
 
     <div class="header-right">
       <div class="action-group">
-        <el-tooltip :content="t('chat.room_info')" placement="bottom" :show-after="300">
-          <div class="action-btn"><el-icon>
-              <InfoFilled />
-            </el-icon></div>
-        </el-tooltip>
         <el-tooltip :content="t('common.menu')" placement="bottom" :show-after="300">
-          <el-dropdown trigger="click" placement="bottom-end">
+          <el-dropdown trigger="click" placement="bottom-end" popper-class="ez-header-popper">
             <div class="action-btn"><el-icon>
                 <MoreFilled />
               </el-icon></div>

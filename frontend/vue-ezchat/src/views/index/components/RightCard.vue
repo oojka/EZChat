@@ -10,9 +10,9 @@ import {
   Picture,
   User
 } from '@element-plus/icons-vue'
-import { useRegister } from '@/hooks/useRegister.ts'
+import { useRegister } from '@/composables/useRegister.ts'
 import { useI18n } from 'vue-i18n'
-import useLogin from '@/hooks/useLogin.ts'
+import useLogin from '@/composables/useLogin.ts'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { useImageStore } from '@/stores/imageStore'
 import { ElMessage } from 'element-plus'

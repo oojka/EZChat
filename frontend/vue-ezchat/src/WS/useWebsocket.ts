@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Message, UserStatus, WebSocketResult, AckPayload, MemberLeaveBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload } from '@/type'
-import { isAckPayload, isMemberLeavePayload, isOwnerTransferPayload, isRoomDisbandPayload } from '@/utils/validators'
+import type { Message, UserStatus, WebSocketResult, AckPayload, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, ForceLogoutPayload } from '@/type'
+import { isAckPayload, isMemberLeavePayload, isMemberRemovedPayload, isOwnerTransferPayload, isRoomDisbandPayload, isForceLogoutPayload } from '@/utils/validators'
 import i18n from '@/i18n'
 
 const { t } = i18n.global
@@ -18,8 +18,10 @@ type ConnectOptions = {
   onClose?: (event: CloseEvent) => void
   onChatMemberAdd?: (member: any) => void
   onChatMemberLeave?: (payload: MemberLeaveBroadcastPayload) => void
+  onChatMemberRemoved?: (payload: MemberRemovedBroadcastPayload) => void
   onChatOwnerTransfer?: (payload: OwnerTransferBroadcastPayload) => void
   onChatRoomDisband?: (payload: RoomDisbandBroadcastPayload) => void
+  onForceLogout?: (payload: ForceLogoutPayload) => void
   // 新增：重连成功回调，用于触发消息同步
   onReconnect?: () => void
 }
@@ -193,6 +195,20 @@ export function useWebsocket() {
                 console.warn('[WS] Invalid ROOM_DISBAND payload:', payload)
               }
               break
+            case 3005: // MEMBER_REMOVED
+              if (isMemberRemovedPayload(payload)) {
+                currentOptions?.onChatMemberRemoved?.(payload)
+              } else {
+                console.warn('[WS] Invalid MEMBER_REMOVED payload:', payload)
+              }
+              break
+            case 2003: // FORCE_LOGOUT
+              if (isForceLogoutPayload(payload)) {
+                currentOptions?.onForceLogout?.(payload)
+              } else {
+                console.warn('[WS] Invalid FORCE_LOGOUT payload:', payload)
+              }
+              break
           }
           return
         }
@@ -231,8 +247,8 @@ export function useWebsocket() {
         currentOptions.onClose(event)
       }
 
-      // 2. 如果是 4001(过期)/4002(认证失败) 或 用户主动断开，则不重连
-      if (event.code === 4001 || event.code === 4002 || isIntentionalClose) {
+      // 2. 如果是 4001(过期)/4002(认证失败)/4003(强制下线) 或 用户主动断开，则不重连
+      if (event.code === 4001 || event.code === 4002 || event.code === 4003 || isIntentionalClose) {
         return
       }
 

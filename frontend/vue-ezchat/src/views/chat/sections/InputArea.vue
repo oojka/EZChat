@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {nextTick, onMounted, ref, watch} from 'vue'
 import {ArrowUp, Close, Picture} from '@element-plus/icons-vue'
-import {useChatInput} from '@/hooks/useChatInput.ts'
+import {useChatInput} from '@/composables/useChatInput.ts'
 import {useRoute} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import EmojiPicker from '@/components/EmojiPicker.vue'

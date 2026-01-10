@@ -24,6 +24,12 @@ const systemText = computed(() => {
     } else if (props.msg.type === 12) {
         const nickname = props.msg.text || props.msg.sender || 'Unknown'
         return t('system.member_left', [nickname])
+    } else if (props.msg.type === 13) {
+        const text = props.msg.text || ''
+        const [removedName, operatorName] = text.split('|')
+        const removed = removedName || props.msg.sender || 'Unknown'
+        const operator = operatorName || 'Unknown'
+        return t('system.member_removed', [removed, operator])
     }
     // Future extension for other system message types
     return props.msg.text || ''

@@ -1,6 +1,7 @@
 import {h} from 'vue'
 import {ElNotification} from 'element-plus'
 import type {Image, LoginUserInfo, Message} from '@/type'
+import { hasImages } from '@/utils/validators'
 import router from '@/router'
 import i18n from '@/i18n' // 引入 i18n 实例
 
@@ -15,7 +16,7 @@ const { t } = i18n.global
  */
 const getPreviewContent = (message: Message): string => {
   let content = message.text || ''
-  if (message.images && message.images.length > 0) {
+  if (hasImages(message) && message.images.length > 0) {
     content += `[${t('chat.image')}]`.repeat(message.images.length)
   }
   return content || `[${t('chat.new_message')}]`

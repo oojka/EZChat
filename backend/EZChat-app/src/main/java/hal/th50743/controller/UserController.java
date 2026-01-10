@@ -5,11 +5,14 @@ import hal.th50743.exception.ErrorCode;
 import hal.th50743.pojo.FormalUserRegisterReq;
 import hal.th50743.pojo.LoginVO;
 import hal.th50743.pojo.Result;
+import hal.th50743.pojo.UpdatePasswordReq;
 import hal.th50743.pojo.User;
 import hal.th50743.pojo.UserReq;
 import hal.th50743.pojo.UserVO;
 import hal.th50743.service.AuthService;
+import hal.th50743.service.FormalUserService;
 import hal.th50743.service.UserService;
+import org.springframework.validation.annotation.Validated;
 import hal.th50743.utils.CurrentHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +31,7 @@ public class UserController {
 
     private final UserService userService;
     private final AuthService authService;
+    private final FormalUserService formalUserService;
 
     /**
      * 获取用户信息
@@ -43,6 +47,7 @@ public class UserController {
 
     /**
      * 更新用户信息
+     * 
      * @param userReq 包含待更新信息的用户请求对象
      */
     @PostMapping
@@ -94,10 +99,31 @@ public class UserController {
 
         // 调用认证服务执行升级逻辑（情况B：临时用户转为正式用户）
         LoginVO res = authService.userRegister(req);
-        log.info("Guest user upgraded to formal user successfully: userId={}, username={}", 
+        log.info("Guest user upgraded to formal user successfully: userId={}, username={}",
                 currentUserId, req.getUsername());
 
         return Result.success(res);
+    }
+
+    /**
+     * 修改密码（仅限正式用户）
+     * <p>
+     * 验证旧密码后更新为新密码，成功后强制登出。
+     *
+     * @param req 修改密码请求对象
+     * @return 操作结果
+     */
+    @PutMapping("/password")
+    public Result<Void> updatePassword(@RequestBody @Validated UpdatePasswordReq req) {
+        Integer currentUserId = CurrentHolder.getCurrentId();
+        if (currentUserId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+
+        log.info("用户修改密码: userId={}", currentUserId);
+        formalUserService.updatePassword(currentUserId, req.getOldPassword(), req.getNewPassword());
+
+        return Result.success();
     }
 
 }

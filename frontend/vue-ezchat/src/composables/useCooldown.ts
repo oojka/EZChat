@@ -37,13 +37,14 @@ export function useCooldown(cooldownInstance: Cooldown) {
   /**
    * 尝试执行并自动启动倒计时
    */
-  const tryExecute = (onSuccess: () => void, onBlocked?: (sec: number) => void) => {
+  const tryExecute = async (onSuccess: () => void | Promise<void>, onBlocked?: (sec: number) => void): Promise<boolean> => {
     if (cooldownInstance.canExecute()) {
-      onSuccess()
-    } else {
-      startTimer()
-      if (onBlocked) onBlocked(secondsLeft.value)
+      await onSuccess()
+      return true
     }
+    startTimer()
+    if (onBlocked) onBlocked(secondsLeft.value)
+    return false
   }
 
   onUnmounted(() => stopTimer())

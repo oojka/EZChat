@@ -13,6 +13,12 @@
                c.chat_name,
                u.uid owner_uid,
                c.join_enabled,
+               CASE
+                   WHEN c.chat_password_hash IS NULL OR c.chat_password_hash = '' THEN 0
+                   ELSE 1
+               END AS password_enabled,
+               c.max_members,
+               c.announcement,
                c.create_time,
                c.update_time,
                a.asset_name AS avatarAssetName,
@@ -36,6 +42,12 @@
                c.chat_name,
                u.uid owner_uid,
                c.join_enabled,
+               CASE
+                   WHEN c.chat_password_hash IS NULL OR c.chat_password_hash = '' THEN 0
+                   ELSE 1
+               END AS password_enabled,
+               c.max_members,
+               c.announcement,
                c.create_time,
                c.update_time,
                a.asset_name AS avatarAssetName,
@@ -46,12 +58,17 @@
         WHERE c.id = #{chatId}
     </select>
 
+    <select id="selectAssetIdByChatId" resultType="java.lang.Integer">
+        SELECT asset_id FROM chats WHERE id = #{chatId}
+    </select>
+
     <select id="selectJoinInfoByChatId" resultType="hal.th50743.pojo.ChatJoinInfo">
         SELECT id chatId,
                chat_code,
                chat_name,
                join_enabled,
-               chat_password_hash
+               chat_password_hash,
+               max_members
         FROM chats
         WHERE id = #{chatId}
     </select>
@@ -64,9 +81,9 @@
 
     <insert id="insertChat" parameterType="hal.th50743.pojo.ChatCreate" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chats
-        (chat_code, chat_name, owner_id, chat_password_hash, join_enabled, asset_id, create_time, update_time)
+        (chat_code, chat_name, owner_id, chat_password_hash, join_enabled, max_members, announcement, asset_id, create_time, update_time)
         VALUES
-        (#{chatCode}, #{chatName}, #{ownerId}, #{chatPasswordHash}, #{joinEnabled}, #{objectId}, NOW(), NOW())
+        (#{chatCode}, #{chatName}, #{ownerId}, #{chatPasswordHash}, #{joinEnabled}, #{maxMembers}, #{announcement}, #{objectId}, NOW(), NOW())
     </insert>
 
     <select id="selectOwnerIdByChatId" resultType="java.lang.Integer">
@@ -83,6 +100,16 @@
     <update id="updateChatPassword">
         UPDATE chats
         SET chat_password_hash = #{passwordHash},
+            update_time = NOW()
+        WHERE id = #{chatId}
+    </update>
+
+    <update id="updateChatBasicInfo">
+        UPDATE chats
+        SET chat_name = #{chatName},
+            max_members = #{maxMembers},
+            announcement = #{announcement},
+            asset_id = #{assetId},
             update_time = NOW()
         WHERE id = #{chatId}
     </update>

@@ -110,6 +110,14 @@ export const useMessageStore = defineStore('message', () => {
   const loadingMessages = ref(false)
 
   /**
+   * 历史消息加载中状态
+   * - true: loadMoreHistory 正在拉取更早的历史消息
+   * - false: 非历史拉取
+   * 用途：避免历史拉取触发“新消息”提示
+   */
+  const isLoadingHistory = ref(false)
+
+  /**
    * 没有更多消息标志
    * - true: 已加载所有历史消息，无需继续加载
    * - false: 还有更多历史消息可以加载
@@ -408,21 +416,25 @@ export const useMessageStore = defineStore('message', () => {
 
     // 设置加载状态
     loadingMessages.value = true
+    isLoadingHistory.value = true
 
     // 获取分页游标（最老消息的 seqId）
     // currentMessageList 是倒序（新->旧），所以最后一项是最老的
     const oldestMessage = currentMessageList.value[currentMessageList.value.length - 1]
 
-    if (oldestMessage && oldestMessage.seqId) {
-      // 加载更多消息
-      await getMessageList(oldestMessage.seqId)
-    } else {
-      console.warn('loadMoreHistory: Oldest message has no seqId', oldestMessage)
-      noMoreMessages.value = true // 无法继续加载，标记为结束
+    try {
+      if (oldestMessage && oldestMessage.seqId) {
+        // 加载更多消息
+        await getMessageList(oldestMessage.seqId)
+      } else {
+        console.warn('loadMoreHistory: Oldest message has no seqId', oldestMessage)
+        noMoreMessages.value = true // 无法继续加载，标记为结束
+      }
+    } finally {
+      // 清除加载状态
+      loadingMessages.value = false
+      isLoadingHistory.value = false
     }
-
-    // 清除加载状态
-    loadingMessages.value = false
   }
 
   /**
@@ -910,6 +922,7 @@ export const useMessageStore = defineStore('message', () => {
     currentMessageList,     // 当前房间的消息列表（响应式）
     chatViewIsLoading,      // 聊天视图加载状态（骨架屏控制）
     loadingMessages,        // 消息加载中状态（分页加载控制）
+    isLoadingHistory,       // 历史消息加载中状态
     noMoreMessages,         // 没有更多消息标志（分页边界控制）
     isLoading,              // 通用加载状态（按钮禁用控制）
     isSyncing,              // 消息同步中状态

@@ -111,5 +111,19 @@
         WHERE chat_id = #{chatId}
     </delete>
 
+    <delete id="deleteChatMembersByChatIdAndUserIds">
+        DELETE FROM chat_members
+        WHERE chat_id = #{chatId}
+          AND user_id IN
+        <foreach collection="userIds" item="userId" open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+    </delete>
+
+    <select id="countMembersByChatId" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_members
+        WHERE chat_id = #{chatId}
+    </select>
 
 </mapper>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import {onMounted, onUnmounted, ref} from 'vue'
-import MessageArea from '@/views/chat/layout/MessageArea.vue'
-import InputArea from '@/views/chat/layout/InputArea.vue'
-import RightAside from '@/views/chat/layout/RightAside.vue'
-import ChatHeader from '@/views/chat/layout/ChatHeader.vue'
+import MessageArea from '@/views/chat/sections/MessageArea.vue'
+import InputArea from '@/views/chat/sections/InputArea.vue'
+import RightAside from '@/views/chat/sections/RightAside.vue'
+import ChatHeader from '@/views/chat/sections/ChatHeader.vue'
 import MessageSkeleton from '@/views/chat/components/MessageSkeleton.vue'
 import {useMessageStore} from '@/stores/messageStore.ts'
 import {storeToRefs} from 'pinia'

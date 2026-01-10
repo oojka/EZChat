@@ -56,7 +56,7 @@ const currentLangCode = {
         <div class="action-icon-btn">
           <Transition name="el-fade-in-linear" mode="out-in">
             <span :key="locale" class="lang-code-text">{{ currentLangCode[locale as keyof typeof currentLangCode]
-              }}</span>
+            }}</span>
           </Transition>
         </div>
         <template #dropdown>
@@ -81,12 +81,15 @@ const currentLangCode = {
       </div>
 
       <!-- 4. 设置菜单 -->
-      <el-dropdown trigger="click" placement="bottom-end" popper-class="ez-header-popper">
+      <el-dropdown trigger="click" placement="bottom-end" popper-class="ez-header-popper"
+        style="border-radius: var(--radius-base);">
         <el-button class="setting-btn" :icon="Operation" plain />
         <template #dropdown>
-          <el-dropdown-menu class="ez-dropdown-menu">
-            <el-dropdown-item :icon="Setting">{{ t('common.settings') }}</el-dropdown-item>
-            <el-dropdown-item divided :icon="SwitchButton" @click="handleLogout" class="danger-item">
+          <el-dropdown-menu class="ez-dropdown-menu" style="border-radius: var(--radius-base);">
+            <el-dropdown-item :icon="Setting" style="border-radius: var(--radius-base);">{{ t('common.settings')
+              }}</el-dropdown-item>
+            <el-dropdown-item divided :icon="SwitchButton" @click="handleLogout" class="danger-item"
+              style="border-radius: var(--radius-base);">
               {{ t('auth.logout') }}
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -222,51 +225,5 @@ html.dark .action-icon-btn:hover {
 
 html.dark .setting-btn:hover {
   box-shadow: 0 0 12px rgba(77, 171, 255, 0.2);
-}
-</style>
-
-<style>
-.el-popper.ez-header-popper {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.el-popper.ez-header-popper .el-popper__arrow::before {
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border-glass) !important;
-}
-
-.ez-dropdown-menu {
-  border-radius: var(--radius-base) !important;
-  padding: 6px !important;
-  border: 1px solid var(--border-glass) !important;
-  background: var(--bg-card) !important;
-  backdrop-filter: blur(10px) !important;
-  box-shadow: var(--shadow-glass) !important;
-  outline: none !important;
-}
-
-.ez-dropdown-menu .el-dropdown-menu__item {
-  border-radius: var(--radius-sm) !important;
-  padding: 8px 16px !important;
-  font-weight: 600 !important;
-  font-size: 13px !important;
-  color: var(--text-700) !important;
-  outline: none !important;
-}
-
-.ez-dropdown-menu .el-dropdown-menu__item:hover {
-  background-color: var(--bg-page) !important;
-  color: var(--primary) !important;
-}
-
-.ez-dropdown-menu .el-dropdown-menu__item.danger-item {
-  color: var(--text-500) !important;
-}
-
-.ez-dropdown-menu .el-dropdown-menu__item.danger-item:hover {
-  color: #ef4444 !important;
-  background-color: rgba(239, 68, 68, 0.1) !important;
 }
 </style>

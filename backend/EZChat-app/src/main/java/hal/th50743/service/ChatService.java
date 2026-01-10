@@ -4,6 +4,9 @@ import hal.th50743.pojo.AppInitVO;
 import hal.th50743.pojo.Chat;
 import hal.th50743.pojo.ChatJoinInfo;
 import hal.th50743.pojo.ChatMemberVO;
+import hal.th50743.pojo.ChatBasicUpdateReq;
+import hal.th50743.pojo.ChatKickReq;
+import hal.th50743.pojo.ChatOwnerTransferReq;
 import hal.th50743.pojo.ChatReq;
 import hal.th50743.pojo.ChatPasswordUpdateReq;
 import hal.th50743.pojo.CreateChatVO;
@@ -156,5 +159,33 @@ public interface ChatService {
      * @param req 密码更新请求
      */
     void updateChatPassword(Integer userId, String chatCode, ChatPasswordUpdateReq req);
+
+    /**
+     * 更新聊天室基础信息（仅群主可执行）
+     *
+     * @param userId 当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req 基础信息更新请求
+     * @return 更新后的聊天室信息
+     */
+    ChatVO updateChatBasicInfo(Integer userId, String chatCode, ChatBasicUpdateReq req);
+
+    /**
+     * 批量移除聊天室成员（仅群主可执行）
+     *
+     * @param userId 当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req 移除请求
+     */
+    void kickMembers(Integer userId, String chatCode, ChatKickReq req);
+
+    /**
+     * 群主转让（仅群主可执行）
+     *
+     * @param userId 当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req 转让请求
+     */
+    void transferOwner(Integer userId, String chatCode, ChatOwnerTransferReq req);
 
 }

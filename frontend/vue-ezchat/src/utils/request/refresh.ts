@@ -9,8 +9,6 @@ import { canRetryWithCurrentToken, isRefreshRequest, isSafeRetryMethod } from '.
 
 const { t } = i18n.global
 
-let refreshPromise: Promise<string | null> | null = null
-
 const TOKEN_EXPIRED_CODES = new Set<ErrorCodeValue>([ErrorCode.TOKEN_EXPIRED])
 
 const isTokenExpiredCode = (code: ErrorCodeValue | null): boolean => {
@@ -24,17 +22,16 @@ const refreshAccessToken = async (): Promise<string | null> => {
   return userStore.refreshAccessToken()
 }
 
-export const getRefreshPromise = (): Promise<string | null> | null => refreshPromise
+export const getRefreshPromise = (): Promise<string | null> | null => {
+  const userStore = useUserStore()
+  return userStore.getRefreshAccessTokenPromise()
+}
 
 export const getTokenForRetry = async (): Promise<string | null> => {
-  if (!refreshPromise) {
-    refreshPromise = refreshAccessToken()
-      .finally(() => {
-        refreshPromise = null
-      })
-  }
-
-  return refreshPromise
+  const userStore = useUserStore()
+  const inFlight = userStore.getRefreshAccessTokenPromise()
+  if (inFlight) return inFlight
+  return refreshAccessToken()
 }
 
 export const retryWithFreshToken = async (

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { UserFilled, Setting } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'
+import type { Image } from '@/type'
 
 interface Props {
   avatar?: string
@@ -15,6 +17,16 @@ const props = withDefaults(defineProps<Props>(), {
   avatar: '', nickname: 'User', uid: '00000000', isOnline: false, showBadge: true, clickable: true
 })
 
+const buildAvatarImage = (avatarUrl?: string): Image => ({
+  imageName: '',
+  imageUrl: avatarUrl || '',
+  imageThumbUrl: avatarUrl || '',
+  blobUrl: '',
+  blobThumbUrl: '',
+})
+
+const avatarImage = computed(() => buildAvatarImage(props.avatar))
+
 const emit = defineEmits<{
   (e: 'click'): void
   (e: 'setting'): void
@@ -25,7 +37,7 @@ const emit = defineEmits<{
   <div class="user-item-wrapper" :class="{ 'is-offline': !isOnline, 'is-clickable': clickable }"
     @click="clickable && emit('click')">
     <div class="avatar-section">
-      <Avatar class="user-avatar" :size="40" shape="square" :thumb-url="avatar" :url="avatar" :text="nickname" />
+      <Avatar class="user-avatar" :size="40" shape="square" :image="avatarImage" :text="nickname" />
     </div>
     <div class="info-section">
       <div class="name-row"><span class="nickname">{{ nickname }}</span></div>

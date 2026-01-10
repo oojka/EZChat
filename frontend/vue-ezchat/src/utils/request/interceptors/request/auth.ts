@@ -15,8 +15,12 @@ export const createAuthRequestInterceptor = () => {
 
     const needsTokenHeader = needsToken(requestUrl, configStore.NO_TOKEN_APIS)
     if (needsTokenHeader) {
-      // 必须检查 localStorage 中是否存在登录信息，防止用户删除 localStorage 后仍能使用 token
-      const hasLoginInStorage = localStorage.getItem('loginUser') !== null || localStorage.getItem('loginGuest') !== null
+      // 必须检查 localStorage 中是否存在 refreshToken，防止用户删除存储后仍能使用 token
+      const storedRefreshToken = localStorage.getItem('refreshToken')
+      if (storedRefreshToken === '') {
+        localStorage.removeItem('refreshToken')
+      }
+      const hasLoginInStorage = !!storedRefreshToken
 
       if (!hasLoginInStorage) {
         websocketStore.close()

@@ -22,7 +22,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "copy_failed": "Copy failed",
-    "verifying_invitation": "Verifying invitation..."
+    "verifying_invitation": "Verifying invitation...",
+    "save": "Save"
   },
   "dialog": {
     "tip": "Tip",
@@ -86,7 +87,8 @@
     "too_fast": "Too many attempts. Please wait {sec} seconds.",
     "guest": "Guest",
     "login_failed": "Login failed. Please check your credentials.",
-    "session_expired": "Session expired. Please login again."
+    "session_expired": "Session expired. Please login again.",
+    "force_logout": "Your account was signed in on another device. Please log in again."
   },
   "validation": {
     "nickname_required": "Display name is required.",
@@ -111,7 +113,10 @@
     "chat_code_format": "Room code must be 8 digits.",
     "invite_url_required": "Invite URL is required.",
     "invite_url_format": "Invalid Invite URL format.",
-    "image_upload_limit": "Image upload limit has been reached."
+    "image_upload_limit": "Image upload limit has been reached.",
+    "chat_max_members_required": "Max members is required.",
+    "chat_max_members_range": "Max members must be between 2 and 200.",
+    "chat_announcement_length": "Announcement cannot exceed 500 characters."
   },
   "api": {
     "too_many_requests": "Requests are coming in too fast. Please slow down a bit.",
@@ -163,6 +168,7 @@
       "42002": "No access permission: You are not a member of this chat room.",
       "42003": "Password is required.",
       "42004": "Incorrect password.",
+      "42005": "Chat room is full.",
       "42010": "Invalid invite code.",
       "42011": "Invite code has expired.",
       "42012": "Invite code has been revoked.",
@@ -322,7 +328,8 @@
     "leave_owner_confirm": "You are the owner. Leaving will transfer ownership to the earliest joined member. Continue?",
     "disband_confirm": "Disbanding will remove all members and cannot be undone. Continue?",
     "owner_transfer_alert": "You are now the owner of \"{0}\".",
-    "room_disband_alert": "\"{0}\" has been disbanded."
+    "room_disband_alert": "\"{0}\" has been disbanded.",
+    "member_removed_alert": "You were removed from \"{0}\" by {1}."
   },
   "room_settings": {
     "invite_section_title": "Invite Link Management",
@@ -345,9 +352,46 @@
     "revoke": "Revoke",
     "password_section_title": "Room Password",
     "password_section_desc": "Enable to join via room ID + password. Disable to clear password.",
+    "password_change": "Change Password",
     "password_save": "Save Password",
     "password_update_success": "Password updated",
-    "password_update_failed": "Password update failed"
+    "password_update_failed": "Password update failed",
+    "invites_tab": "Invitations",
+    "security_tab": "Password Settings",
+    "room_password": "Room Password",
+    "basic_tab": "Basic",
+    "members_tab": "Members",
+    "basic_title": "Room Info",
+    "member_title": "Member Management",
+    "basic_section_title": "Basic Info",
+    "basic_section_desc": "Update name, avatar, member limit, and announcement.",
+    "basic_save": "Save",
+    "basic_chat_name": "Room Name",
+    "basic_chat_name_placeholder": "Enter room name",
+    "basic_max_members": "Member Limit",
+    "basic_max_members_hint": "Range 2-200",
+    "basic_announcement": "Announcement",
+    "basic_announcement_placeholder": "Share rules or important info",
+    "basic_avatar_tip": "Click to change avatar",
+    "basic_update_success": "Room info updated",
+    "basic_update_failed": "Room info update failed",
+    "basic_avatar_upload_failed": "Avatar upload failed",
+    "member_section_title": "Member Management",
+    "member_section_desc": "Batch remove members or transfer ownership.",
+    "member_kick": "Remove Members",
+    "member_kick_confirm": "Remove {0} member(s)?",
+    "member_kick_success": "Members removed",
+    "member_kick_failed": "Remove failed",
+    "member_kick_empty": "Select members to remove",
+    "member_empty": "No members",
+    "member_owner_tag": "Owner",
+    "member_transfer_title": "Transfer Ownership",
+    "member_transfer_placeholder": "Select new owner",
+    "member_transfer_action": "Confirm Transfer",
+    "member_transfer_confirm": "Transfer ownership to {0}?",
+    "member_transfer_success": "Ownership transferred",
+    "member_transfer_failed": "Transfer failed",
+    "member_transfer_empty": "Select a new owner"
   },
   "create_chat": {
     "title": "Create New Room",
@@ -438,6 +482,29 @@
     "room_created": "Room created",
     "member_joined": "{0} joined the group",
     "guest_joined": "{0} joined the group as a guest",
-    "member_left": "{0} left the group"
+    "member_left": "{0} left the group",
+    "member_removed": "{0} was removed by {1}"
+  },
+  "user_settings": {
+    "title": "Settings",
+    "profile_tab": "Profile",
+    "security_tab": "Security",
+    "profile_title": "Edit Profile",
+    "security_title": "Change Password",
+    "avatar": "Avatar",
+    "avatar_hint": "Supports JPG/PNG/GIF, less than 2MB",
+    "nickname": "Nickname",
+    "nickname_placeholder": "Enter your nickname",
+    "bio": "Bio",
+    "bio_placeholder": "Tell us about yourself...",
+    "profile_saved": "Profile updated successfully",
+    "old_password": "Current Password",
+    "old_password_placeholder": "Enter current password",
+    "new_password": "New Password",
+    "new_password_placeholder": "Enter new password (8-20 characters)",
+    "confirm_password": "Confirm Password",
+    "confirm_password_placeholder": "Re-enter new password",
+    "change_password": "Change Password",
+    "password_changed_relogin": "Password changed successfully. Please log in again with your new password."
   }
 }

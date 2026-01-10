@@ -59,9 +59,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 <template>
   <div class="chat-item" :class="{ 'is-active': isActive }" :data-chat-code="chat.chatCode">
     <div class="avatar-wrapper">
-      <Avatar class="avatar" :size="50" shape="square"
-        :thumb-url="chat.avatar?.blobThumbUrl || chat.avatar?.imageThumbUrl || ''"
-        :url="chat.avatar?.blobUrl || chat.avatar?.imageUrl || ''" :text="chat.chatName" />
+      <Avatar class="avatar" :size="50" shape="square" :image="chat.avatar" :text="chat.chatName" />
     </div>
 
     <div class="info-container">

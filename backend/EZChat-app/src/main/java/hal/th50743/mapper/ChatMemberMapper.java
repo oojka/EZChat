@@ -110,4 +110,21 @@ public interface ChatMemberMapper {
      * @return 影响行数
      */
     int deleteChatMembersByChatId(@Param("chatId") Integer chatId);
+
+    /**
+     * 批量删除聊天室成员
+     *
+     * @param chatId 聊天室ID
+     * @param userIds 需要移除的成员ID列表
+     * @return 影响行数
+     */
+    int deleteChatMembersByChatIdAndUserIds(@Param("chatId") Integer chatId, @Param("userIds") List<Integer> userIds);
+
+    /**
+     * 统计聊天室成员数
+     *
+     * @param chatId 聊天室ID
+     * @return 成员数量
+     */
+    int countMembersByChatId(@Param("chatId") Integer chatId);
 }

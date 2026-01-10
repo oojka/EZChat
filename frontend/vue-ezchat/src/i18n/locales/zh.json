@@ -22,7 +22,8 @@
     "copy": "复制",
     "copied": "已复制",
     "copy_failed": "复制失败",
-    "verifying_invitation": "验证邀请中..."
+    "verifying_invitation": "验证邀请中...",
+    "save": "保存"
   },
   "dialog": {
     "tip": "提示",
@@ -86,7 +87,8 @@
     "too_fast": "操作过于频繁。请等待 {sec} 秒。",
     "guest": "游客",
     "login_failed": "登录失败，请检查您的凭据。",
-    "session_expired": "登录已过期，请重新登录。"
+    "session_expired": "登录已过期，请重新登录。",
+    "force_logout": "账号已在其他设备登录，请重新登录。"
   },
   "validation": {
     "nickname_required": "请输入昵称。",
@@ -111,7 +113,10 @@
     "chat_code_format": "房间代码必须是8位数字。",
     "invite_url_required": "请输入邀请链接。",
     "invite_url_format": "不合法的邀请链接格式。",
-    "image_upload_limit": "图片上传数量已达到上限。"
+    "image_upload_limit": "图片上传数量已达到上限。",
+    "chat_max_members_required": "请输入群成员上限。",
+    "chat_max_members_range": "群成员上限需在 2-200 之间。",
+    "chat_announcement_length": "群公告不能超过 500 个字符。"
   },
   "api": {
     "too_many_requests": "请求太快了，请稍慢一点。",
@@ -163,6 +168,7 @@
       "42002": "无访问权限：您不是该聊天室的成员。",
       "42003": "密码必填。",
       "42004": "密码错误。",
+      "42005": "群成员已满。",
       "42010": "邀请码无效。",
       "42011": "邀请码已过期。",
       "42012": "邀请码已被撤销。",
@@ -322,7 +328,8 @@
     "leave_owner_confirm": "你是群主，退出后群主将转让给加入最早的成员。确定退出吗？",
     "disband_confirm": "解散后所有成员将被移出，且不可恢复。确定解散吗？",
     "owner_transfer_alert": "你已成为“{0}”的群主。",
-    "room_disband_alert": "“{0}”已被群主解散。"
+    "room_disband_alert": "“{0}”已被群主解散。",
+    "member_removed_alert": "你已被 {1} 移出“{0}”。"
   },
   "room_settings": {
     "invite_section_title": "邀请链接管理",
@@ -345,9 +352,46 @@
     "revoke": "撤销",
     "password_section_title": "群密码设置",
     "password_section_desc": "开启后可通过房间ID+密码加入，关闭则清除密码。",
+    "password_change": "修改密码",
     "password_save": "保存密码设置",
     "password_update_success": "群密码已更新",
-    "password_update_failed": "群密码更新失败"
+    "password_update_failed": "群密码更新失败",
+    "invites_tab": "邀请管理",
+    "security_tab": "密码设置",
+    "room_password": "房间密码",
+    "basic_tab": "基本信息",
+    "members_tab": "成员管理",
+    "basic_title": "房间信息",
+    "member_title": "成员管理",
+    "basic_section_title": "房间基础信息",
+    "basic_section_desc": "更新群名、头像、人数上限与公告。",
+    "basic_save": "保存修改",
+    "basic_chat_name": "群名称",
+    "basic_chat_name_placeholder": "请输入群名称",
+    "basic_max_members": "人数上限",
+    "basic_max_members_hint": "范围 2-200",
+    "basic_announcement": "群公告",
+    "basic_announcement_placeholder": "写点什么，让大家知道群规则或公告",
+    "basic_avatar_tip": "点击更换群头像",
+    "basic_update_success": "房间信息已更新",
+    "basic_update_failed": "房间信息更新失败",
+    "basic_avatar_upload_failed": "头像上传失败",
+    "member_section_title": "成员管理",
+    "member_section_desc": "批量移除成员或转让群主。",
+    "member_kick": "移除成员",
+    "member_kick_confirm": "确定移除 {0} 名成员吗？",
+    "member_kick_success": "成员已移除",
+    "member_kick_failed": "移除失败",
+    "member_kick_empty": "请先选择要移除的成员",
+    "member_empty": "暂无成员",
+    "member_owner_tag": "群主",
+    "member_transfer_title": "转让群主",
+    "member_transfer_placeholder": "选择新群主",
+    "member_transfer_action": "确认转让",
+    "member_transfer_confirm": "确定将群主转让给 {0} 吗？",
+    "member_transfer_success": "群主已转让",
+    "member_transfer_failed": "转让失败",
+    "member_transfer_empty": "请选择新群主"
   },
   "create_chat": {
     "title": "创建新房间",
@@ -438,6 +482,29 @@
     "room_created": "房间已创建",
     "member_joined": "{0} 加入了群聊",
     "guest_joined": "{0} 以访客身份加入了群聊",
-    "member_left": "{0} 退出了群聊"
+    "member_left": "{0} 退出了群聊",
+    "member_removed": "{0} 被 {1} 移除出群聊"
+  },
+  "user_settings": {
+    "title": "设置",
+    "profile_tab": "个人资料",
+    "security_tab": "安全设置",
+    "profile_title": "编辑资料",
+    "security_title": "修改密码",
+    "avatar": "头像",
+    "avatar_hint": "支持 JPG/PNG/GIF，小于 2MB",
+    "nickname": "昵称",
+    "nickname_placeholder": "请输入昵称",
+    "bio": "个人简介",
+    "bio_placeholder": "介绍一下自己...",
+    "profile_saved": "资料更新成功",
+    "old_password": "当前密码",
+    "old_password_placeholder": "请输入当前密码",
+    "new_password": "新密码",
+    "new_password_placeholder": "请输入新密码（8-20位）",
+    "confirm_password": "确认密码",
+    "confirm_password_placeholder": "请再次输入新密码",
+    "change_password": "修改密码",
+    "password_changed_relogin": "密码修改成功，请使用新密码重新登录。"
   }
 }

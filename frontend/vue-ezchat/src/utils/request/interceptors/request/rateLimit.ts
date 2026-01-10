@@ -23,7 +23,9 @@ export const createRateLimitRequestInterceptor = () => {
         const until = parseInt(restrictionUntil)
         if (!isNaN(until) && until > now) {
           ElMessage.closeAll()
+          localStorage.removeItem('refreshToken')
           localStorage.removeItem('loginUser')
+          localStorage.removeItem('loginGuest')
 
           // 处于封锁期：直接跳错误页（使用 state 传递错误码，避免 URL 暴露敏感参数）
           router.replace({

@@ -10,6 +10,7 @@ import { useConfigStore } from '@/stores/configStore.ts'
 import { useImageStore } from '@/stores/imageStore.ts'
 import i18n from '@/i18n'
 import { isTokenExpired } from '@/utils/validators'
+import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 
 /**
  * WebsocketStore：管理 WebSocket 连接与分发
@@ -34,6 +35,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
   const { t } = i18n.global
   const authRetryCount = ref(0)
   const maxAuthRetry = 1
+  const forceLogoutHandled = ref(false)
 
   /**
    * 给 UI 展示用的连接状态（含颜色/徽标类型）
@@ -59,6 +61,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
   const initWS = async (token: string) => {
     if (!token || isInitialized.value) return
     authRetryCount.value = 0
+    forceLogoutHandled.value = false
 
     const configStore = useConfigStore()
     const { websocketUrl } = storeToRefs(configStore)
@@ -84,6 +87,20 @@ export const useWebsocketStore = defineStore('websocket', () => {
       return url.toString()
     }
     const fullUrl = buildWsUrl(wsToken)
+
+    const handleForceLogout = async () => {
+      if (forceLogoutHandled.value) return
+      forceLogoutHandled.value = true
+      try {
+        await showAlertDialog({
+          message: t('auth.force_logout') || 'Account logged in elsewhere',
+          type: 'warning',
+        })
+      } catch (e) {
+        console.warn('[WARN] [WS] Force logout dialog closed unexpectedly', e)
+      }
+      await userStore.logout({ showDialog: false, silent: true })
+    }
 
     connect(fullUrl, {
       onMessage: (data: any) => {
@@ -114,11 +131,17 @@ export const useWebsocketStore = defineStore('websocket', () => {
       onChatMemberLeave: (payload) => {
         roomStore.handleMemberLeave(payload)
       },
+      onChatMemberRemoved: (payload) => {
+        roomStore.handleMemberRemoved(payload).then(() => { })
+      },
       onChatOwnerTransfer: (payload) => {
         roomStore.handleOwnerTransfer(payload)
       },
       onChatRoomDisband: (payload) => {
         roomStore.handleRoomDisband(payload).then(() => { })
+      },
+      onForceLogout: async () => {
+        await handleForceLogout()
       },
       onAck: (data: any) => {
         // 系统消息：服务端 ACK，标记本地“发送中”消息为 sent
@@ -137,6 +160,10 @@ export const useWebsocketStore = defineStore('websocket', () => {
       },
       onClose: async (event: CloseEvent) => {
         isInitialized.value = false
+        if (event.code === 4003) {
+          await handleForceLogout()
+          return
+        }
         // 认证失败/过期：不再重连，直接退出登录并回到首页
         if (event.code === 4001 || event.code === 4002) {
           if (authRetryCount.value < maxAuthRetry) {

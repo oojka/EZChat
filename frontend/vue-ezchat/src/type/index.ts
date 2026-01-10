@@ -99,6 +99,9 @@ export type ChatRoom = {
   chatName: string //
   ownerUid: string //
   joinEnabled: number //
+  passwordEnabled?: number
+  maxMembers: number
+  announcement?: string | null
   lastActiveAt: string //
   createTime: string //
   updateTime: string //
@@ -131,6 +134,21 @@ export type ChatInvite = {
 export type ChatInviteCreateReq = {
   joinLinkExpiryMinutes: number
   maxUses: 0 | 1
+}
+
+export type ChatBasicUpdateReq = {
+  chatName: string
+  maxMembers: number
+  announcement?: string | null
+  avatar: Image
+}
+
+export type ChatKickReq = {
+  memberUids: string[]
+}
+
+export type ChatOwnerTransferReq = {
+  newOwnerUid: string
 }
 
 export type ChatPasswordUpdateReq = {
@@ -235,6 +253,14 @@ export interface MemberJoinMessage extends BaseMessage {
 }
 
 /**
+ * Type 13: 成员被移除系统消息
+ */
+export interface MemberRemovedMessage extends BaseMessage {
+  type: 13
+  text: string
+}
+
+/**
  * 消息联合类型 (Discriminated Union)
  * 利用 `type` 字段进行类型收窄
  */
@@ -244,6 +270,7 @@ export type Message =
   | MixedMessage
   | RoomCreatedMessage
   | MemberJoinMessage
+  | MemberRemovedMessage
   // 兜底类型
   | (BaseMessage & { type: number; text?: string; images?: Image[]; member?: any })
 
@@ -268,6 +295,15 @@ export type MemberLeaveBroadcastPayload = {
   leftAt: string
 }
 
+export type MemberRemovedBroadcastPayload = {
+  chatCode: string
+  removedUid: string
+  removedNickname: string
+  operatorUid: string
+  operatorNickname: string
+  removedAt: string
+}
+
 export type OwnerTransferBroadcastPayload = {
   chatCode: string
   oldOwnerUid: string
@@ -283,8 +319,14 @@ export type RoomDisbandBroadcastPayload = {
   disbandAt: string
 }
 
+export type ForceLogoutPayload = {
+  uid: string
+  reason: string
+  forcedAt: string
+}
+
 export type WebSocketResult = {
-  code?: number        // 新增状态码: 1001=Message, 2001=Status, 2002=ACK, 3001=MemberJoin, 3002=MemberLeave, 3003=OwnerTransfer, 3004=RoomDisband
+  code?: number        // 新增状态码: 1001=Message, 2001=Status, 2002=ACK, 2003=ForceLogout, 3001=MemberJoin, 3002=MemberLeave, 3003=OwnerTransfer, 3004=RoomDisband, 3005=MemberRemoved
   isSystemMessage: 0 | 1
   type: string
   data: unknown

@@ -1,0 +1,108 @@
+/* =========================================
+   Custom EZ Dropdown (Glassmorphism)
+   ========================================= */
+
+/* 1. Force Reset Popper Container Variables */
+.el-popper.ez-header-popper {
+    /* Kill default Element Plus variables for this specific popper */
+    --el-bg-color-overlay: transparent !important;
+    --el-border-color-light: transparent !important;
+    --el-box-shadow-light: none !important;
+
+    /* Ensure styles are cleared */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+
+    /* User suggested adding radius to parent to fix artifacts */
+    border-radius: var(--radius-base) !important;
+}
+
+/* Also target state variants just in case */
+.el-popper.is-light.ez-header-popper,
+.el-popper.is-dark.ez-header-popper {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 2. Arrow Styling */
+.el-popper.ez-header-popper .el-popper__arrow::before {
+    /* Arrow background must match the card background to blend in */
+    background: var(--bg-card) !important;
+    /* Use a visible border color matching the menu */
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    /* Remove default shadow to prevent double shadow artifacts */
+    box-shadow: none !important;
+    /* Remove blur as we are going solid */
+    backdrop-filter: none !important;
+}
+
+/* 3. The Menu (Visible Card) */
+.ez-dropdown-menu {
+    border-radius: var(--radius-base) !important;
+    padding: 6px !important;
+
+    /* Border: Use semi-transparent dark border for crisp definition in Light Mode */
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+
+    /* Background: Solid Card Color */
+    background: var(--bg-card) !important;
+
+    /* Remove glass effect */
+    backdrop-filter: none !important;
+
+    /* Shadow: Custom deep shadow */
+    box-shadow: var(--shadow-glass) !important;
+
+    outline: none !important;
+    overflow: hidden !important;
+}
+
+/* Dark Mode Overrides for Menu */
+html.dark .ez-dropdown-menu {
+    /* In dark mode, border needs to be subtle */
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    /* Keep background solid card color (handled by var(--bg-card) which changes in dark mode) */
+    background: var(--bg-card) !important;
+}
+
+html.dark .el-popper.ez-header-popper .el-popper__arrow::before {
+    background: var(--bg-card) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 4. Menu Items */
+.ez-dropdown-menu .el-dropdown-menu__item {
+    border-radius: var(--radius-sm) !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    color: var(--text-700) !important;
+    outline: none !important;
+    transition: all 0.2s;
+}
+
+.ez-dropdown-menu .el-dropdown-menu__item:not(.is-disabled):hover,
+.ez-dropdown-menu .el-dropdown-menu__item:focus {
+    background-color: var(--el-fill-color-light) !important;
+    /* Gentler hover bg */
+    color: var(--primary) !important;
+    box-shadow: none !important;
+}
+
+.ez-dropdown-menu .el-dropdown-menu__item.danger-item {
+    color: var(--text-500) !important;
+}
+
+.ez-dropdown-menu .el-dropdown-menu__item.danger-item:hover {
+    color: #ef4444 !important;
+    background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Scrollbar clean up */
+.ez-dropdown-menu .el-scrollbar__wrap,
+.ez-dropdown-menu .el-scrollbar__view {
+    background: transparent !important;
+}

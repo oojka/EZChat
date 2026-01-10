@@ -106,6 +106,7 @@ public class ChatAssembler {
         }
         chatVO.setOwnerUid(null);
         chatVO.setJoinEnabled(null);
+        chatVO.setPasswordEnabled(null);
         chatVO.setLastActiveAt(null);
         chatVO.setCreateTime(null);
         chatVO.setUpdateTime(null);

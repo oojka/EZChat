@@ -22,6 +22,12 @@ public class ChatVO {
     private String ownerUid;
     private Image avatar;
     private Integer joinEnabled;
+    /**
+     * 是否启用房间密码（0: 未启用, 1: 已启用）
+     */
+    private Integer passwordEnabled;
+    private Integer maxMembers;
+    private String announcement;
     private LocalDateTime lastActiveAt;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

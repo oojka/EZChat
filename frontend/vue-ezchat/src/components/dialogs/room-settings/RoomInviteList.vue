@@ -44,11 +44,11 @@ const formatDateTime = (dateStr: string) => {
             </div>
             <div class="section-actions">
                 <el-button type="primary" class="create-invite-btn" :disabled="!props.canCreate"
-                    @click="$emit('create')" size="small">
+                    @click="$emit('create')">
                     <el-icon class="el-icon--left">
                         <Plus />
                     </el-icon>
-                    {{ t('room_settings.new') || 'New' }}
+                    {{ t('room_settings.new') }}
                 </el-button>
             </div>
         </div>
@@ -57,7 +57,7 @@ const formatDateTime = (dateStr: string) => {
         <div class="limit-bar">
             <span class="limit-text">{{ props.inviteLimitTip }}</span>
             <el-progress :percentage="(props.inviteList.length / 5) * 100" :show-text="false" :stroke-width="4"
-                :status="props.inviteList.length >= 5 ? 'exception' : 'primary'" class="limit-progress" />
+                :status="props.inviteList.length >= 5 ? 'exception' : ''" class="limit-progress" />
         </div>
 
         <div class="invite-list-container">
@@ -155,7 +155,7 @@ const formatDateTime = (dateStr: string) => {
 .invite-list-container {
     flex: 1;
     overflow-y: auto;
-    max-height: 360px;
+    /* max-height: 360px; REMOVED */
     padding-right: 4px;
     /* scrollbar space */
 }

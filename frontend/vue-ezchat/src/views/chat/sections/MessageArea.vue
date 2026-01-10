@@ -8,11 +8,11 @@ import { useUserStore } from '@/stores/userStore.ts'
 import MessageItem from '@/views/chat/components/MessageItem.vue'
 import SystemMessageItem from '@/views/chat/components/SystemMessageItem.vue'
 import { useI18n } from 'vue-i18n'
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll.ts'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll.ts'
 
 const { t } = useI18n()
 const messageStore = useMessageStore()
-const { currentMessageList, loadingMessages, noMoreMessages, isSyncing } = storeToRefs(messageStore)
+const { currentMessageList, loadingMessages, noMoreMessages, isSyncing, isLoadingHistory } = storeToRefs(messageStore)
 const { loadMoreHistory } = messageStore
 
 const roomStore = useRoomStore()
@@ -58,6 +58,7 @@ watch(() => currentRoomCode.value, async (newVal) => {
 
 // 监听新消息，自动滚动或显示未读数
 watch(() => currentMessageList.value.length, (newLen, oldLen) => {
+  if (isLoadingHistory.value) return
   if (newLen > oldLen && currentMessageList.value.length > 0) {
     const latestMsg = currentMessageList.value[0]
     if (!latestMsg) return
@@ -158,6 +159,10 @@ watch(() => currentMessageList.value.length, (newLen, oldLen) => {
 
 .loading-wrapper {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px 0;
   gap: 8px;
   color: var(--text-500);
   font-size: 13px;

@@ -4,7 +4,10 @@ import hal.th50743.pojo.ChatInviteCreateReq;
 import hal.th50743.pojo.ChatInviteVO;
 import hal.th50743.pojo.ChatPasswordUpdateReq;
 import hal.th50743.pojo.ChatReq;
+import hal.th50743.pojo.ChatBasicUpdateReq;
+import hal.th50743.pojo.ChatKickReq;
 import hal.th50743.pojo.ChatMemberVO;
+import hal.th50743.pojo.ChatOwnerTransferReq;
 import hal.th50743.pojo.ChatVO;
 import hal.th50743.pojo.CreateChatVO;
 import hal.th50743.pojo.JoinChatReq;
@@ -176,6 +179,47 @@ public class ChatController {
     public Result<Void> updateChatPassword(@PathVariable String chatCode, @RequestBody ChatPasswordUpdateReq req) {
         Integer userId = CurrentHolder.getCurrentId();
         chatService.updateChatPassword(userId, chatCode, req);
+        return Result.success();
+    }
+
+    /**
+     * 更新聊天室基础信息（仅群主）
+     *
+     * @param chatCode 聊天室代码
+     * @param req 基础信息更新请求
+     * @return 更新后的聊天室信息
+     */
+    @PostMapping("/{chatCode}/basic")
+    public Result<ChatVO> updateChatBasicInfo(@PathVariable String chatCode, @RequestBody ChatBasicUpdateReq req) {
+        Integer userId = CurrentHolder.getCurrentId();
+        return Result.success(chatService.updateChatBasicInfo(userId, chatCode, req));
+    }
+
+    /**
+     * 批量移除聊天室成员（仅群主）
+     *
+     * @param chatCode 聊天室代码
+     * @param req 移除请求
+     * @return 统一响应结果
+     */
+    @PostMapping("/{chatCode}/members/kick")
+    public Result<Void> kickMembers(@PathVariable String chatCode, @RequestBody ChatKickReq req) {
+        Integer userId = CurrentHolder.getCurrentId();
+        chatService.kickMembers(userId, chatCode, req);
+        return Result.success();
+    }
+
+    /**
+     * 转让群主（仅群主）
+     *
+     * @param chatCode 聊天室代码
+     * @param req 转让请求
+     * @return 统一响应结果
+     */
+    @PostMapping("/{chatCode}/owner/transfer")
+    public Result<Void> transferOwner(@PathVariable String chatCode, @RequestBody ChatOwnerTransferReq req) {
+        Integer userId = CurrentHolder.getCurrentId();
+        chatService.transferOwner(userId, chatCode, req);
         return Result.success();
     }
 

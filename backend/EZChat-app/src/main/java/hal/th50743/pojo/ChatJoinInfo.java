@@ -20,6 +20,6 @@ public class ChatJoinInfo {
     private String chatCode;
     private Integer joinEnabled;
     private String chatPasswordHash;
+    private Integer maxMembers;
 }
-
 

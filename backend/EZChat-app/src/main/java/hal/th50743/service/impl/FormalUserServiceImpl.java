@@ -115,6 +115,20 @@ public class FormalUserServiceImpl implements FormalUserService {
     }
 
     /**
+     * 清空正式用户 RefreshToken
+     *
+     * @param userId 用户ID
+     */
+    @Override
+    public void clearRefreshToken(Integer userId) {
+        if (userId == null) {
+            log.warn("清空正式用户 RefreshToken 失败: userId 为空");
+            return;
+        }
+        userMapper.updateFormalUserToken(userId, null);
+    }
+
+    /**
      * 用户登录
      * <p>
      * 使用 BCrypt 密码哈希验证，确保密码安全性。
@@ -149,5 +163,54 @@ public class FormalUserServiceImpl implements FormalUserService {
 
         log.info("登录成功: username={}, uid={}", loginReq.getUsername(), user.getUid());
         return user;
+    }
+
+    /**
+     * 修改密码
+     * <p>
+     * 验证旧密码后更新为新密码，并清除 RefreshToken 强制重新登录。
+     *
+     * @param userId      用户ID
+     * @param oldPassword 旧密码（明文）
+     * @param newPassword 新密码（明文）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void updatePassword(Integer userId, String oldPassword, String newPassword) {
+        // 1. 获取当前密码哈希
+        String currentHash = getPasswordHashByUserId(userId);
+        if (currentHash == null) {
+            log.warn("修改密码失败: 用户不是正式用户 - userId={}", userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "User is not a formal user");
+        }
+
+        // 2. 验证旧密码
+        boolean passwordMatches = PasswordUtils.matches(oldPassword, currentHash);
+        if (!passwordMatches) {
+            log.warn("修改密码失败: 旧密码错误 - userId={}", userId);
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Old password is incorrect");
+        }
+
+        // 3. 生成新密码哈希并更新
+        String newHash = PasswordUtils.encode(newPassword);
+        userMapper.updateFormalUserPassword(userId, newHash);
+        log.info("密码修改成功: userId={}", userId);
+
+        // 4. 清除 RefreshToken 强制重新登录
+        clearRefreshToken(userId);
+    }
+
+    /**
+     * 根据用户ID获取密码哈希
+     *
+     * @param userId 用户ID
+     * @return 密码哈希
+     */
+    @Override
+    public String getPasswordHashByUserId(Integer userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userMapper.selectPasswordHashByUserId(userId);
     }
 }

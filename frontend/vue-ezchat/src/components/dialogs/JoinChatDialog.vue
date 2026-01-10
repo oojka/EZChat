@@ -10,8 +10,8 @@ import {
   CircleCheckFilled,
   CircleCloseFilled,
 } from '@element-plus/icons-vue'
-import { useJoinInput } from '@/hooks/chat/join/useJoinInput.ts'
-import { useLoginJoin } from '@/hooks/chat/join/useLoginJoin.ts'
+import { useJoinInput } from '@/composables/chat/join/useJoinInput.ts'
+import { useLoginJoin } from '@/composables/chat/join/useLoginJoin.ts'
 import { useRoomStore } from '@/stores/roomStore'
 import { useUserStore } from '@/stores/userStore'
 import { useI18n } from 'vue-i18n'

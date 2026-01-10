@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * 访客清理服务
  * <p>
- * 负责清理离线超过 10 分钟的访客用户。
+ * 负责清理离线超过 2 小时的访客用户。
  */
 @Slf4j
 @Service
@@ -30,11 +30,12 @@ public class GuestCleanupService {
     /**
      * 定时清理离线访客
      * <p>
-     * 每 5 分钟执行一次，清理离线超过 10 分钟的访客用户。
+     * 每 5 分钟执行一次，清理离线超过 2 小时的访客用户。
      */
     @Scheduled(fixedDelay = 5 * 60 * 1000L)
     public void cleanupOfflineGuests() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(10);
+        // 修改为清理离线超过 2 小时 (120 min) 的访客
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(2);
         List<Integer> candidates = userMapper.selectGuestCandidatesForCleanup(cutoff);
         if (candidates == null || candidates.isEmpty()) {
             return;

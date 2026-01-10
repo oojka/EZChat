@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'
+import type { Image } from '@/type'
 
 interface Props {
   avatar?: string
@@ -20,6 +22,16 @@ const props = withDefaults(defineProps<Props>(), {
   clickable: true
 })
 
+const buildAvatarImage = (avatarUrl?: string): Image => ({
+  imageName: '',
+  imageUrl: avatarUrl || '',
+  imageThumbUrl: avatarUrl || '',
+  blobUrl: '',
+  blobThumbUrl: '',
+})
+
+const avatarImage = computed(() => buildAvatarImage(props.avatar))
+
 const emit = defineEmits<{
   (e: 'click'): void
 }>()
@@ -30,7 +42,7 @@ const emit = defineEmits<{
     @click="clickable && emit('click')">
     <div class="avatar-section">
       <el-badge is-dot :offset="[-2, 34]" :type="isOnline ? 'success' : 'info'" :disabled="!showBadge">
-        <Avatar class="user-avatar" :size="40" shape="square" :thumb-url="avatar" :url="avatar" :text="nickname" />
+        <Avatar class="user-avatar" :size="40" shape="square" :image="avatarImage" :text="nickname" />
       </el-badge>
     </div>
 

@@ -67,4 +67,30 @@ public interface FormalUserService {
      * @return RefreshToken
      */
     String getRefreshTokenByUserId(Integer userId);
+
+    /**
+     * 清空正式用户 RefreshToken
+     *
+     * @param userId 用户ID
+     */
+    void clearRefreshToken(Integer userId);
+
+    /**
+     * 修改密码
+     * <p>
+     * 验证旧密码后更新为新密码，并清除 RefreshToken 强制重新登录。
+     *
+     * @param userId      用户ID
+     * @param oldPassword 旧密码（明文）
+     * @param newPassword 新密码（明文）
+     */
+    void updatePassword(Integer userId, String oldPassword, String newPassword);
+
+    /**
+     * 根据用户ID获取密码哈希
+     *
+     * @param userId 用户ID
+     * @return 密码哈希
+     */
+    String getPasswordHashByUserId(Integer userId);
 }

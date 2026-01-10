@@ -25,17 +25,6 @@ const senderInfo = computed(() => {
   return props.currentChat.chatMembers.find((m) => m.uid === props.msg.sender)
 })
 
-const avatarThumbUrl = computed(() =>
-  senderInfo.value?.avatar?.blobThumbUrl
-  || senderInfo.value?.avatar?.imageThumbUrl
-  || ''
-)
-const avatarUrl = computed(() =>
-  senderInfo.value?.avatar?.blobUrl
-  || senderInfo.value?.avatar?.imageUrl
-  || ''
-)
-
 // 预取发送者头像 blob URL（避免重新加载）
 watchEffect(() => {
   const avatar = senderInfo.value?.avatar
@@ -227,7 +216,7 @@ const handleImageError = async (img: Image, idx: number) => {
 
 <template>
   <li class="message-row" :class="{ 'is-me': isMe }">
-    <Avatar class="user-avatar" :size="38" shape="square" :thumb-url="avatarThumbUrl" :url="avatarUrl"
+    <Avatar class="user-avatar" :size="38" shape="square" :image="senderInfo?.avatar"
       :text="senderInfo?.nickname || '?'" />
 
     <div class="content-wrapper">

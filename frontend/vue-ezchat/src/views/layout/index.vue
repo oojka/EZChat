@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import MainHeader from '@/views/layout/layout/MainHeader.vue'
-import MainAside from '@/views/layout/layout/MainAside.vue'
+import MainHeader from '@/views/layout/sections/MainHeader.vue'
+import MainAside from '@/views/layout/sections/MainAside.vue'
 import { useAppStore } from '@/stores/appStore.ts'
 import { onMounted, onUnmounted } from 'vue'
 

@@ -18,6 +18,8 @@ export const useImageStore = defineStore('image', () => {
   // =========================
   const thumbPromiseMap = new Map<string, Promise<string | undefined>>()
   const originalPromiseMap = new Map<string, Promise<string | undefined>>()
+  const avatarCache = new Map<string, Image>()
+  const AVATAR_CACHE_LIMIT = 300
 
   // =========================
   // 2) 基础能力：拉取 blob 并转 objectURL
@@ -228,9 +230,87 @@ export const useImageStore = defineStore('image', () => {
     })
   }
 
+  const isSameAvatarUrl = (cached: Image, incoming: Image): boolean => {
+    return cached.imageThumbUrl === incoming.imageThumbUrl && cached.imageUrl === incoming.imageUrl
+  }
+
+  const touchAvatarCache = (key: string) => {
+    const cached = avatarCache.get(key)
+    if (!cached) return
+    avatarCache.delete(key)
+    avatarCache.set(key, cached)
+  }
+
+  const evictAvatarCacheOverflow = () => {
+    while (avatarCache.size > AVATAR_CACHE_LIMIT) {
+      const oldestKey = avatarCache.keys().next().value
+      if (!oldestKey) return
+      const oldestImage = avatarCache.get(oldestKey)
+      if (oldestImage) {
+        revokeImageBlobs(oldestImage)
+      }
+      avatarCache.delete(oldestKey)
+    }
+  }
+
+  const resolveAvatarFromCache = (key: string, incoming?: Image): Image | undefined => {
+    if (!incoming) return undefined
+    if (!key) return incoming
+
+    const cached = avatarCache.get(key)
+    if (!cached) {
+      avatarCache.set(key, incoming)
+      evictAvatarCacheOverflow()
+      return incoming
+    }
+
+    if (isSameAvatarUrl(cached, incoming)) {
+      if (incoming.imageName) {
+        cached.imageName = incoming.imageName
+      }
+      cached.imageUrl = incoming.imageUrl
+      cached.imageThumbUrl = incoming.imageThumbUrl
+      if (typeof incoming.assetId === 'number') {
+        cached.assetId = incoming.assetId
+      }
+      if (!cached.blobThumbUrl && incoming.blobThumbUrl) {
+        cached.blobThumbUrl = incoming.blobThumbUrl
+      }
+      if (!cached.blobUrl && incoming.blobUrl) {
+        cached.blobUrl = incoming.blobUrl
+      }
+      touchAvatarCache(key)
+      return cached
+    }
+
+    revokeImageBlobs(cached)
+    if (incoming.imageName) {
+      cached.imageName = incoming.imageName
+    }
+    cached.imageUrl = incoming.imageUrl
+    cached.imageThumbUrl = incoming.imageThumbUrl
+    if (typeof incoming.assetId === 'number') {
+      cached.assetId = incoming.assetId
+    }
+    touchAvatarCache(key)
+    return cached
+  }
+
+  const pruneAvatarCache = (validKeys: Iterable<string>) => {
+    const keep = new Set(validKeys)
+    avatarCache.forEach((img, key) => {
+      if (!keep.has(key)) {
+        revokeImageBlobs(img)
+        avatarCache.delete(key)
+      }
+    })
+  }
+
   const resetState = () => {
     thumbPromiseMap.clear()
     originalPromiseMap.clear()
+    avatarCache.forEach((img) => revokeImageBlobs(img))
+    avatarCache.clear()
   }
 
   // =========================
@@ -314,10 +394,10 @@ export const useImageStore = defineStore('image', () => {
     revokeImageBlobs,
     revokeImagesBlobs,
     revokeUnusedBlobs,
+    resolveAvatarFromCache,
+    pruneAvatarCache,
     resetState,
     generateDefaultAvatarUrl,
     uploadDefaultAvatarIfNeeded,
   }
 })
-
-

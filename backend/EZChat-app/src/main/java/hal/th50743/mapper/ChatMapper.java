@@ -4,6 +4,7 @@ import hal.th50743.pojo.ChatCreate;
 import hal.th50743.pojo.ChatJoinInfo;
 import hal.th50743.pojo.ChatVO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -47,6 +48,14 @@ public interface ChatMapper {
      * @return 聊天室视图对象
      */
     ChatVO selectChatVOByChatId(Integer chatId);
+
+    /**
+     * 获取聊天室头像资源ID
+     *
+     * @param chatId 聊天室ID
+     * @return 头像资源ID
+     */
+    Integer selectAssetIdByChatId(Integer chatId);
 
     /**
      * 获取"加入校验"所需的最小信息（根据聊天室 ID）
@@ -96,6 +105,21 @@ public interface ChatMapper {
      * @param passwordHash 密码哈希（null 表示关闭密码）
      */
     void updateChatPassword(Integer chatId, String passwordHash);
+
+    /**
+     * 更新聊天室基础信息（群名、人数上限、公告、头像）
+     *
+     * @param chatId 聊天室ID
+     * @param chatName 群名
+     * @param maxMembers 群成员上限
+     * @param announcement 群公告
+     * @param assetId 头像资源ID
+     */
+    void updateChatBasicInfo(@Param("chatId") Integer chatId,
+                             @Param("chatName") String chatName,
+                             @Param("maxMembers") Integer maxMembers,
+                             @Param("announcement") String announcement,
+                             @Param("assetId") Integer assetId);
 
     /**
      * 删除聊天室

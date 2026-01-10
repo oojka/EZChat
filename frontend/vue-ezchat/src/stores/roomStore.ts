@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore, storeToRefs } from 'pinia'
-import type { ChatRoom, Message, Image, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload } from '@/type'
+import type { ChatRoom, ChatMember, Message, Image, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload } from '@/type'
 import { initApi } from '@/api/AppInit.ts'
 import { getChatMembersApi, joinChatApi } from '@/api/Chat'
 import { validateChatJoinApi } from '@/api/Auth'
@@ -104,6 +104,55 @@ export const useRoomStore = defineStore('room', () => {
     return avatar !== null && avatar !== undefined
   }
 
+  const buildRoomAvatarKey = (chatCode?: string) => {
+    return chatCode ? `room:${chatCode}` : ''
+  }
+
+  const buildUserAvatarKey = (uid?: string) => {
+    return uid ? `user:${uid}` : ''
+  }
+
+  const resolveRoomAvatar = (room: ChatRoom, imageStore: ReturnType<typeof useImageStore>) => {
+    if (!room.avatar) return
+    const resolved = imageStore.resolveAvatarFromCache(buildRoomAvatarKey(room.chatCode), room.avatar)
+    if (resolved) {
+      room.avatar = resolved
+    }
+  }
+
+  const resolveMemberAvatar = (member: ChatMember, imageStore: ReturnType<typeof useImageStore>) => {
+    if (!member.avatar) return
+    const resolved = imageStore.resolveAvatarFromCache(buildUserAvatarKey(member.uid), member.avatar)
+    if (resolved) {
+      member.avatar = resolved
+    }
+  }
+
+  const collectAvatarCacheKeys = () => {
+    const keys = new Set<string>()
+    _roomList.value.forEach((room) => {
+      const roomKey = buildRoomAvatarKey(room.chatCode)
+      if (roomKey) keys.add(roomKey)
+      room.chatMembers?.forEach((member) => {
+        const memberKey = buildUserAvatarKey(member.uid)
+        if (memberKey) keys.add(memberKey)
+      })
+    })
+    for (const pending of pendingRoomInfoMap.values()) {
+      const roomKey = buildRoomAvatarKey(pending.chatCode)
+      if (roomKey) keys.add(roomKey)
+      pending.chatMembers?.forEach((member) => {
+        const memberKey = buildUserAvatarKey(member.uid)
+        if (memberKey) keys.add(memberKey)
+      })
+    }
+    if (loginUserInfo.value?.uid) {
+      const selfKey = buildUserAvatarKey(loginUserInfo.value.uid)
+      if (selfKey) keys.add(selfKey)
+    }
+    return keys
+  }
+
   /**
    * 初始化房间列表及用户在线状态
    */
@@ -111,7 +160,6 @@ export const useRoomStore = defineStore('room', () => {
     try {
       isRoomListLoading.value = true
       const imageStore = useImageStore()
-      const prevAvatars = _roomList.value.map(r => r.avatar).filter(isImage)
       // 1) 从后端拉取：chatList + userStatusList
       const result = await initApi()
       if (result?.data) {
@@ -147,10 +195,15 @@ export const useRoomStore = defineStore('room', () => {
 
       // 2) 列表头像缩略图：在 Store 更新后异步预取 blob（不阻塞主流程）
       const rooms = _roomList.value || []
-      const allAvatars = rooms.map(r => r.avatar).filter(isImage)
+      rooms.forEach((room) => {
+        resolveRoomAvatar(room, imageStore)
+        room.chatMembers?.forEach((member) => resolveMemberAvatar(member, imageStore))
+      })
+      const roomAvatars = rooms.map(r => r.avatar).filter(isImage)
+      const memberAvatars = rooms.flatMap((room) => room.chatMembers?.map((member) => member.avatar) || []).filter(isImage)
       // prefetchThumbs 内部已自动去重，无需手动去重
-      imageStore.revokeUnusedBlobs(prevAvatars, allAvatars)
-      imageStore.prefetchThumbs(allAvatars, 6)
+      imageStore.prefetchThumbs([...roomAvatars, ...memberAvatars], 6)
+      imageStore.pruneAvatarCache(collectAvatarCacheKeys())
     } catch (e) {
       console.error('[ERROR] [RoomStore] Init API Error:', e)
     } finally {
@@ -165,12 +218,15 @@ export const useRoomStore = defineStore('room', () => {
   const updateRoomInfo = (newRoomInfo: ChatRoom) => {
     if (!newRoomInfo || !newRoomInfo.chatCode) return
     const imageStore = useImageStore()
+    resolveRoomAvatar(newRoomInfo, imageStore)
+    newRoomInfo.chatMembers?.forEach((member) => resolveMemberAvatar(member, imageStore))
 
     // 列表尚未加载完成时：只缓存，不插入（避免 refresh 时只出现“当前房间 1 条”）
     if (!hasRoomListLoaded.value && _roomList.value.length === 0) {
       pendingRoomInfoMap.set(newRoomInfo.chatCode, newRoomInfo)
       // 头像仍可提前预取（不影响列表长度）
       if (newRoomInfo.avatar) imageStore.ensureThumbBlobUrl(newRoomInfo.avatar).then(() => { })
+      imageStore.pruneAvatarCache(collectAvatarCacheKeys())
       return
     }
     // 业务目的：进入房间后拿到更完整的 ChatRoom 信息（例如成员列表），需要覆盖到列表里
@@ -189,6 +245,7 @@ export const useRoomStore = defineStore('room', () => {
     const members = newRoomInfo.chatMembers || []
     // prefetchThumbs 内部已自动去重，无需手动去重
     imageStore.prefetchThumbs(members.map(m => m.avatar), 6)
+    imageStore.pruneAvatarCache(collectAvatarCacheKeys())
   }
 
   /**
@@ -212,14 +269,16 @@ export const useRoomStore = defineStore('room', () => {
     try {
       const res = await getChatMembersApi(chatCode)
       const members = res?.data || []
+      const imageStore = useImageStore()
+      members.forEach((member) => resolveMemberAvatar(member, imageStore))
       target.chatMembers = members
       target.memberCount = members.length
       target.onLineMemberCount = members.filter(m => m.online).length
 
       // 成员头像缩略图预取：异步触发，不阻塞 UI
       // prefetchThumbs 内部已自动去重，无需手动去重
-      const imageStore = useImageStore()
       imageStore.prefetchThumbs(members.map(m => m.avatar).filter(isImage), 6)
+      imageStore.pruneAvatarCache(collectAvatarCacheKeys())
     } catch (e) {
       console.error('[ERROR] [RoomStore] Fetch members failed:', e)
     } finally {
@@ -266,9 +325,11 @@ export const useRoomStore = defineStore('room', () => {
   /**
    * 添加单个成员到房间 (WeSocket 推送)
    */
-  const addRoomMember = (member: any) => {
+  const addRoomMember = (member: ChatMember) => {
     if (!member || !member.chatCode) return
     const room = _roomList.value.find(r => r.chatCode === member.chatCode)
+    const imageStore = useImageStore()
+    resolveMemberAvatar(member, imageStore)
     if (room) {
       // 1. 总是更新统计数据
       room.memberCount = (room.memberCount || 0) + 1
@@ -292,6 +353,7 @@ export const useRoomStore = defineStore('room', () => {
         }
       }
     }
+    imageStore.pruneAvatarCache(collectAvatarCacheKeys())
   }
 
   /**
@@ -326,6 +388,8 @@ export const useRoomStore = defineStore('room', () => {
         const status = userStatusList.value.find(s => s.uid === m.uid)
         return status?.online
       }).length
+      const imageStore = useImageStore()
+      imageStore.pruneAvatarCache(collectAvatarCacheKeys())
       return
     }
 
@@ -336,6 +400,57 @@ export const useRoomStore = defineStore('room', () => {
         room.onLineMemberCount = Math.max(room.onLineMemberCount - 1, 0)
       }
     }
+    const imageStore = useImageStore()
+    imageStore.pruneAvatarCache(collectAvatarCacheKeys())
+  }
+
+  /**
+   * 处理成员被移除广播
+   *
+   * @param payload 被移除广播数据
+   */
+  const handleMemberRemoved = async (payload: MemberRemovedBroadcastPayload) => {
+    const room = _roomList.value.find(r => r.chatCode === payload.chatCode)
+    if (!room) return
+
+    const removedUid = payload.removedUid
+    const isSelfRemoved = loginUserInfo.value?.uid === removedUid
+
+    if (room.chatMembers && room.chatMembers.length > 0) {
+      room.chatMembers = room.chatMembers.filter(m => m.uid !== removedUid)
+      room.memberCount = room.chatMembers.length
+      room.onLineMemberCount = room.chatMembers.filter(m => {
+        const status = userStatusList.value.find(s => s.uid === m.uid)
+        return status?.online
+      }).length
+    } else {
+      room.memberCount = Math.max((room.memberCount || 0) - 1, 0)
+      if (room.onLineMemberCount && room.onLineMemberCount > 0) {
+        const status = userStatusList.value.find(s => s.uid === removedUid)
+        if (status?.online) {
+          room.onLineMemberCount = Math.max(room.onLineMemberCount - 1, 0)
+        }
+      }
+    }
+
+    const imageStore = useImageStore()
+    imageStore.pruneAvatarCache(collectAvatarCacheKeys())
+
+    if (!isSelfRemoved) return
+
+    const roomName = room.chatName || payload.chatCode
+    await showAlertDialog({
+      message: t('chat.member_removed_alert', [roomName, payload.operatorNickname]),
+      type: 'warning',
+    })
+
+    const currentChatParam = router.currentRoute.value.params.chatCode
+    const activeChatCode = typeof currentChatParam === 'string' ? currentChatParam : ''
+    if (activeChatCode === payload.chatCode) {
+      currentRoomCode.value = ''
+      await router.push('/chat')
+    }
+    await initRoomList()
   }
 
   /**
@@ -498,6 +613,7 @@ export const useRoomStore = defineStore('room', () => {
     addRoomMember,
     updateRoomPreview,
     handleMemberLeave,
+    handleMemberRemoved,
     handleOwnerTransfer,
     handleRoomDisband,
     fetchRoomMembers,

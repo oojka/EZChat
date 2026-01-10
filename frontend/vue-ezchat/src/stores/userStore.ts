@@ -14,10 +14,7 @@ import type {
   ChatRoom,
   Token,
   GuestJoinReq,
-  JoinChatReq,
-  JwtPayload,
   UserLoginState,
-  LoginForm
 } from '@/type'
 
 // API 导入
@@ -36,9 +33,16 @@ import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 
 // 校验工具导入
-import { isLoginUser, isJwtPayload } from '@/utils/validators'
+import { decodeJwtPayload, isJwtPayload, isRecord } from '@/utils/validators'
 
 const { t } = i18n.global
+
+type SyncUserStateOptions = {
+  loadUserInfo?: boolean
+}
+
+type RestoreLoginOptions = SyncUserStateOptions
+
 /**
  * UserStore：管理登录态与当前用户信息
  *
@@ -193,6 +197,68 @@ export const useUserStore = defineStore('user', () => {
     validatedChatRoom.value = null
   }
 
+  const REFRESH_TOKEN_KEY = 'refreshToken'
+
+  const clearLegacyLoginStorage = () => {
+    localStorage.removeItem('loginUser')
+    localStorage.removeItem('loginGuest')
+  }
+
+  const persistRefreshToken = (refreshToken: string) => {
+    if (!refreshToken) {
+      localStorage.removeItem(REFRESH_TOKEN_KEY)
+      clearLegacyLoginStorage()
+      return
+    }
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+    clearLegacyLoginStorage()
+  }
+
+  const clearStoredRefreshToken = () => {
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+    clearLegacyLoginStorage()
+  }
+
+  const extractRefreshTokenFromLegacyStorage = (): string => {
+    const legacyKeys = ['loginUser', 'loginGuest']
+    for (const key of legacyKeys) {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      try {
+        const parsed = JSON.parse(raw)
+        if (isRecord(parsed) && typeof parsed.refreshToken === 'string' && parsed.refreshToken) {
+          persistRefreshToken(parsed.refreshToken)
+          return parsed.refreshToken
+        }
+      } catch {
+        // ignore legacy parse errors
+      }
+    }
+    clearLegacyLoginStorage()
+    return ''
+  }
+
+  const getStoredRefreshToken = (): string => {
+    const stored = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (stored) return stored
+    if (stored === '') {
+      localStorage.removeItem(REFRESH_TOKEN_KEY)
+    }
+    return extractRefreshTokenFromLegacyStorage()
+  }
+
+  const buildLoginUserFromRefreshToken = (refreshToken: string): LoginUser | null => {
+    const payload = decodeJwtPayload(refreshToken)
+    if (!payload) return null
+    if (!payload.uid || !payload.username) return null
+    return {
+      uid: payload.uid,
+      username: payload.username,
+      accessToken: '',
+      refreshToken,
+    }
+  }
+
 
   // =========================
   // 2.1 用户认证相关 Actions
@@ -204,7 +270,7 @@ export const useUserStore = defineStore('user', () => {
    * 业务逻辑：
    * 1. 调用后端登录接口
    * 2. 更新内存状态（loginUser）
-   * 3. 持久化到 localStorage
+   * 3. 持久化 refreshToken 到 localStorage
    * 4. 触发状态同步（token 和 loginUserInfo）
    *
    * 注意：
@@ -236,36 +302,35 @@ export const useUserStore = defineStore('user', () => {
 
 
   /**
-   * 从 localStorage 恢复正式用户登录状态
+   * 从 localStorage 恢复正式用户登录状态（仅 refreshToken）
    *
    * 业务目的：
    * - 页面刷新时优先"同步恢复 token"，让后续 API/WS 尽快可用
    * - 用户详情（昵称/头像）可后台再拉取，不阻塞首屏
    *
    * 业务逻辑：
-   * 1. 从 localStorage 读取 loginUser
+   * 1. 从 localStorage 读取 refreshToken
    * 2. 验证数据格式
    * 3. 更新内存状态
    * 4. 触发状态同步
    *
    * @returns 是否恢复成功
    */
-  const restoreLoginUserFromStorage = (): boolean => {
-    const rowString: string | null = localStorage.getItem('loginUser')
-    if (!rowString) return false
+  const restoreLoginUserFromStorage = (options?: RestoreLoginOptions): boolean => {
+    const refreshToken = getStoredRefreshToken()
+    if (!refreshToken) return false
     try {
-      const parsed = JSON.parse(rowString)
-      if (isLoginUser(parsed)) {
-        loginUser.value = {
-          type: 'formal',
-          formal: parsed,
-          guest: undefined
-        }
-        // 手动触发状态同步（token 和 loginUserInfo）
-        syncUserState(parsed, 'formal')
-        return token.value.type !== 'none' && !!token.value.refreshToken?.token
+      const rebuilt = buildLoginUserFromRefreshToken(refreshToken)
+      if (!rebuilt) return false
+      if (rebuilt.username === 'guest') return false
+      loginUser.value = {
+        type: 'formal',
+        formal: rebuilt,
+        guest: undefined
       }
-      return false
+      // 手动触发状态同步（token 和 loginUserInfo）
+      syncUserState(rebuilt, 'formal', options)
+      return token.value.type !== 'none' && !!token.value.refreshToken?.token
     } catch {
       return false
     }
@@ -289,12 +354,25 @@ export const useUserStore = defineStore('user', () => {
    *
    * @returns 是否存在有效 token
    */
-  const restoreLoginStateIfNeeded = (prefer: 'formal' | 'guest' = 'formal'): boolean => {
+  const restoreLoginStateIfNeeded = (prefer: 'formal' | 'guest' = 'formal', options?: RestoreLoginOptions): boolean => {
     if (hasToken()) return true
     if (prefer === 'guest') {
-      return restoreLoginGuestFromStorage() || restoreLoginUserFromStorage()
+      return restoreLoginGuestFromStorage(options) || restoreLoginUserFromStorage(options)
     }
-    return restoreLoginUserFromStorage() || restoreLoginGuestFromStorage()
+    return restoreLoginUserFromStorage(options) || restoreLoginGuestFromStorage(options)
+  }
+
+  /**
+   * 主动触发用户信息同步（不阻塞初始化）
+   */
+  const syncLoginUserInfo = async (): Promise<void> => {
+    if (loginUser.value.type === 'formal' && loginUser.value.formal) {
+      await syncUserState(loginUser.value.formal, 'formal')
+      return
+    }
+    if (loginUser.value.type === 'guest' && loginUser.value.guest) {
+      await syncUserState(loginUser.value.guest, 'guest')
+    }
   }
 
   /**
@@ -316,12 +394,13 @@ export const useUserStore = defineStore('user', () => {
    * - 使用 replace 跳转避免保留历史记录
    * - 延迟关闭加载状态，让路由守卫先处理
    */
-  const logout = async (options?: { showDialog?: boolean }) => {
+  const logout = async (options?: { showDialog?: boolean; silent?: boolean }) => {
     if (isLoggingOut.value) {
       return
     }
     isLoggingOut.value = true
     const shouldShowDialog = options?.showDialog ?? false
+    const silent = options?.silent ?? false
 
     if (shouldShowDialog) {
       try {
@@ -344,8 +423,7 @@ export const useUserStore = defineStore('user', () => {
       websocketStore.close()
 
       // 2) 清除持久化：让刷新后不会"误以为已登录"
-      localStorage.removeItem('loginUser')
-      localStorage.removeItem('loginGuest')
+      clearStoredRefreshToken()
 
       // 3) 重置 Store：清空所有与用户相关的数据，防止跨账号串数据
       // 注意：先重置其他Store，最后重置userStore自身
@@ -356,12 +434,12 @@ export const useUserStore = defineStore('user', () => {
       useUserStore().resetState()
 
       // 4) 显示成功消息
-      if (!shouldShowDialog) {
+      if (!shouldShowDialog && !silent) {
         ElMessage.success(t('auth.logout_success') || 'log out success')
       }
     } catch (e) {
       // 如果路由跳转失败，至少显示成功消息
-      if (!shouldShowDialog) {
+      if (!shouldShowDialog && !silent) {
         ElMessage.success(t('auth.logout_success') || 'log out success')
       }
 
@@ -429,31 +507,31 @@ export const useUserStore = defineStore('user', () => {
   // =========================
 
   /**
-   * 从 localStorage 恢复访客登录状态
+   * 从 localStorage 恢复访客登录状态（仅 refreshToken）
    *
    * 业务逻辑：
-   * 1. 从 localStorage 读取 loginGuest
+   * 1. 从 localStorage 读取 refreshToken
    * 2. 验证数据格式
    * 3. 更新内存状态
    * 4. 触发状态同步
    *
    * @returns 是否恢复成功
    */
-  const restoreLoginGuestFromStorage = (): boolean => {
-    const rowString: string | null = localStorage.getItem('loginGuest')
-    if (!rowString) return false
+  const restoreLoginGuestFromStorage = (options?: RestoreLoginOptions): boolean => {
+    const refreshToken = getStoredRefreshToken()
+    if (!refreshToken) return false
     try {
-      const parsed = JSON.parse(rowString)
-      if (isLoginUser(parsed)) {
-        loginUser.value = {
-          type: 'guest',
-          guest: parsed,
-          formal: undefined
-        }
-        // 手动触发状态同步（token 和 loginUserInfo）
-        syncUserState(parsed, 'guest')
-        return true;
+      const rebuilt = buildLoginUserFromRefreshToken(refreshToken)
+      if (!rebuilt) return false
+      if (rebuilt.username !== 'guest') return false
+      loginUser.value = {
+        type: 'guest',
+        guest: rebuilt,
+        formal: undefined
       }
+      // 手动触发状态同步（token 和 loginUserInfo）
+      syncUserState(rebuilt, 'guest', options)
+      return true;
     } catch (e) {
       isAppError(e)
       throw createAppError(
@@ -475,7 +553,7 @@ export const useUserStore = defineStore('user', () => {
    * 业务逻辑：
    * 1. 更新内存状态
    * 2. 触发状态同步
-   * 3. 持久化到 localStorage
+   * 3. 仅持久化 refreshToken 到 localStorage
    *
    * @param guest 访客用户对象
    */
@@ -491,11 +569,8 @@ export const useUserStore = defineStore('user', () => {
 
     // 2. 持久化操作进行异常捕获
     try {
-      // 先删除之前的登录用户
-      localStorage.removeItem('loginUser')
-      localStorage.removeItem('loginGuest')
-      // 再保存新的登录用户
-      localStorage.setItem('loginGuest', JSON.stringify(guest))
+      // 只保存 refreshToken
+      persistRefreshToken(guest.refreshToken)
     } catch (e) {
       // 使用你定义的错误工厂记录日志
       isAppError(e)
@@ -532,7 +607,7 @@ export const useUserStore = defineStore('user', () => {
    * 业务逻辑：
    * 1. 更新内存状态
    * 2. 触发状态同步
-   * 3. 持久化到 localStorage
+   * 3. 仅持久化 refreshToken 到 localStorage
    *
    * @param newloginUser 正式用户对象
    */
@@ -548,11 +623,8 @@ export const useUserStore = defineStore('user', () => {
 
     // 2. 持久化操作进行异常捕获
     try {
-      // 先删除之前的登录用户
-      localStorage.removeItem('loginGuest')
-      localStorage.removeItem('loginUser')
-      // 再保存新的登录用户
-      localStorage.setItem('loginUser', JSON.stringify(newloginUser))
+      // 只保存 refreshToken
+      persistRefreshToken(newloginUser.refreshToken)
     } catch (e) {
       // 使用你定义的错误工厂记录日志
       isAppError(e)
@@ -810,7 +882,7 @@ export const useUserStore = defineStore('user', () => {
               formal: updatedUser,
               guest: undefined
             }
-            localStorage.setItem('loginUser', JSON.stringify(updatedUser))
+            persistRefreshToken(newRefreshToken)
           } else if (currentType === 'guest' && loginUser.value.guest) {
             const updatedGuest: LoginUser = {
               ...loginUser.value.guest,
@@ -822,7 +894,7 @@ export const useUserStore = defineStore('user', () => {
               formal: undefined,
               guest: updatedGuest
             }
-            localStorage.setItem('loginGuest', JSON.stringify(updatedGuest))
+            persistRefreshToken(newRefreshToken)
           }
 
           setToken(newRefreshToken, 'refresh', currentType)
@@ -875,7 +947,7 @@ export const useUserStore = defineStore('user', () => {
    * @param user 用户对象（loginUser 或 loginGuest）
    * @param type 用户类型：formal 或 guest
    */
-  const syncUserState = async (user: LoginUser | null, type: 'formal' | 'guest') => {
+  const syncUserState = async (user: LoginUser | null, type: 'formal' | 'guest', options?: SyncUserStateOptions) => {
     if (!user || !user.refreshToken) return
 
     // 1. 同步 refreshToken
@@ -883,6 +955,9 @@ export const useUserStore = defineStore('user', () => {
     if (user.accessToken) {
       setToken(user.accessToken, 'access', type)
     }
+
+    const shouldLoadUserInfo = options?.loadUserInfo ?? true
+    if (!shouldLoadUserInfo) return
 
     // 如果没有 token，则不加载用户详细信息
     if (!hasToken()) return
@@ -902,16 +977,17 @@ export const useUserStore = defineStore('user', () => {
         const result = await getUserInfoApi(uid)
         if (result) {
           const imageStore = useImageStore()
-          const prevAvatar = loginUserInfo.value?.avatar
+          const avatarKey = result.data?.uid ? `user:${result.data.uid}` : ''
+          const resolvedAvatar = result.data?.avatar
+            ? imageStore.resolveAvatarFromCache(avatarKey, result.data.avatar)
+            : undefined
           // 设置用户信息，并添加 userType 字段
           loginUserInfo.value = {
             ...result.data,
+            avatar: resolvedAvatar || result.data.avatar,
             userType: type
           }
           // Store 更新后：预取自己的头像缩略图 blob（不阻塞初始化）
-          if (prevAvatar && loginUserInfo.value?.avatar) {
-            imageStore.revokeUnusedBlobs([prevAvatar], [loginUserInfo.value.avatar])
-          }
           if (loginUserInfo.value?.avatar) {
             imageStore.ensureThumbBlobUrl(loginUserInfo.value.avatar).then(() => { })
           }
@@ -952,7 +1028,9 @@ export const useUserStore = defineStore('user', () => {
     getAccessToken,
     hasToken,
     restoreLoginStateIfNeeded,
+    syncLoginUserInfo,
     refreshAccessToken,
+    getRefreshAccessTokenPromise: () => refreshTokenPromise,
 
     // =========================
     // 3.4 用户状态管理方法

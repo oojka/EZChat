@@ -23,6 +23,8 @@ public class ChatCreate {
     private Integer ownerId;
     private String chatPasswordHash;
     private Integer joinEnabled;
+    private Integer maxMembers;
+    private String announcement;
     /**
      * 关联 objects 表的 id（头像对象，逻辑外键）
      * <p>
@@ -32,5 +34,4 @@ public class ChatCreate {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
-
 

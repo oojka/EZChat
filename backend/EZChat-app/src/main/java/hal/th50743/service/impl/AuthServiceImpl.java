@@ -13,15 +13,21 @@ import hal.th50743.service.PresenceService;
 import hal.th50743.service.TokenCacheService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.JwtUtils;
+import hal.th50743.utils.MessageUtils;
 import hal.th50743.utils.PasswordUtils;
+import hal.th50743.ws.WebSocketServer;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 认证服务实现类
@@ -76,6 +82,48 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
+     * 登录前强制下线已在线的同账号会话
+     *
+     * @param userId  用户ID
+     * @param uid     用户UID
+     * @param isFormal 是否正式用户
+     */
+    private void forceLogoutIfOnline(Integer userId, String uid, boolean isFormal) {
+        if (userId == null || uid == null || uid.isBlank()) {
+            log.warn("强制下线失败: userId 或 uid 为空");
+            return;
+        }
+        if (!presenceService.isOnline(userId)) {
+            return;
+        }
+
+        log.info("检测到账号在线，准备强制下线: userId={}, uid={}", userId, uid);
+
+        // 1) 删除旧 Token
+        tokenCacheService.evictAccessToken(userId);
+        if (isFormal) {
+            formalUserService.clearRefreshToken(userId);
+        } else {
+            tokenCacheService.evictGuestRefreshToken(userId);
+        }
+
+        // 2) 发送强制下线通知
+        ForceLogoutBroadcastVO payload = new ForceLogoutBroadcastVO(uid, "LOGIN_ELSEWHERE", LocalDateTime.now());
+        String message = MessageUtils.setMessage(2003, "FORCE_LOGOUT", payload);
+        WebSocketServer.broadcast(message, List.of(userId));
+
+        // 3) 主动关闭该用户的 WS 连接
+        Session session = WebSocketServer.getOnLineUserList().get(userId);
+        if (session != null && session.isOpen()) {
+            try {
+                session.close(new CloseReason(() -> 4003, "FORCE_LOGOUT"));
+            } catch (IOException e) {
+                log.warn("强制下线关闭 WS 失败: userId={}, msg={}", userId, e.getMessage());
+            }
+        }
+    }
+
+    /**
      * 校验注册请求参数的合法性
      *
      * @param req 注册请求对象
@@ -103,6 +151,8 @@ public class AuthServiceImpl implements AuthService {
         if (res != null && res.getUid() != null) {
             log.info("User login successful: {}", res.getUid());
             userService.updateUserType(res.getId(), 1);
+            // 登录前检查在线状态并强制下线旧会话
+            forceLogoutIfOnline(res.getId(), res.getUid(), true);
             return issueTokens(res.getUid(), res.getUsername(), res.getId(), true);
         }
 
@@ -285,6 +335,8 @@ public class AuthServiceImpl implements AuthService {
         User user = userService.add(userReq);
         log.info("Guest user created successfully: uid={}, nickName={}, assetId={}",
                 user.getUid(), user.getNickname(), user.getAssetId());
+        // 登录前检查在线状态并强制下线旧会话（访客同样适用）
+        forceLogoutIfOnline(user.getId(), user.getUid(), false);
 
         // 4. 执行加入聊天室逻辑
         // 4. 执行加入聊天室逻辑 (统一调用 ChatService)

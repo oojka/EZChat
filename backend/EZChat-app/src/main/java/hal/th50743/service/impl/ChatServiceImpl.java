@@ -494,6 +494,14 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException(ErrorCode.FORBIDDEN, "Join is disabled for this chat room");
         }
 
+        int maxMembers = info.getMaxMembers() == null ? 200 : info.getMaxMembers();
+        int currentMembers = chatMemberMapper.countMembersByChatId(chatId);
+        if (currentMembers >= maxMembers) {
+            log.warn("[Validate Join] Member limit reached: chatId={}, current={}, max={}", chatId,
+                    currentMembers, maxMembers);
+            throw new BusinessException(ErrorCode.CHAT_FULL, "Chat room is full");
+        }
+
         // 5. 如果是密码模式，验证密码
         if (req.getChatCode() != null && !req.getChatCode().isBlank()) {
             if (info.getChatPasswordHash() == null || info.getChatPasswordHash().isBlank()) {
@@ -641,6 +649,15 @@ public class ChatServiceImpl implements ChatService {
         // 检查聊天室是否允许新成员加入（joinEnabled == 1）
         if (Integer.valueOf(0).equals(chatInfo.getJoinEnabled())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "This chat room has disabled joining");
+        }
+
+        // ========== 步骤3.1: 成员上限校验 ==========
+        int maxMembers = chatInfo.getMaxMembers() == null ? 200 : chatInfo.getMaxMembers();
+        int currentMembers = chatMemberMapper.countMembersByChatId(chatInfo.getChatId());
+        if (currentMembers >= maxMembers) {
+            log.warn("[Join Chat] Member limit reached: chatId={}, current={}, max={}", chatInfo.getChatId(),
+                    currentMembers, maxMembers);
+            throw new BusinessException(ErrorCode.CHAT_FULL, "Chat room is full");
         }
 
         // ========== 步骤4: 执行加入操作 ==========
@@ -828,6 +845,8 @@ public class ChatServiceImpl implements ChatService {
         String passwordHash = null;
         String password = chatReq.getPassword();
         String confirm = chatReq.getPasswordConfirm();
+        int maxMembers = 200;
+        String announcement = null;
 
         // 2.1 如果提供了密码，需要验证和加密
         if (password != null && !password.isBlank()) {
@@ -864,6 +883,8 @@ public class ChatServiceImpl implements ChatService {
         chatCreate.setJoinEnabled(joinEnabled); // 是否允许加入
         chatCreate.setChatPasswordHash(passwordHash); // 密码哈希（可能为null）
         chatCreate.setObjectId(objectId); // 头像资源ID（可能为null）
+        chatCreate.setMaxMembers(maxMembers); // 群成员上限
+        chatCreate.setAnnouncement(announcement); // 群公告
 
         // 4.1 重试机制：最多尝试5次生成唯一聊天室代码
         for (int i = 1; i <= 5; i++) {
@@ -1421,6 +1442,243 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
+     * 更新聊天室基础信息（仅群主可执行）
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req      基础信息更新请求
+     * @return 更新后的聊天室信息
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ChatVO updateChatBasicInfo(Integer userId, String chatCode, ChatBasicUpdateReq req) {
+        if (userId == null || chatCode == null || chatCode.isBlank()) {
+            log.warn("[Chat Basic] Invalid params: userId={}, chatCode={}", userId, chatCode);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Chat code is required");
+        }
+
+        Integer chatId = getChatId(userId, chatCode);
+        Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
+        if (ownerId == null) {
+            log.error("[Chat Basic] Chat owner not found: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Chat owner not found");
+        }
+        if (!Objects.equals(ownerId, userId)) {
+            log.warn("[Chat Basic] Permission denied: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only owner can update chat info");
+        }
+        if (req == null) {
+            log.warn("[Chat Basic] Request body missing: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Request body is required");
+        }
+
+        String chatName = req.getChatName();
+        if (chatName == null || chatName.isBlank()) {
+            log.warn("[Chat Basic] chatName required: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "chatName is required");
+        }
+        if (chatName.length() > 20) {
+            log.warn("[Chat Basic] chatName too long: chatId={}, length={}", chatId, chatName.length());
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "chatName is too long");
+        }
+
+        Integer maxMembers = req.getMaxMembers();
+        if (maxMembers == null) {
+            log.warn("[Chat Basic] maxMembers required: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "maxMembers is required");
+        }
+        if (maxMembers < 2 || maxMembers > 200) {
+            log.warn("[Chat Basic] maxMembers out of range: chatId={}, value={}", chatId, maxMembers);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "maxMembers out of range");
+        }
+
+        String announcement = req.getAnnouncement();
+        if (announcement != null && announcement.length() > 500) {
+            log.warn("[Chat Basic] announcement too long: chatId={}, length={}", chatId, announcement.length());
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "announcement is too long");
+        }
+
+        Integer assetId = chatMapper.selectAssetIdByChatId(chatId);
+        Image avatar = req.getAvatar();
+        if (avatar != null) {
+            if (avatar.getAssetId() != null) {
+                assetId = avatar.getAssetId();
+            } else if (avatar.getImageName() != null) {
+                Asset existing = assetService.findByAssetName(avatar.getImageName());
+                if (existing != null) {
+                    assetId = existing.getId();
+                } else {
+                    log.warn("[Chat Basic] Avatar asset not found: chatId={}, imageName={}", chatId,
+                            avatar.getImageName());
+                }
+            }
+        }
+
+        chatMapper.updateChatBasicInfo(chatId, chatName, maxMembers, announcement, assetId);
+        log.info("[Chat Basic] Updated: chatId={}, userId={}", chatId, userId);
+        return getChat(userId, chatCode);
+    }
+
+    /**
+     * 批量移除聊天室成员（仅群主可执行）
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req      移除请求
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void kickMembers(Integer userId, String chatCode, ChatKickReq req) {
+        if (userId == null || chatCode == null || chatCode.isBlank()) {
+            log.warn("[Kick Member] Invalid params: userId={}, chatCode={}", userId, chatCode);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Chat code is required");
+        }
+
+        Integer chatId = getChatId(userId, chatCode);
+        Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
+        if (ownerId == null) {
+            log.error("[Kick Member] Chat owner not found: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Chat owner not found");
+        }
+        if (!Objects.equals(ownerId, userId)) {
+            log.warn("[Kick Member] Permission denied: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only owner can remove members");
+        }
+        if (req == null || req.getMemberUids() == null || req.getMemberUids().isEmpty()) {
+            log.warn("[Kick Member] memberUids missing: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "memberUids is required");
+        }
+
+        List<ChatMember> members = chatMemberMapper.selectChatMemberListByChatId(chatId);
+        if (members == null || members.isEmpty()) {
+            log.warn("[Kick Member] Member list empty: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+
+        Map<String, ChatMember> memberMap = members.stream()
+                .filter(m -> m.getUid() != null)
+                .collect(Collectors.toMap(ChatMember::getUid, m -> m, (a, b) -> a));
+
+        Set<String> uniqueUids = new HashSet<>(req.getMemberUids());
+        List<ChatMember> targets = new ArrayList<>();
+        for (String uid : uniqueUids) {
+            ChatMember target = memberMap.get(uid);
+            if (target == null) {
+                log.warn("[Kick Member] Target not found: chatId={}, uid={}", chatId, uid);
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Target member not found");
+            }
+            if (Objects.equals(target.getUserId(), userId)) {
+                log.warn("[Kick Member] Attempt to remove owner: chatId={}, userId={}", chatId, userId);
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Owner cannot be removed");
+            }
+            targets.add(target);
+        }
+
+        if (targets.isEmpty()) {
+            log.warn("[Kick Member] No valid targets: chatId={}, userId={}", chatId, userId);
+            return;
+        }
+
+        List<Integer> targetIds = targets.stream()
+                .map(ChatMember::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (targetIds.isEmpty()) {
+            log.warn("[Kick Member] Target IDs empty: chatId={}, userId={}", chatId, userId);
+            return;
+        }
+
+        int removed = chatMemberMapper.deleteChatMembersByChatIdAndUserIds(chatId, targetIds);
+        if (removed <= 0) {
+            log.warn("[Kick Member] Remove failed: chatId={}, userId={}, targetSize={}", chatId, userId,
+                    targetIds.size());
+            return;
+        }
+
+        User operator = userMapper.selectUserById(userId);
+        if (operator == null) {
+            log.error("[Kick Member] Operator not found: userId={}", userId);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+
+        List<Integer> memberIds = members.stream().map(ChatMember::getUserId).collect(Collectors.toList());
+        LocalDateTime now = LocalDateTime.now();
+        for (ChatMember target : targets) {
+            User removedUser = userMapper.selectUserById(target.getUserId());
+            if (removedUser == null) {
+                log.warn("[Kick Member] Removed user not found: chatId={}, userId={}", chatId, target.getUserId());
+                continue;
+            }
+            broadcastMemberRemoved(operator, removedUser, chatCode, chatId, memberIds, now);
+        }
+
+        log.info("[Kick Member] Removed members: chatId={}, operatorId={}, count={}", chatId, userId,
+                targets.size());
+    }
+
+    /**
+     * 群主转让（仅群主可执行）
+     *
+     * @param userId   当前用户ID
+     * @param chatCode 聊天室代码
+     * @param req      转让请求
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void transferOwner(Integer userId, String chatCode, ChatOwnerTransferReq req) {
+        if (userId == null || chatCode == null || chatCode.isBlank()) {
+            log.warn("[Owner Transfer] Invalid params: userId={}, chatCode={}", userId, chatCode);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Chat code is required");
+        }
+
+        Integer chatId = getChatId(userId, chatCode);
+        Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
+        if (ownerId == null) {
+            log.error("[Owner Transfer] Chat owner not found: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Chat owner not found");
+        }
+        if (!Objects.equals(ownerId, userId)) {
+            log.warn("[Owner Transfer] Permission denied: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only owner can transfer ownership");
+        }
+        if (req == null || req.getNewOwnerUid() == null || req.getNewOwnerUid().isBlank()) {
+            log.warn("[Owner Transfer] newOwnerUid missing: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "newOwnerUid is required");
+        }
+        User oldOwner = userMapper.selectUserById(userId);
+        if (oldOwner == null) {
+            log.error("[Owner Transfer] Operator not found: userId={}", userId);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+        if (req.getNewOwnerUid().equals(oldOwner.getUid())) {
+            log.warn("[Owner Transfer] newOwnerUid is owner: chatId={}, userId={}", chatId, userId);
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "newOwnerUid cannot be owner");
+        }
+
+        List<ChatMember> members = chatMemberMapper.selectChatMemberListByChatId(chatId);
+        if (members == null || members.isEmpty()) {
+            log.warn("[Owner Transfer] Member list empty: chatId={}", chatId);
+            throw new BusinessException(ErrorCode.CHAT_NOT_FOUND, "Chat room not found");
+        }
+
+        ChatMember nextOwner = members.stream()
+                .filter(m -> req.getNewOwnerUid().equals(m.getUid()))
+                .findFirst()
+                .orElse(null);
+        if (nextOwner == null || nextOwner.getUserId() == null) {
+            log.warn("[Owner Transfer] Target not in chat: chatId={}, uid={}", chatId, req.getNewOwnerUid());
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Target is not a member");
+        }
+
+        chatMapper.updateChatOwner(chatId, nextOwner.getUserId());
+        List<Integer> memberIds = members.stream().map(ChatMember::getUserId).collect(Collectors.toList());
+        broadcastOwnerTransfer(oldOwner, nextOwner, chatCode, memberIds, LocalDateTime.now());
+
+        log.info("[Owner Transfer] Success: chatId={}, oldOwnerId={}, newOwnerId={}", chatId, userId,
+                nextOwner.getUserId());
+    }
+
+    /**
      * 解散聊天室（内部实现）
      *
      * @param operator  操作人信息
@@ -1486,6 +1744,49 @@ public class ChatServiceImpl implements ChatService {
                 chatCode, user.getUid(), displayName, now);
         String leaveJson = MessageUtils.setMessage(3002, "MEMBER_LEAVE", leaveVO);
         WebSocketServer.broadcast(leaveJson, memberIds);
+    }
+
+    /**
+     * 广播成员被移除事件并写入系统消息
+     *
+     * @param operator  操作人
+     * @param removed   被移除成员
+     * @param chatCode  聊天室代码
+     * @param chatId    聊天室ID
+     * @param memberIds 广播目标成员ID列表
+     * @param now       当前时间
+     */
+    private void broadcastMemberRemoved(User operator, User removed, String chatCode, Integer chatId,
+            List<Integer> memberIds, LocalDateTime now) {
+        String removedName = buildDisplayName(removed);
+        String operatorName = buildDisplayName(operator);
+        String systemText = removedName + "|" + operatorName;
+
+        // 1) 写入系统消息（Type 13: 成员被移除）
+        messageMapper.updateChatSequence(chatId);
+        Long seqId = messageMapper.selectCurrentSequence(chatId);
+        Message sysMsg = new Message();
+        sysMsg.setChatId(chatId);
+        sysMsg.setSenderId(operator.getId());
+        sysMsg.setSeqId(seqId);
+        sysMsg.setType(13);
+        sysMsg.setText(systemText);
+        sysMsg.setAssetIds("");
+        sysMsg.setCreateTime(now);
+        sysMsg.setUpdateTime(now);
+        messageMapper.insertMessage(sysMsg);
+
+        // 2) 广播消息给前端渲染
+        MessageVO messageVO = new MessageVO(operator.getUid(), chatCode, seqId, 13,
+                systemText, "", Collections.emptyList(), now);
+        String messageJson = MessageUtils.setMessage(1001, "MESSAGE", messageVO);
+        WebSocketServer.broadcast(messageJson, memberIds);
+
+        // 3) 广播成员被移除事件（用于更新成员列表/弹窗）
+        MemberRemovedBroadcastVO removedVO = new MemberRemovedBroadcastVO(
+                chatCode, removed.getUid(), removedName, operator.getUid(), operatorName, now);
+        String removedJson = MessageUtils.setMessage(3005, "MEMBER_REMOVED", removedVO);
+        WebSocketServer.broadcast(removedJson, memberIds);
     }
 
     /**

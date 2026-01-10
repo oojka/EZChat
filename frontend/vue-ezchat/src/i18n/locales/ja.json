@@ -22,7 +22,8 @@
     "copy": "コピー",
     "copied": "コピーしました",
     "copy_failed": "コピーに失敗しました",
-    "verifying_invitation": "招待を確認中..."
+    "verifying_invitation": "招待を確認中...",
+    "save": "保存"
   },
   "dialog": {
     "tip": "ヒント",
@@ -86,7 +87,8 @@
     "too_fast": "試行回数が多すぎます。{sec} 秒お待ちください。",
     "guest": "ゲスト",
     "login_failed": "ログインに失敗しました。認証情報を確認してください。",
-    "session_expired": "セッションが期限切れです。再度ログインしてください。"
+    "session_expired": "セッションが期限切れです。再度ログインしてください。",
+    "force_logout": "別の端末でログインされたため、再度ログインしてください。"
   },
   "validation": {
     "nickname_required": "表示名が必要です。",
@@ -111,7 +113,10 @@
     "chat_code_format": "ルームコードは8桁の数字でなければなりません。",
     "invite_url_required": "招待リンクを入力してください。",
     "invite_url_format": "無効な招待リンク形式です。",
-    "image_upload_limit": "画像のアップロード件数が上限に達しました。"
+    "image_upload_limit": "画像のアップロード件数が上限に達しました。",
+    "chat_max_members_required": "最大人数を入力してください。",
+    "chat_max_members_range": "最大人数は 2〜200 の範囲です。",
+    "chat_announcement_length": "公告は 500 文字以内で入力してください。"
   },
   "api": {
     "too_many_requests": "リクエストが速すぎます。少しお待ちください。",
@@ -163,6 +168,7 @@
       "42002": "アクセス権限がありません：このチャットルームのメンバーではありません。",
       "42003": "パスワードが必要です。",
       "42004": "パスワードが正しくありません。",
+      "42005": "メンバー数の上限に達しました。",
       "42010": "無効な招待コードです。",
       "42011": "招待コードの有効期限が切れています。",
       "42012": "招待コードは取り消されました。",
@@ -299,7 +305,8 @@
     "leave_owner_confirm": "あなたは群主です。退出すると、群主は最も早く参加したメンバーに引き継がれます。続行しますか？",
     "disband_confirm": "解散すると全員が退出し、元に戻せません。解散しますか？",
     "owner_transfer_alert": "「{0}」の群主になりました。",
-    "room_disband_alert": "「{0}」は解散されました。"
+    "room_disband_alert": "「{0}」は解散されました。",
+    "member_removed_alert": "あなたは {1} によって「{0}」から削除されました。"
   },
   "room_settings": {
     "invite_section_title": "招待リンク管理",
@@ -322,9 +329,46 @@
     "revoke": "撤回",
     "password_section_title": "ルームパスワード",
     "password_section_desc": "有効にするとルームID+パスワードで参加できます。無効にするとパスワードを削除します。",
+    "password_change": "パスワードを変更",
     "password_save": "パスワードを保存",
     "password_update_success": "パスワードを更新しました",
-    "password_update_failed": "パスワードの更新に失敗しました"
+    "password_update_failed": "パスワードの更新に失敗しました",
+    "invites_tab": "招待リンク管理",
+    "security_tab": "パスワード設定",
+    "room_password": "ルームパスワード",
+    "basic_tab": "基本情報",
+    "members_tab": "メンバー管理",
+    "basic_title": "ルーム情報",
+    "member_title": "メンバー管理",
+    "basic_section_title": "ルーム基本情報",
+    "basic_section_desc": "名前・アイコン・人数上限・公告を更新します。",
+    "basic_save": "保存",
+    "basic_chat_name": "ルーム名",
+    "basic_chat_name_placeholder": "ルーム名を入力",
+    "basic_max_members": "人数上限",
+    "basic_max_members_hint": "範囲 2-200",
+    "basic_announcement": "公告",
+    "basic_announcement_placeholder": "ルールや重要なお知らせを書いてください",
+    "basic_avatar_tip": "クリックしてアイコンを変更",
+    "basic_update_success": "ルーム情報を更新しました",
+    "basic_update_failed": "ルーム情報の更新に失敗しました",
+    "basic_avatar_upload_failed": "アイコンのアップロードに失敗しました",
+    "member_section_title": "メンバー管理",
+    "member_section_desc": "メンバーの一括削除や群主の移譲。",
+    "member_kick": "メンバーを削除",
+    "member_kick_confirm": "{0} 名のメンバーを削除しますか？",
+    "member_kick_success": "メンバーを削除しました",
+    "member_kick_failed": "削除に失敗しました",
+    "member_kick_empty": "削除するメンバーを選択してください",
+    "member_empty": "メンバーがいません",
+    "member_owner_tag": "群主",
+    "member_transfer_title": "群主の移譲",
+    "member_transfer_placeholder": "新しい群主を選択",
+    "member_transfer_action": "移譲する",
+    "member_transfer_confirm": "{0} に群主を移譲しますか？",
+    "member_transfer_success": "群主を移譲しました",
+    "member_transfer_failed": "移譲に失敗しました",
+    "member_transfer_empty": "新しい群主を選択してください"
   },
   "create_chat": {
     "title": "ルーム新規作成",
@@ -415,6 +459,29 @@
     "room_created": "ルームが作成されました",
     "member_joined": "{0} がグループに参加しました",
     "guest_joined": "{0} がゲストとしてグループに参加しました",
-    "member_left": "{0} がグループを退出しました"
+    "member_left": "{0} がグループを退出しました",
+    "member_removed": "{0} が {1} によって削除されました"
+  },
+  "user_settings": {
+    "title": "設定",
+    "profile_tab": "プロフィール",
+    "security_tab": "セキュリティ",
+    "profile_title": "プロフィール編集",
+    "security_title": "パスワード変更",
+    "avatar": "アバター",
+    "avatar_hint": "JPG/PNG/GIF対応、2MB未満",
+    "nickname": "ニックネーム",
+    "nickname_placeholder": "ニックネームを入力",
+    "bio": "自己紹介",
+    "bio_placeholder": "自己紹介を入力...",
+    "profile_saved": "プロフィールを更新しました",
+    "old_password": "現在のパスワード",
+    "old_password_placeholder": "現在のパスワードを入力",
+    "new_password": "新しいパスワード",
+    "new_password_placeholder": "新しいパスワードを入力（8-20文字）",
+    "confirm_password": "パスワード確認",
+    "confirm_password_placeholder": "新しいパスワードを再入力",
+    "change_password": "パスワードを変更",
+    "password_changed_relogin": "パスワードが変更されました。新しいパスワードで再ログインしてください。"
   }
 }

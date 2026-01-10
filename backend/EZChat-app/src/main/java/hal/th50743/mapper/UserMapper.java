@@ -164,4 +164,20 @@ public interface UserMapper {
      * @return 用户对象
      */
     User selectUserById(Integer userId);
+
+    /**
+     * 更新正式用户密码
+     *
+     * @param userId       用户ID
+     * @param passwordHash 新的密码哈希
+     */
+    void updateFormalUserPassword(@Param("userId") Integer userId, @Param("passwordHash") String passwordHash);
+
+    /**
+     * 根据用户ID获取密码哈希
+     *
+     * @param userId 用户ID
+     * @return 密码哈希
+     */
+    String selectPasswordHashByUserId(@Param("userId") Integer userId);
 }

@@ -9,10 +9,13 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 ## 功能特性 / Features
 
 - **实时消息 / Real-time**：WebSocket 双向通信（消息广播、心跳、ACK）/ WebSocket messaging with heartbeat & ACK
-- **认证 / Auth**：注册登录 + 访客加入（JWT）/ registered login + guest access (JWT)
+- **认证 / Auth**：双 Token 机制（Access/Refresh）+ 自动刷新，支持注册登录与访客加入 / Dual Token (Access/Refresh) + auto-refresh, supports registered/guest access
+- **自动清理 / Auto-Cleanup**：自动清理长期离线的访客账号及其数据 / Auto-cleanup of inactive guest accounts
 - **聊天室 / Rooms**：创建房间（可使用密码加入/邀请链接/一次性链接）、通过 chatCode 获取房间信息并进入聊天 / create rooms (join with password/invite links/one-time links), join rooms via chatCode
+- **消息排序 / Message Ordering**：基于 Sequence ID 的精确消息排序与分页 / Precise message ordering & pagination based on Sequence ID
 - **在线状态 / Presence**：上线/离线广播 / online-offline presence broadcast
 - **状态防抖 / Presence Debounce**：30s 离线缓冲，防止网络波动造成误报 / 30s offline buffer to prevent status flickering
+- **操作审计 / Audit Logging**：全量操作日志记录，支持安全审计 / Comprehensive operation logging for security audit
 - **图片上传 / Image upload**：上传图片，按需生成缩略图（仅超阈值才生成），统一大小限制 10MB / uploads with conditional thumbnails, unified 10MB size limit
 - **默认头像生成 / Default avatar generation**：使用 DiceBear API 自动生成默认头像（用户使用 bottts-neutral，房间使用 identicon），未上传头像时自动使用 / auto-generates default avatars via DiceBear API (bottts-neutral for users, identicon for rooms) when no avatar uploaded
 - **图片去重 / Image deduplication**：双哈希策略（前端预计算 + 后端规范化哈希）防止重复上传，节省存储空间 / dual-hash strategy (frontend pre-calculation + backend normalized hash) prevents duplicate uploads
@@ -74,8 +77,9 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 - `chats`：聊天室（群/单聊统一存储）/ chat rooms
 - `chat_members`：聊天室成员关系 + 最后阅读时间 / membership + last_seen_at
 - `chat_invites`：聊天室邀请码（短链接加入权限，含 TTL / 次数 / 撤销）/ invite codes (short link join permission, TTL/usage/revoke)
-- `messages`：消息主体 / messages
+- `messages`：消息主体（含 seq_id） / messages (with seq_id)
 - `objects`：对象存储元数据（图片/文件对象，含去重哈希字段）/ object storage metadata (images/files with deduplication hash fields)
+- `operation_logs`：操作审计日志 / operation audit logs
 
 #### 字段要点 / Key fields (summary)
 
@@ -147,6 +151,7 @@ Schema is defined in `backend/EZChat-app/src/main/resources/sql/init.sql` (MySQL
 | `id` (PK) | 消息内部ID | internal message id |
 | `sender_id` | 发送者 `users.id` | sender `users.id` |
 | `chat_id` | 房间 `chats.id` | chat `chats.id` |
+| `seq_id` (Index) | 消息序列号（单调递增，用于排序和分页） | message sequence id (monotonic, for ordering & paging) |
 | `type` (tinyint) | 消息类型：0文本/1图片/2混合 | message type: 0 text / 1 image / 2 mixed |
 | `text` | 文本内容（可空） | text content (nullable) |
 | `object_ids` | 图片对象ID列表（JSON数组格式，如 `[1,2,3]`，存储 `objects.id`） | list of image object IDs (JSON array, e.g. `[1,2,3]`, stores `objects.id`) |
@@ -506,7 +511,12 @@ The system uses **logical foreign keys** to reference `objects` table, avoiding 
   "status": 1,
   "code": 200,
   "message": "success",
-  "data": { "uid": "20000001", "username": "alice", "token": "eyJhbGciOi..." }
+  "data": { 
+    "uid": "20000001", 
+    "username": "alice", 
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJ..." 
+  }
 }
 ```
 
@@ -539,7 +549,12 @@ The system uses **logical foreign keys** to reference `objects` table, avoiding 
   "status": 1,
   "code": 200,
   "message": "success",
-  "data": { "uid": "20000001", "username": "alice", "token": "eyJhbGciOi..." }
+  "data": { 
+    "uid": "20000001", 
+    "username": "alice", 
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJ..." 
+  }
 }
 ```
 
@@ -588,7 +603,12 @@ The system uses **logical foreign keys** to reference `objects` table, avoiding 
   "status": 1,
   "code": 200,
   "message": "success",
-  "data": { "uid": "90000001", "username": "guest", "token": "eyJhbGciOi..." }
+  "data": { 
+    "uid": "90000001", 
+    "username": "guest", 
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJ..." 
+  }
 }
 ```
 
@@ -810,7 +830,8 @@ The system uses **logical foreign keys** to reference `objects` table, avoiding 
 - **Auth**：需要 `token` / requires `token`
 - **Query**：
   - `chatCode`：必填
-  - `timeStamp`：可选，格式为 `LocalDateTime` 字符串，例如 `2026-01-02T10:00:00`
+  - `cursorSeqId`：可选，用于分页，传入上一页最后一条消息的 `seqId`
+  - `limit`：可选，默认 30
 - **Response (mock)**：`data` 为对象，包含 `messageList` 与 `chatRoom`
 
 ```json
@@ -1343,6 +1364,24 @@ EZChat/
 ---
 
 ## 更新日志 / Changelog
+
+### 2026-01-09
+- **Architecture**:
+  - **Dual Token Auth**: Implemented Access/Refresh token mechanism with caching (Caffeine).
+  - **Auto-Cleanup**: Added `GuestCleanupService` to remove inactive guest accounts automatically.
+  - **Audit Logging**: Added AOP-based operation logging (`OperationLog` table) for all CUD operations. 
+  - **SeqId Pagination**: Replaced timestamp-based pagination with stable `seq_id` cursor pagination.
+  - **Security Hardening**: Removed `accessToken` persistence in localStorage (memory-only) to reduce XSS risk.
+- **Frontend**:
+  - **Source Refactor**: Renamed `hooks` directory to `composables` to align with Vue 3 naming conventions.
+  - **Refresh Logic**: Implemented 401 retry lock and background token refresh.
+  - **Login Feedback**: Enhanced login error feedback (alerting failures directly on home page).
+  - **Room Settings**: 
+    - Added "Password Enabled" flag to public room info for accurate UI status.
+    - Redesigned Password Settings UI (Switch-driven, edit mode, conditional inputs).
+    - Improved Member Management (Per-row actions for Transfer/Kick, optimized list layout).
+  - **UI Polish**: Optimized flip card animations (0.7s) and verified light/dark mode consistency.
+  - **I18n**: Completed missing translations for Room Settings and Member Management alerts.
 
 ### 2026-01-07
 - **Refactoring**:

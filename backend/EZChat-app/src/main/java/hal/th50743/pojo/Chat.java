@@ -75,6 +75,24 @@ public class Chat {
     private Integer joinEnabled;
 
     /**
+     * 群成员上限
+     * <p>
+     * 业务规则：
+     * - 范围：2 ~ 200
+     * - 触发加入校验，超过上限则拒绝加入
+     */
+    private Integer maxMembers;
+
+    /**
+     * 群公告
+     * <p>
+     * 业务规则：
+     * - 最多 500 字符
+     * - 支持换行
+     */
+    private String announcement;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

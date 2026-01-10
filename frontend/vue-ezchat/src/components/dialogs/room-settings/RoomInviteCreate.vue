@@ -64,10 +64,19 @@ const oneTimeLinkModel = computed({
     display: flex;
     flex-direction: column;
     gap: 16px;
+    height: 100%;
+    /* Ensure full height */
 }
 
 .form-content {
     justify-content: space-between;
+}
+
+.form-section {
+    flex: 1;
+    /* Push footer down */
+    overflow-y: auto;
+    /* Allow scroll if content is long */
 }
 
 .form-desc {
@@ -86,5 +95,8 @@ const oneTimeLinkModel = computed({
     gap: 12px;
     padding-top: 20px;
     border-top: 1px solid var(--el-border-color-light);
+    margin-top: auto;
+    /* Double insurance to stick to bottom */
+    flex-shrink: 0;
 }
 </style>

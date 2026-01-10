@@ -5,8 +5,10 @@ import { useI18n } from 'vue-i18n'
 import AsideList from '@/views/layout/components/AsideList.vue'
 import GuestAside from '@/views/layout/components/GuestAside.vue'
 import UserItem from '@/components/UserItem.vue'
+import UserSettingsDialog from '@/components/dialogs/user-settings/index.vue'
 import { useUserStore } from '@/stores/userStore.ts'
 import { useWebsocketStore } from '@/stores/websocketStore.ts'
+import { useAppStore } from '@/stores/appStore.ts'
 
 const { t } = useI18n()
 
@@ -20,6 +22,16 @@ const switchView = (view: 'friends' | 'chat') => {
 // 用户信息相关
 const userStore = useUserStore()
 const websocketStore = useWebsocketStore()
+const appStore = useAppStore()
+
+// 处理设置按钮点击
+const handleSettingClick = () => {
+  // 正式用户打开用户设置对话框
+  if (userStore.loginUserInfo?.userType === 'formal') {
+    appStore.userSettingsDialogVisible = true
+  }
+  // 访客用户的升级逻辑已在 GuestAside 中处理
+}
 </script>
 
 <template>
@@ -55,8 +67,11 @@ const websocketStore = useWebsocketStore()
       <UserItem
         :avatar="userStore.loginUserInfo?.avatar?.blobThumbUrl || userStore.loginUserInfo?.avatar?.imageThumbUrl || userStore.loginUserInfo?.avatar?.blobUrl || userStore.loginUserInfo?.avatar?.imageUrl"
         :nickname="userStore.loginUserInfo?.nickname" :uid="userStore.loginUserInfo?.uid"
-        :is-online="websocketStore.status === 'OPEN'" class="footer-user-card" />
+        :is-online="websocketStore.status === 'OPEN'" class="footer-user-card" @setting="handleSettingClick" />
     </div>
+
+    <!-- 用户设置对话框 -->
+    <UserSettingsDialog />
   </div>
 </template>
 

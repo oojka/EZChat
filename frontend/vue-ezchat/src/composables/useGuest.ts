@@ -27,8 +27,12 @@ export default function () {
     if (result) {
       //提示信息
       ElMessage.success('ゲストとして参加成功しました。')
-      // 保存token到本地存储
-      localStorage.setItem('loginUser', JSON.stringify(result.data))
+      const refreshToken = result.data.refreshToken
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
+        localStorage.removeItem('loginUser')
+        localStorage.removeItem('loginGuest')
+      }
       // 跳转到首页
       await router.push('/chat')
     }

@@ -71,6 +71,7 @@ CREATE TABLE `chats` (
                          `chat_password_hash` VARCHAR(255) NULL,
                          `join_enabled`       TINYINT DEFAULT 1 NOT NULL,
                          `max_members`        INT UNSIGNED DEFAULT 200 NOT NULL COMMENT '群成员上限',
+                         `announcement`       VARCHAR(500) DEFAULT NULL COMMENT '群公告',
                          `asset_id`           INT UNSIGNED NULL COMMENT '群封面ID (关联 assets.id)',
                          `create_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
                          `update_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,

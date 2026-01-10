@@ -232,6 +232,14 @@ public enum ErrorCode {
     PASSWORD_INCORRECT(42004, "Incorrect password"),
 
     /**
+     * 聊天室人数已满
+     * <p>
+     * 使用场景：
+     * - 加入聊天室时成员数已达到上限
+     */
+    CHAT_FULL(42005, "Chat room is full"),
+
+    /**
      * 邀请码无效
      */
     INVITE_CODE_INVALID(42010, "Invalid invite code"),

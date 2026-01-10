@@ -79,7 +79,7 @@ export const LOOKAHEAD_COMPLEX = '(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\\x21-\
  */
 
 // 类型导入
-import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage, AckPayload, MemberLeaveBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, ChatInvite } from '@/type'
+import type { LoginUser, JwtPayload, JoinChatCredentialsForm, ValidateChatJoinReq, Image, Message, TextMessage, ImageMessage, MixedMessage, AckPayload, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, ForceLogoutPayload, ChatInvite } from '@/type'
 import { jwtDecode } from 'jwt-decode'
 
 export type PasswordSecurityLevel = 'basic' | 'alphanumeric' | 'strong' | 'complex'
@@ -464,6 +464,16 @@ export const isMemberLeavePayload = (data: unknown): data is MemberLeaveBroadcas
     && isStringValue(data.leftAt)
 }
 
+export const isMemberRemovedPayload = (data: unknown): data is MemberRemovedBroadcastPayload => {
+  if (!isRecord(data)) return false
+  return isStringValue(data.chatCode)
+    && isStringValue(data.removedUid)
+    && isStringValue(data.removedNickname)
+    && isStringValue(data.operatorUid)
+    && isStringValue(data.operatorNickname)
+    && isStringValue(data.removedAt)
+}
+
 export const isOwnerTransferPayload = (data: unknown): data is OwnerTransferBroadcastPayload => {
   if (!isRecord(data)) return false
   return isStringValue(data.chatCode)
@@ -479,6 +489,13 @@ export const isRoomDisbandPayload = (data: unknown): data is RoomDisbandBroadcas
     && isStringValue(data.operatorUid)
     && isStringValue(data.operatorNickname)
     && isStringValue(data.disbandAt)
+}
+
+export const isForceLogoutPayload = (data: unknown): data is ForceLogoutPayload => {
+  if (!isRecord(data)) return false
+  return isStringValue(data.uid)
+    && isStringValue(data.reason)
+    && isStringValue(data.forcedAt)
 }
 
 export const isChatInvite = (data: unknown): data is ChatInvite => {

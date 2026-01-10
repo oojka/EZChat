@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '@/stores/appStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
-import { useGuestJoin } from '@/hooks/chat/join/useGuestJoin.ts'
-import { useLoginJoin } from '@/hooks/chat/join/useLoginJoin.ts'
-import { computed } from 'vue'
+import { useGuestJoin } from '@/composables/chat/join/useGuestJoin.ts'
+import { useLoginJoin } from '@/composables/chat/join/useLoginJoin.ts'
 
 // ... (imports remain)
-import useLogin from '@/hooks/useLogin.ts'
+import useLogin from '@/composables/useLogin.ts'
 import AppLogo from '@/components/AppLogo.vue'
 import Avatar from '@/components/Avatar.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { Moon, Sunny, User, Camera, Picture, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
+import type { Image } from '@/type'
 
 const { locale, t } = useI18n()
 const router = useRouter()
@@ -53,6 +53,20 @@ const {
 
 // 合并 Loading 状态
 const isLoading = computed(() => guestJoinModule.isLoading.value || loginJoinModule.isLoading.value)
+
+const buildAvatarImage = (avatar: Image, fallbackUrl: string): Image => ({
+  imageName: avatar.imageName || '',
+  imageUrl: avatar.imageUrl || fallbackUrl,
+  imageThumbUrl: avatar.imageThumbUrl || fallbackUrl,
+  blobUrl: avatar.blobUrl || '',
+  blobThumbUrl: avatar.blobThumbUrl || '',
+  assetId: avatar.assetId,
+})
+
+const guestAvatarDisplay = computed(() => {
+  const fallback = defaultAvatarUrl.value || ''
+  return buildAvatarImage(guestAvatar.value, fallback)
+})
 
 
 // 登录表单状态（使用 useLogin hook）
@@ -183,8 +197,7 @@ const handleGoToRegister = () => {
 
               <div class="room-card-preview">
                 <div class="room-avatar-wrapper">
-                  <Avatar :thumb-url="validatedChatRoom?.avatar?.imageThumbUrl"
-                    :url="validatedChatRoom?.avatar?.imageUrl" :text="validatedChatRoom?.chatName" :size="100"
+                  <Avatar :image="validatedChatRoom?.avatar" :text="validatedChatRoom?.chatName" :size="100"
                     shape="square" class="room-avatar" />
                 </div>
 
@@ -226,8 +239,7 @@ const handleGoToRegister = () => {
                   <div class="avatar-upload-area">
                     <el-upload class="avatar-uploader" action="/api/auth/register/upload" :show-file-list="false"
                       :on-success="handleAvatarSuccess">
-                      <Avatar :thumb-url="guestAvatar.imageThumbUrl || guestAvatar.blobUrl || defaultAvatarUrl || ''"
-                        :url="guestAvatar.imageUrl || ''" :size="100" shape="square" :editable="true"
+                      <Avatar :image="guestAvatarDisplay" :size="100" shape="square" :editable="true"
                         class="guest-avatar-preview" />
                     </el-upload>
                     <p class="text-muted">{{ t('join_page.click_to_upload_avatar') }}</p>
