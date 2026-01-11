@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 创建聊天室对话框组件
+ * 
+ * 功能：多步骤创建聊天室，包含基本信息、密码设置、过期时间配置
+ * 特性：分步表单、图片上传、密码保护、邀请链接生成
+ */
 import { computed, onMounted, ref } from 'vue'
 import {
   ArrowRight,
@@ -25,6 +31,9 @@ const { createChatDialogVisible } = storeToRefs(roomStore)
 const { t } = useI18n()
 const imageStore = useImageStore()
 
+/**
+ * 使用创建聊天室组合式函数
+ */
 const {
   createChatForm,
   createStep,
@@ -48,13 +57,20 @@ const {
   copyRoomId,
 } = useCreateChat()
 
-const defaultAvatarUrl = ref('') // 用于展示的默认头像 URL（不上传）
+/** 用于展示的默认头像URL（不上传） */
+const defaultAvatarUrl = ref('')
 
-// 组件加载时生成默认头像 URL（仅用于展示）
+// 组件加载时生成默认头像URL（仅用于展示）
 onMounted(() => {
   defaultAvatarUrl.value = imageStore.generateDefaultAvatarUrl('room')
 })
 
+/**
+ * 构建头像图片对象
+ * @param avatar 原始头像对象
+ * @param fallbackUrl 备用URL
+ * @returns 完整的图片对象
+ */
 const buildAvatarImage = (avatar: Image, fallbackUrl: string): Image => ({
   imageName: avatar.imageName || '',
   imageUrl: avatar.imageUrl || fallbackUrl,
@@ -64,12 +80,17 @@ const buildAvatarImage = (avatar: Image, fallbackUrl: string): Image => ({
   assetId: avatar.assetId,
 })
 
+/**
+ * 显示头像计算属性
+ */
 const displayAvatar = computed(() => {
   const fallback = defaultAvatarUrl.value || ''
   return buildAvatarImage(createChatForm.value.avatar, fallback)
 })
 
-// 进度条百分比计算
+/**
+ * 进度条百分比计算
+ */
 const progressPercentage = computed(() => {
   if (createStep.value === 4 && createResult.value.success) {
     return 100

@@ -509,4 +509,26 @@
     "incorrect_old_password": "当前密码不正确。",
     "password_change_failed": "密码修改失败。"
   }
+  ,
+  "friend": {
+    "add_friend": "添加好友",
+    "add_friend_placeholder": "请输入用户 ID (如 1000001)",
+    "send_request": "发送申请",
+    "request_sent": "申请已发送",
+    "request_failed": "申请发送失败",
+    "new_requests": "新申请",
+    "accepted": "已同意",
+    "rejected": "已拒绝",
+    "operation_failed": "操作失败",
+    "remove_confirm": "确定要删除该好友吗？",
+    "delete": "删除",
+    "friend_removed": "好友已删除",
+    "remove_failed": "删除好友失败",
+    "start_chat_failed": "发起聊天失败",
+    "no_friends": "暂无好友",
+    "no_bio": "暂无简介",
+    "uid": "UID: {0}"
+    ,
+    "profile": "个人资料"
+  }
 }

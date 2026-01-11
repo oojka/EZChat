@@ -30,7 +30,7 @@ public class Asset {
     /**
      * MinIO 对象名（Object Key），唯一标识
      */
-    private String AssetName;
+    private String assetName;
 
     /**
      * 原始文件名（用户上传时的文件名）

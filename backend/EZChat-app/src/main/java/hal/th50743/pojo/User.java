@@ -6,13 +6,30 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 用户实体类
+ * <p>
+ * 对应数据库中的 users 表，表示系统中的用户信息。
+ * 支持访客用户和正式用户两种类型。
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class User {
 
+    /**
+     * 用户内部ID（主键，自增）
+     */
     private Integer id;
+
+    /**
+     * 用户唯一标识（对外展示，10位随机字符串）
+     */
     private String uid;
+
+    /**
+     * 用户昵称
+     */
     private String nickname;
     /**
      * 关联 objects 表的 id（逻辑外键）
@@ -24,9 +41,25 @@ public class User {
      * - 如果对象被删除，应用层需要处理 object_id 的清理（设为 NULL）
      */
     private Integer assetId;
+
+    /**
+     * 用户简介
+     */
     private String bio;
+
+    /**
+     * 用户最后活跃时间
+     */
     private LocalDateTime lastSeenAt;
+
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
 
     /**
@@ -39,7 +72,9 @@ public class User {
      */
     private Integer userType;
 
-    // 临时用户属性
+    /**
+     * 临时字段：用户名（正式用户专用，通过 JOIN 查询获取）
+     */
     private String username;
 
     /**

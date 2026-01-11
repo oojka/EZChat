@@ -1,13 +1,27 @@
 <script setup lang="ts">
+/**
+ * 应用Logo组件
+ * 
+ * 功能：显示EZ Chat应用Logo，支持多种样式配置
+ * 特性：响应式设计、暗黑模式适配、悬停效果、点击导航
+ */
 import {computed} from 'vue'
 import {useRouter} from 'vue-router'
 
+/**
+ * 组件属性定义
+ */
 const props = withDefaults(
   defineProps<{
+    /** Logo尺寸，支持数字(px)或字符串单位 */
     size?: number | string
+    /** 文字颜色 */
     color?: string
+    /** 是否垂直布局（图标在上，文字在下） */
     vertical?: boolean
+    /** 是否显示图标容器的玻璃态阴影效果 */
     showShadow?: boolean
+    /** 是否可点击（点击返回首页） */
     clickable?: boolean
   }>(),
   {
@@ -20,8 +34,15 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+
+/**
+ * 计算图标尺寸，将数字转换为px单位字符串
+ */
 const iconSize = computed(() => typeof props.size === 'number' ? `${props.size}px` : props.size)
 
+/**
+ * 处理点击事件，如果可点击则导航到首页
+ */
 const handleClick = () => {
   if (props.clickable) router.push('/')
 }

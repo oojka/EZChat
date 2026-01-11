@@ -127,4 +127,13 @@ public interface ChatMapper {
      * @param chatId 聊天室ID
      */
     void deleteChatById(Integer chatId);
+
+    /**
+     * 获取两个用户之间的私聊房间代码
+     *
+     * @param u1 用户1的ID
+     * @param u2 用户2的ID
+     * @return 私聊房间代码，不存在返回 null
+     */
+    String selectPrivateChatCodeBetweenUsers(@Param("u1") Integer u1, @Param("u2") Integer u2);
 }

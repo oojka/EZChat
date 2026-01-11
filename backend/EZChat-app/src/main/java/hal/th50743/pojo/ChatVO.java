@@ -27,6 +27,10 @@ public class ChatVO {
      */
     private Integer passwordEnabled;
     private Integer maxMembers;
+    /**
+     * 聊天室类型（0=Group, 1=Private）
+     */
+    private Integer type;
     private String announcement;
     private LocalDateTime lastActiveAt;
     private LocalDateTime createTime;

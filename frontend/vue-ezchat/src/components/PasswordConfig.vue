@@ -1,55 +1,77 @@
 <script setup lang="ts">
+/**
+ * 密码保护配置组件
+ * 
+ * 功能：提供密码保护开关和密码输入框的UI组件
+ * 特性：支持展开/收起模式、国际化、表单验证集成
+ * 
+ * 注意：本组件仅负责UI渲染，不维护校验状态，依赖外层el-form rules进行验证
+ */
 import { computed } from 'vue'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { useI18n } from 'vue-i18n'
 
 /**
- * PasswordConfig - 密码保护配置组件（UI-only，可复用）
- *
- * 职责：
- * - 渲染密码保护开关（switch）
- * - 渲染密码输入框（支持 expand / always-visible 两种模式）
- * - 不维护校验状态：依赖外层 el-form rules 作为唯一校验来源
- *
- * modelValue 语义：密码保护开关（joinEnableByPassword）
- * - 1: 启用密码保护
- * - 0: 禁用密码保护
+ * 组件属性接口
  */
 interface Props {
-  modelValue: number // joinEnableByPassword: 0 | 1
+  /** 密码保护开关值：0=禁用，1=启用 */
+  modelValue: number
+  /** 密码值 */
   password: string
+  /** 确认密码值 */
   passwordConfirm: string
-  mode?: 'expand' | 'always-visible' // expand: 开关控制展开/收起; always-visible: 开关控制是否可输入
+  /** 显示模式：expand=开关控制展开/收起，always-visible=始终显示但开关控制是否可输入 */
+  mode?: 'expand' | 'always-visible'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   mode: 'expand',
 })
 
+/**
+ * 组件事件定义
+ */
 const emit = defineEmits<{
+  /** 更新密码保护开关值 */
   'update:modelValue': [value: number]
+  /** 更新密码值 */
   'update:password': [value: string]
+  /** 更新确认密码值 */
   'update:passwordConfirm': [value: string]
+  /** 回车键事件 */
   'enter': []
 }>()
 
 const { t } = useI18n()
 
+/**
+ * 密码保护开关的计算属性（双向绑定）
+ */
 const joinEnableByPassword = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 })
 
+/**
+ * 密码输入框的计算属性（双向绑定）
+ */
 const passwordValue = computed({
   get: () => props.password,
   set: (val) => emit('update:password', val),
 })
 
+/**
+ * 确认密码输入框的计算属性（双向绑定）
+ */
 const passwordConfirmValue = computed({
   get: () => props.passwordConfirm,
   set: (val) => emit('update:passwordConfirm', val),
 })
 
+/**
+ * 处理回车键事件
+ */
 const handleEnter = () => {
   emit('enter')
 }

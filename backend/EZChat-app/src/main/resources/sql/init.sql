@@ -13,6 +13,7 @@
  5. 已完成 Object -> Asset 的全量重命名。
  6. [NEW] 新增 `chat_sequences` 表，messages 表新增 seq_id 并保证群内唯一递增。
  7. [NEW] chats 表新增 max_members 限制。
+ 8. [NEW] 好友系统：新增 friendships, friend_requests 表，chats 表新增 type 字段。
 */
 
 SET NAMES utf8mb4;
@@ -61,7 +62,7 @@ CREATE TABLE `users` (
                          CONSTRAINT `uq_uid` UNIQUE (`uid`)
 ) COMMENT='用户基础信息表' CHARSET=utf8mb4;
 
--- 1.3 聊天室表 (关联 asset_id, 新增 max_members)
+-- 1.3 聊天室表 (关联 asset_id, 新增 max_members, type)
 DROP TABLE IF EXISTS `chats`;
 CREATE TABLE `chats` (
                          `id`                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -71,6 +72,7 @@ CREATE TABLE `chats` (
                          `chat_password_hash` VARCHAR(255) NULL,
                          `join_enabled`       TINYINT DEFAULT 1 NOT NULL,
                          `max_members`        INT UNSIGNED DEFAULT 200 NOT NULL COMMENT '群成员上限',
+                         `type`               TINYINT DEFAULT 0 NOT NULL COMMENT '0=Group(群聊), 1=Private(私聊)',
                          `announcement`       VARCHAR(500) DEFAULT NULL COMMENT '群公告',
                          `asset_id`           INT UNSIGNED NULL COMMENT '群封面ID (关联 assets.id)',
                          `create_time`        DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -79,7 +81,7 @@ CREATE TABLE `chats` (
                          CONSTRAINT `chk_max_members` CHECK (`max_members` >= 1)
 ) COMMENT='聊天室/群组表' CHARSET=utf8mb4;
 
--- 1.4 会话序列号表 (NEW)
+-- 1.4 会话序列号表
 DROP TABLE IF EXISTS `chat_sequences`;
 CREATE TABLE `chat_sequences` (
                                   `chat_id`      INT UNSIGNED NOT NULL COMMENT '关联 chats.id',
@@ -88,7 +90,7 @@ CREATE TABLE `chat_sequences` (
                                   PRIMARY KEY (`chat_id`)
 ) COMMENT='会话全局序列号表 (用于原子递增)' CHARSET=utf8mb4;
 
--- 1.5 消息表 (新增 seq_id)
+-- 1.5 消息表
 DROP TABLE IF EXISTS `messages`;
 CREATE TABLE `messages` (
                             `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -147,9 +149,7 @@ CREATE TABLE `formal_users` (
                                 CONSTRAINT `uq_username` UNIQUE (`username`)
 ) COMMENT='正式用户认证表' CHARSET=utf8mb4;
 
--- =============================================
 -- 1.7 业务审计日志表 (增强版)
--- =============================================
 DROP TABLE IF EXISTS `operation_logs`;
 CREATE TABLE `operation_logs` (
                                   `id`             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -173,13 +173,37 @@ CREATE TABLE `operation_logs` (
                                   INDEX `idx_target_id` (`target_id`)
 ) COMMENT='业务操作审计日志表 (增强版)' CHARSET=utf8mb4;
 
+-- 1.8 好友系统表 (NEW)
+DROP TABLE IF EXISTS `friend_requests`;
+CREATE TABLE `friend_requests` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `sender_id` INT UNSIGNED NOT NULL,
+    `receiver_id` INT UNSIGNED NOT NULL,
+    `status` TINYINT DEFAULT 0 NOT NULL COMMENT '0=Pending, 1=Accepted, 2=Rejected',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX `uq_sender_receiver` (`sender_id`, `receiver_id`),
+    INDEX `idx_receiver_status` (`receiver_id`, `status`)
+) COMMENT='好友申请表' CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `friendships`;
+CREATE TABLE `friendships` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT UNSIGNED NOT NULL,
+    `friend_id` INT UNSIGNED NOT NULL,
+    `alias` VARCHAR(50) NULL COMMENT '备注名',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE INDEX `uq_user_friend` (`user_id`, `friend_id`),
+    INDEX `idx_user` (`user_id`)
+) COMMENT='好友关系表' CHARSET=utf8mb4;
+
 -- =============================================
 -- 2. 存储过程：生成全链路测试数据 (纯引用模式 + 序列号逻辑)
 -- =============================================
 
 DROP PROCEDURE IF EXISTS generate_test_data;
 
-DELIMITER $$
+DELIMITER 2880044
 
 CREATE PROCEDURE generate_test_data()
 BEGIN
@@ -215,6 +239,8 @@ BEGIN
     TRUNCATE TABLE formal_users;
     TRUNCATE TABLE users;
     TRUNCATE TABLE assets;
+    TRUNCATE TABLE friend_requests;
+    TRUNCATE TABLE friendships;
 
     -- =============================================
     -- Step 1: 插入 30 条真实种子数据 (Seed Data, ID 1-30)
@@ -298,7 +324,7 @@ BEGIN
             -- 随机选取一个种子对象 (ID 1-30) 作为群封面
             SET v_seed_id = FLOOR(1 + RAND() * 30);
 
-            INSERT INTO chats (id, chat_code, chat_name, owner_id, join_enabled, max_members, asset_id, create_time)
+            INSERT INTO chats (id, chat_code, chat_name, owner_id, join_enabled, max_members, type, asset_id, create_time)
             VALUES (
                        i,
                        CAST(20000000 + i AS CHAR),
@@ -306,6 +332,7 @@ BEGIN
                        chat_owner,
                        1,
                        200, -- 默认 200
+                       0,   -- 默认 0 (Group)
                        v_seed_id,
                        DATE_SUB(NOW(), INTERVAL FLOOR(RAND() * 30) DAY)
                    );
@@ -372,7 +399,25 @@ BEGIN
     COMMIT;
 
     -- =============================================
-    -- Step 7: 生成垃圾数据 (Pending GC Test)
+    -- Step 7: 生成好友关系 (NEW)
+    -- =============================================
+    -- 让 User 1 和 User 2, User 3 成为好友
+    INSERT INTO friendships (user_id, friend_id, alias) VALUES (1, 2, 'Test Friend A');
+    INSERT INTO friendships (user_id, friend_id, alias) VALUES (2, 1, 'My Bestie');
+    
+    INSERT INTO friendships (user_id, friend_id, alias) VALUES (1, 3, NULL);
+    INSERT INTO friendships (user_id, friend_id, alias) VALUES (3, 1, NULL);
+
+    -- 让 User 1 收到来自 User 4 的好友请求 (Pending)
+    INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES (4, 1, 0);
+    
+    -- 让 User 1 发送给 User 5 的好友请求 (Pending)
+    INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES (1, 5, 0);
+
+    COMMIT;
+
+    -- =============================================
+    -- Step 8: 生成垃圾数据 (Pending GC Test)
     -- =============================================
     SET i = 1;
     WHILE i <= 1000 DO
@@ -394,15 +439,16 @@ BEGIN
     SET UNIQUE_CHECKS = 1;
     SET AUTOCOMMIT = 1;
 
-    SELECT 'Data Generation Complete (Asset Mode + Sequence IDs).' AS result;
+    SELECT 'Data Generation Complete (Asset Mode + Sequence IDs + Friends).' AS result;
     SELECT CONCAT('Total Assets: ', (SELECT COUNT(*) FROM assets)) AS Total_Assets;
     SELECT 'Assets count should be roughly 1030 (30 seeds + 1000 garbage).' AS Expected;
     SELECT CONCAT('Users Count: ', (SELECT COUNT(*) FROM users)) AS Users;
     SELECT CONCAT('Chats Count: ', (SELECT COUNT(*) FROM chats)) AS Chats;
     SELECT CONCAT('Messages Count: ', (SELECT COUNT(*) FROM messages)) AS Messages;
     SELECT CONCAT('Chat Sequences Count: ', (SELECT COUNT(*) FROM chat_sequences)) AS Sequences;
+    SELECT CONCAT('Friendships Count: ', (SELECT COUNT(*) FROM friendships)) AS Friendships;
 
-END$$
+END2880044
 
 DELIMITER ;
 

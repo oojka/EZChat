@@ -484,4 +484,24 @@
     "change_password": "パスワードを変更",
     "password_changed_relogin": "パスワードが変更されました。新しいパスワードで再ログインしてください。"
   }
+  ,
+  "friend": {
+    "add_friend": "Add Friend",
+    "add_friend_placeholder": "Enter User ID (e.g. 1000001)",
+    "send_request": "Send Request",
+    "request_sent": "Request sent",
+    "request_failed": "Failed to send request",
+    "new_requests": "New Requests",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "operation_failed": "Operation failed",
+    "remove_confirm": "Are you sure you want to delete this friend?",
+    "delete": "Delete",
+    "friend_removed": "Friend removed",
+    "remove_failed": "Failed to remove friend",
+    "start_chat_failed": "Failed to start chat",
+    "no_friends": "No friends yet",
+    "no_bio": "No bio",
+    "uid": "UID: {0}"
+  }
 }

@@ -31,7 +31,12 @@ public class ChatCreate {
      * 业务说明：前端上传头像时已获得 objectId，直接传递即可，无需后端查表
      */
     private Integer objectId;
+    
+    /**
+     * 聊天室类型 (0=Group, 1=Private)
+     */
+    private Integer type;
+    
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
-

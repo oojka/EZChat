@@ -188,4 +188,9 @@ public interface ChatService {
      */
     void transferOwner(Integer userId, String chatCode, ChatOwnerTransferReq req);
 
+
+    /**
+     * Create Private Chat
+     */
+    String createPrivateChat(Integer userId, Integer targetUserId);
 }

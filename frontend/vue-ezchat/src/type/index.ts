@@ -1,24 +1,45 @@
 import type { InternalAxiosRequestConfig } from 'axios'
 
+/**
+ * API响应结果类型
+ * @template T 数据类型
+ */
 export type Result<T> = {
+  /** 状态：0=成功，1=失败 */
   status: 0 | 1
+  /** 错误码 */
   code: number
+  /** 消息 */
   message: string
+  /** 数据 */
   data: T
 }
 
+/**
+ * 图片类型
+ */
 export type Image = {
+  /** 图片名称 */
   imageName?: string
+  /** 图片URL */
   imageUrl: string
+  /** 缩略图URL */
   imageThumbUrl: string
-  assetId?: number // 对象 ID，用于直接关联 objects 表（可选，向后兼容）
-  // 前端持久化字段
-  blobUrl?: string    // 原图 Blob URL
-  blobThumbUrl?: string // 缩略图 Blob URL
+  /** 对象ID，用于直接关联objects表（可选，向后兼容） */
+  assetId?: number
+  /** 前端持久化字段 - 原图Blob URL */
+  blobUrl?: string
+  /** 前端持久化字段 - 缩略图Blob URL */
+  blobThumbUrl?: string
 }
 
+/**
+ * 登录表单类型
+ */
 export type LoginForm = {
+  /** 用户名 */
   username: string
+  /** 密码 */
   password: string
 }
 
@@ -29,9 +50,13 @@ export type LoginForm = {
  * - 供 HTTP header 和 WebSocket 连接使用
  */
 export type LoginUser = {
+  /** 用户唯一标识 */
   uid: string
+  /** 用户名 */
   username: string
+  /** 访问令牌 */
   accessToken: string
+  /** 刷新令牌 */
   refreshToken: string
 }
 
@@ -48,22 +73,40 @@ export type UserLoginState =
   | { type: 'guest'; formal: undefined; guest: LoginUser }
   | { type: 'none'; formal: undefined; guest: undefined }
 
+/**
+ * 令牌负载类型
+ */
 export type TokenPayload = {
+  /** 令牌字符串 */
   token: string
+  /** JWT负载 */
   payload: JwtPayload
 }
 
+/**
+ * 令牌类型
+ */
 export type Token = {
+  /** 令牌类型：正式用户、访客或无 */
   type: 'formal' | 'guest' | 'none'
+  /** 访问令牌 */
   accessToken?: TokenPayload
+  /** 刷新令牌 */
   refreshToken?: TokenPayload
 }
 
+/**
+ * JWT负载接口
+ */
 export interface JwtPayload {
+  /** 用户唯一标识 */
   uid: string;
+  /** 用户名 */
   username: string;
-  iat: number; // 签发时间 (seconds)
-  exp: number; // 过期时间 (seconds)
+  /** 签发时间 (秒) */
+  iat: number;
+  /** 过期时间 (秒) */
+  exp: number;
 }
 /**
  * 登录用户详细信息（对应后端 UserVO）
@@ -387,3 +430,35 @@ export type RetryableRequestConfig = InternalAxiosRequestConfig & {
  * 业务错误码的联合类型（字符串或数字）
  */
 export type ErrorCodeValue = string | number
+
+// ==================== Friend System Types ====================
+
+export type Friend = {
+  userId: number
+  uid: string
+  nickname: string
+  alias?: string
+  avatar?: Image
+  bio?: string
+  online: boolean
+  lastSeenAt: string
+  createTime: string
+}
+
+export type FriendRequest = {
+  id: number
+  senderId: number
+  senderUid: string
+  senderNickname: string
+  senderAvatar?: Image
+  status: number // 0=Pending, 1=Accepted, 2=Rejected
+  createTime: string
+}
+
+export type FriendReq = {
+  targetUid?: string
+  requestId?: number
+  accept?: boolean
+  friendUid?: string
+  alias?: string
+}

@@ -248,4 +248,14 @@ public class ChatInviteServiceImpl implements ChatInviteService {
                 invite.getCreateTime()
         );
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void consumeInvite(Integer chatId, String codeHash) {
+        int rows = chatInviteMapper.consume(chatId, codeHash);
+        if (rows <= 0) {
+            log.warn("[Invite Consume] Failed: chatId={}, hash={}", chatId, codeHash);
+            throw new BusinessException(ErrorCode.INVITE_CODE_INVALID, "Invite code invalid or expired");
+        }
+    }
 }

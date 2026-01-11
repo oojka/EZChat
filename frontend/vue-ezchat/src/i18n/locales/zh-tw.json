@@ -484,4 +484,24 @@
     "change_password": "修改密碼",
     "password_changed_relogin": "密碼修改成功，請使用新密碼重新登入。"
   }
+  ,
+  "friend": {
+    "add_friend": "新增好友",
+    "add_friend_placeholder": "請輸入用戶 ID (如 1000001)",
+    "send_request": "發送申請",
+    "request_sent": "申請已發送",
+    "request_failed": "申請發送失敗",
+    "new_requests": "新申請",
+    "accepted": "已同意",
+    "rejected": "已拒絕",
+    "operation_failed": "操作失敗",
+    "remove_confirm": "確定要刪除該好友嗎？",
+    "delete": "刪除",
+    "friend_removed": "好友已刪除",
+    "remove_failed": "刪除好友失敗",
+    "start_chat_failed": "發起聊天失敗",
+    "no_friends": "暫無好友",
+    "no_bio": "暫無簡介",
+    "uid": "UID: {0}"
+  }
 }

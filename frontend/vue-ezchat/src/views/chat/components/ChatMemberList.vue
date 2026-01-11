@@ -2,26 +2,26 @@
 import { ref } from 'vue'
 import {useChatMemberList} from '@/composables/useChatMemberList.ts'
 import ChatMemberItem from '@/views/chat/components/ChatMemberItem.vue'
+import UserProfileDialog from '@/components/dialogs/UserProfileDialog.vue'
 import {useI18n} from 'vue-i18n'
 
 const { t } = useI18n()
 const { chat, sortedChatMemberList, loginUserInfo } = useChatMemberList()
 
-// 可滚动容器的 ref
 const memberListAreaRef = ref<HTMLElement | null>(null)
+const profileVisible = ref(false)
+const selectedUid = ref('')
 
-/**
- * 滚动成员列表到顶部
- *
- * 业务目的：
- * - 成员列表加载完成后自动滚动到顶部，确保用户看到列表开头
- */
 const scrollToTop = () => {
   if (!memberListAreaRef.value) return
   memberListAreaRef.value.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// 暴露方法供父组件调用
+const handleMemberClick = (uid: string) => {
+  selectedUid.value = uid
+  profileVisible.value = true
+}
+
 defineExpose({
   scrollToTop
 })
@@ -40,9 +40,20 @@ defineExpose({
 
     <div class="member-list-area" ref="memberListAreaRef">
       <TransitionGroup name="member-list" tag="div">
-        <ChatMemberItem v-for="member in sortedChatMemberList" :key="member.uid" :member="member" :is-me="member.uid === loginUserInfo?.uid" />
+        <ChatMemberItem 
+          v-for="member in sortedChatMemberList" 
+          :key="member.uid" 
+          :member="member" 
+          :is-me="member.uid === loginUserInfo?.uid" 
+          @click="handleMemberClick(member.uid)"
+        />
       </TransitionGroup>
     </div>
+
+    <UserProfileDialog 
+      v-model:visible="profileVisible" 
+      :uid="selectedUid" 
+    />
   </div>
 </template>
 
