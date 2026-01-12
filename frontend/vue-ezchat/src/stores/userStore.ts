@@ -683,10 +683,9 @@ export const useUserStore = defineStore('user', () => {
    * 3. 返回加入结果
    * 
    * @param req 访客加入请求数据
-   * @param currentChatCode 当前聊天室代码（用于路由跳转）
    * @returns 是否加入成功
    */
-  const executeGuestJoin = async (req: GuestJoinReq, currentChatCode: string): Promise<boolean> => {
+  const executeGuestJoin = async (req: GuestJoinReq): Promise<boolean> => {
     try {
       const result = await guestJoinRequest(req)
 

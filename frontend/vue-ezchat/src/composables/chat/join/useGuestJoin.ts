@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { isValidNickname, isValidChatCode, isInviteJoinReq, isPasswordJoinReq } from '@/utils/validators.ts'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
@@ -14,7 +14,6 @@ import { ElMessage } from 'element-plus' // Added for feedback
  * 职责：管理访客加入流程 (昵称、头像 -> 提交)
  */
 export const useGuestJoin = () => {
-    const router = useRouter()
     const route = useRoute()
     const { t } = useI18n()
 
@@ -50,7 +49,7 @@ export const useGuestJoin = () => {
     }
 
     /** 头像上传成功回调 */
-    const handleAvatarSuccess = (response: any) => {
+    const handleAvatarSuccess = (response: { data?: { imageThumbUrl?: string; url?: string; imageUrl?: string; assetId?: number; imageName?: string; name?: string } }) => {
         if (response?.data) {
             guestAvatar.value.imageThumbUrl = response.data.imageThumbUrl || response.data.url || ''
             guestAvatar.value.imageUrl = response.data.imageUrl || response.data.url || ''
@@ -155,7 +154,7 @@ export const useGuestJoin = () => {
             }
 
             // 6. 调用 store 执行访客加入
-            const success = await userStore.executeGuestJoin(req, currentChatCode)
+            const success = await userStore.executeGuestJoin(req)
 
             if (success) {
                 ElMessage.success(t('chat.join_success') || 'Joined successfully')

@@ -116,7 +116,7 @@ export const useJoinInput = () => {
      * 所有验证消息都通过 t() 函数获取，支持多语言切换
      */
     const joinChatCredentialsFormRules = computed(() => {
-        const rules: any = {}
+        const rules: Record<string, unknown[]> = {}
 
         if (isRoomIdPasswordMode.value) {
             // ID + 密码模式验证规则
@@ -263,7 +263,7 @@ export const useJoinInput = () => {
 
                     useLoading = useGlobalLoading
                     return req
-                } catch (e: any) {
+                } catch (e: unknown) {
                     // 处理已知的前端校验错误
                     const validationErrors: Record<string, string> = {
                         'ROOM_ID_REQUIRED': 'validation.chat_code_required',

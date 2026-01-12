@@ -17,7 +17,7 @@ const fetchClientIp = async () => {
     } else {
       clientIp.value = 'Unknown'
     }
-  } catch (e) {
+  } catch {
     clientIp.value = 'Unknown'
   }
 }

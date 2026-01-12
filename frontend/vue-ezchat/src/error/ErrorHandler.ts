@@ -1,9 +1,5 @@
 import type { App } from 'vue'
-import { ElMessage } from 'element-plus'
 import { createAppError, isAppError, ErrorType, ErrorSeverity, type AppError } from './ErrorTypes'
-import i18n from '@/i18n'
-
-const { t } = i18n.global
 
 /**
  * 错误上报函数（可扩展为 Sentry / 后端上报）

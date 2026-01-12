@@ -530,5 +530,22 @@
     "uid": "UID: {0}"
     ,
     "profile": "Profile"
+  },
+  "mobile": {
+    "index": {
+      "tab_guest": "Guest",
+      "tab_login": "Login",
+      "tab_register": "Register",
+      "quick_join": "Quick Join",
+      "join_hint": "Enter Room ID or invite link"
+    },
+    "tab_chat": "Chat",
+    "tab_friends": "Friends",
+    "tab_settings": "Settings",
+    "friends_locked_title": "Friends feature is for registered users",
+    "friends_locked_desc": "Upgrade to unlock friends feature and start private chats",
+    "upgrade_now": "Upgrade Now",
+    "upgrade_banner_title": "Upgrade to Registered User",
+    "upgrade_banner_desc": "Unlock friends feature and more"
   }
 }

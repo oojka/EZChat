@@ -261,6 +261,38 @@ npm run dev
 
 ---
 
+## 移动端架构 / Mobile Architecture (NEW)
+
+移动端认证流程已重构为多页面架构，提供更流畅的沉浸式体验。
+The mobile authentication flow has been redesigned from a tab-based layout to a multi-page architecture.
+
+### 路由结构 / Routes
+
+- `/m` - 欢迎页 (3个入口卡片) / Welcome page with 3 entry cards
+- `/m/guest` - 访客加入 (房间号+密码 / 邀请码) / Guest join form (Room ID/Password or Invite Link)
+- `/m/login` - 用户登录 / User login
+- `/m/register` - 用户注册 (两步向导) / User registration (2-step wizard)
+
+### 核心组件 / Core Components
+
+位于 `frontend/vue-ezchat/src/views/mobile/entry/`：
+
+- `MobileEntryShell.vue`: 共享布局组件 (Shared layout component)
+- `MobileWelcomeView.vue`: 欢迎页 (Welcome page)
+- `MobileGuestJoinView.vue`: 访客加入 (Guest join)
+- `MobileLoginView.vue`: 登录 (Login)
+- `MobileRegisterView.vue`: 注册 (Registration)
+
+### 设计亮点 / Design Highlights
+
+- **高级玻璃拟态 / Premium Glassmorphism**
+- **动态背景 / Animated Background**: 漂浮光球效果 / Floating orbs
+- **响应式头部 / Responsive Header**: 键盘弹出时自动折叠 / Collapses on keyboard
+- **暗黑模式支持 / Dark mode support**
+- **移动端优先触控 / Mobile-first touch targets**
+
+---
+
 ## API 接口文档 / API Reference
 
 ### 好友系统 / Friend System (`/friend/*`)
@@ -281,7 +313,8 @@ npm run dev
 - **Features**:
   - **Friend System**: Implemented full friend lifecycle (Request, Accept, List, Remove).
   - **Private Chat**: Added support for 1v1 direct messaging with auto-creation logic.
-  - **UI Integration**: Added "Friends" tab in sidebar, friend list view, and add friend dialog.
+  - **Mobile Auth**: Redesigned mobile auth layout (Tab-based → Multi-page `/m/*`) with glassmorphism design.
+  - **UI Integration**: Added "Friends" tab in sidebar; New mobile entry components (`MobileEntryShell`, `MobileWelcomeView`, etc.).
 - **Backend**:
   - **Schema Update**: Added `friendships`, `friend_requests` tables and updated `chats` table.
   - **Logic**: Implemented `FriendService` and extended `ChatService` for private chats.
@@ -302,3 +335,6 @@ npm run dev
   - **Audit Logging**: Added AOP-based operation logging (`OperationLog` table) for all CUD operations. 
   - **SeqId Pagination**: Replaced timestamp-based pagination with stable `seq_id` cursor pagination.
   - **Security Hardening**: Removed `accessToken` persistence in localStorage (memory-only) to reduce XSS risk.
+
+---
+*Last Updated: 2026-01-11*

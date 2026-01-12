@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { ChatInvite, ChatInviteCreateReq, ChatMember, ChatRoom, ChatPasswordUpdateReq, ChatBasicUpdateReq, ChatKickReq, ChatOwnerTransferReq, CreateChatVO, Image, JoinChatReq, LoginUser, Result } from '@/type'
+import type { ChatInvite, ChatInviteCreateReq, ChatMember, ChatRoom, ChatPasswordUpdateReq, ChatBasicUpdateReq, ChatKickReq, ChatOwnerTransferReq, CreateChatVO, Image, JoinChatReq, Result } from '@/type'
 
 
 /**

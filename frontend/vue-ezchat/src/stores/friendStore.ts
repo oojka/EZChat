@@ -88,7 +88,7 @@ export const useFriendStore = defineStore('friend', () => {
       } else {
         ElMessage.error(res.message || t('friend.start_chat_failed'))
       }
-    } catch (e) {
+    } catch {
       ElMessage.error(t('dialog.network_error'))
     }
   }

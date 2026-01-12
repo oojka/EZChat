@@ -376,9 +376,8 @@ export const useMessageStore = defineStore('message', () => {
           currentMessageList.value = sortMessages(merged)
         }
       }
-    } catch (e) {
-      // 错误处理：抛出异常供上层处理
-      await Promise.reject(new Error('Failed to load messages'))
+    } catch {
+      throw new Error('Failed to load messages')
     } finally {
       // 无论成功失败，都要清除加载状态
       loadingMessages.value = false
@@ -633,9 +632,9 @@ export const useMessageStore = defineStore('message', () => {
    * - 状态同步：及时更新房间预览信息
    *
    *
-   * @param {any} rawMessage - 服务端推送的原始消息数据（loose type）
+   * @param {unknown} rawMessage - 服务端推送的原始消息数据（loose type）
    */
-  const receiveMessage = async (rawMessage: any) => {
+  const receiveMessage = async (rawMessage: unknown) => {
     // 1. 运行时校验：确保消息结构合法
     if (!isValidMessage(rawMessage)) {
       // console.warn('[MessageStore] Invalid message format received, ignored:', rawMessage)
@@ -701,8 +700,8 @@ export const useMessageStore = defineStore('message', () => {
             }
             return
           }
-        } catch (e) {
-          console.error('[MessageStore] Sync failed, falling back to full refresh', e)
+    } catch (syncError) {
+          console.error('[MessageStore] Sync failed, falling back to full refresh', syncError)
           await getMessageList()
           return
         } finally {

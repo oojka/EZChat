@@ -13,7 +13,7 @@ import useLogin from '@/composables/useLogin.ts'
 import AppLogo from '@/components/AppLogo.vue'
 import Avatar from '@/components/Avatar.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
-import { Moon, Sunny, User, Camera, Picture, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
+import { Moon, Sunny, User, ArrowRight, CircleCheckFilled } from '@element-plus/icons-vue'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 import type { Image } from '@/type'
 
@@ -70,7 +70,7 @@ const guestAvatarDisplay = computed(() => {
 
 
 // 登录表单状态（使用 useLogin hook）
-const { loginForm, resetLoginForm: resetLoginFormFromHook } = useLogin()
+const { loginForm } = useLogin()
 
 // 模式切换（UI 逻辑）
 const showLoginMode = ref(false)

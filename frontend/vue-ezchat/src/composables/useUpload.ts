@@ -65,7 +65,8 @@ export function useUpload(type: UploadType) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
             uploadProgress.value = percent
             // Element Plus 的 onProgress 期望的是 UploadProgressEvent
-            onProgress?.({ percent } as any)
+            // 使用类型断言来匹配 Element Plus 的内部类型
+            onProgress?.({ percent } as Parameters<NonNullable<typeof onProgress>>[0])
           }
         })
       } else {
@@ -73,7 +74,7 @@ export function useUpload(type: UploadType) {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
             uploadProgress.value = percent
-            onProgress?.({ percent } as any)
+          onProgress?.({ percent } as Parameters<NonNullable<typeof onProgress>>[0])
           }
         })
       }
@@ -91,10 +92,11 @@ export function useUpload(type: UploadType) {
         throw new Error(result.message || 'Upload failed')
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload Error:', error)
       ElMessage.error(t('api.image_upload_failed'))
-      onError(error)
+      const uploadError = error instanceof Error ? error : new Error(String(error))
+      onError(Object.assign(uploadError, { status: 0, method: 'POST', url: '' }))
     } finally {
       isUploading.value = false
     }

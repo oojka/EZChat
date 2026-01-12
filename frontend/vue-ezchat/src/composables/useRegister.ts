@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { registerApi } from '@/api/Auth.ts'
 import { useI18n } from 'vue-i18n'
-import { type PasswordOptions, getPasswordReg, REGEX_USERNAME } from '@/utils/validators.ts'
+import { getPasswordReg, REGEX_USERNAME } from '@/utils/validators.ts'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
 import { calculateObjectHash } from '@/utils/objectHash'
@@ -12,16 +12,15 @@ import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { useImageStore } from '@/stores/imageStore'
 
 import type { RegisterInfo, Result, Image} from '@/type'
-
-const passwordOption: PasswordOptions = { min: 8, max: 20, level: 'basic' }
+import type { InternalRuleItem } from 'async-validator'
 
 export function useRegister() {
   const { t } = useI18n()
   const registerFormRef = ref()
   const imageStore = useImageStore()
 
-  // 仅保留无法通过正则实现的“两次密码一致”校验
-  const validateConfirmPassword = (rule: any, value: any, callback: any) => {
+  // 仅保留无法通过正则实现的"两次密码一致"校验
+  const validateConfirmPassword = (_rule: InternalRuleItem, value: unknown, callback: (error?: Error) => void) => {
     if (!value) callback(new Error(t('validation.confirm_password_required')))
     else if (value !== registerForm.value.password) callback(new Error(t('validation.password_mismatch')))
     else callback()

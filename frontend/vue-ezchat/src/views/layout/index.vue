@@ -1,14 +1,25 @@
 <script setup lang="ts">
 import MainHeader from '@/views/layout/sections/MainHeader.vue'
 import MainAside from '@/views/layout/sections/MainAside.vue'
+import MobileTabbar from '@/views/layout/components/MobileTabbar.vue'
+import ChatListView from '@/views/mobile/ChatListView.vue'
 import { useAppStore } from '@/stores/appStore.ts'
-import { onMounted, onUnmounted } from 'vue'
+import { useIsMobile } from '@/composables/useIsMobile'
+import { onMounted, onUnmounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 const appStore = useAppStore()
-const { initializeApp, setFavicon, removeFavicon } = appStore
+const { setFavicon, removeFavicon } = appStore
+const { isMobile } = useIsMobile()
+const route = useRoute()
+
+const showDesktopLayout = computed(() => !isMobile.value)
+const showMobileTabbar = computed(() => isMobile.value)
+
+// 移动端 /chat 根路由显示聊天列表而不是欢迎页
+const showMobileChatList = computed(() => isMobile.value && route.name === 'Welcome')
 
 onMounted(async () => {
-  // 刷新页面时的初始化：由 router.beforeEach 统一处理，组件内只负责 UI 设置
   setFavicon()
 })
 
@@ -18,37 +29,43 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="common-layout">
-    <!-- 不要在此处用 v-if 卸载布局：避免刷新初始化期间反复 mount 导致数据/订阅状态异常 -->
+  <div class="common-layout" :class="{ 'is-mobile': isMobile }">
     <el-container class="outer-container">
-      <el-header class="header">
+      <el-header v-if="showDesktopLayout" class="header desktop-only">
         <MainHeader />
       </el-header>
+
       <el-container class="inner-container">
-        <el-aside width="350px">
+        <el-aside v-if="showDesktopLayout" width="350px" class="desktop-only">
           <MainAside />
         </el-aside>
+
         <el-main class="main-content">
           <div class="main-container">
-            <!-- Chat 视图的骨架/加载表现由 chat/index.vue 自己控制（左侧 MessageSkeleton + 右侧 AppSpinner） -->
-            <RouterView />
+            <ChatListView v-if="showMobileChatList" />
+            <RouterView v-else />
           </div>
         </el-main>
       </el-container>
+
+      <MobileTabbar v-if="showMobileTabbar" />
     </el-container>
   </div>
 </template>
 
 <style scoped>
 .common-layout {
-  height: 100vh;
-  width: 100vw;
+  /* Inherit fixed size from App.vue */
+  height: 100%;
+  width: 100%;
   overflow: hidden;
-  background-color: #f4f4f5;
+  background-color: var(--bg-page);
 }
 
 .outer-container {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -58,12 +75,20 @@ onUnmounted(() => {
   overflow: hidden;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   z-index: 10;
-  background-color: #fff;
+  background-color: var(--bg-card);
+  flex: none;
 }
 
 .inner-container {
-  height: calc(100vh - 60px);
-  overflow: hidden;
+  /* Remove fixed height calculation, use flex-1 */
+  flex: 1;
+  overflow: hidden; /* Scroll should happen inside main-content or its children */
+  display: flex; /* Allow children to fill height */
+}
+
+.common-layout.is-mobile .inner-container {
+  /* Ensure it fills available space */
+  height: auto;
 }
 
 .main-content {
@@ -75,5 +100,11 @@ onUnmounted(() => {
 .main-container {
   height: 100%;
   width: 100%;
+}
+
+@media (max-width: 767px) {
+  .desktop-only {
+    display: none !important;
+  }
 }
 </style>

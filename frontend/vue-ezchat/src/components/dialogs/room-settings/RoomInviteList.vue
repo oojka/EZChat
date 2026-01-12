@@ -15,7 +15,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits<{
+defineEmits<{
     (e: 'create'): void
     (e: 'revoke', id: number): void
     (e: 'copy', code: string): void

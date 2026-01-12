@@ -260,6 +260,7 @@ public class ChatServiceImpl implements ChatService {
         chatCreate.setJoinEnabled(chatReq.getJoinEnable());
         chatCreate.setObjectId(chatReq.getAvatar() != null ? chatReq.getAvatar().getAssetId() : null);
         chatCreate.setMaxMembers(200);
+        chatCreate.setType(0);
         
         if (chatReq.getPassword() != null) {
             chatCreate.setChatPasswordHash(PasswordUtils.encode(chatReq.getPassword()));

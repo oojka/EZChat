@@ -4,7 +4,7 @@
  * 提供通用的分页加载、滚动监听和自动加载更多功能。
  * 适用于消息列表、聊天列表等需要分页加载的场景。
  */
-import { nextTick, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 export type UseInfiniteScrollOptions = {
   /**

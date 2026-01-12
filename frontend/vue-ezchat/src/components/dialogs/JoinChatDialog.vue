@@ -102,7 +102,7 @@ const handleJoin = async () => {
       let targetCode = userStore.validatedChatRoom?.chatCode
 
       if (!targetCode && payload && 'chatCode' in payload) {
-        targetCode = (payload as any).chatCode
+        targetCode = (payload as { chatCode: string }).chatCode
       }
 
       await navigateToChat(targetCode || '')
@@ -112,7 +112,7 @@ const handleJoin = async () => {
       joinStep.value = 2
     }
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     // 捕获验证或加入过程中的错误，显示在 Dialog 的结果页中
     let errMsg = t('chat.join_failed')
 
@@ -123,9 +123,9 @@ const handleJoin = async () => {
         errMsg = e.message
       } else if (isAppError(e)) {
         errMsg = e.message
-      } else if (e.message) {
+      } else if (typeof e === 'object' && e !== null && 'message' in e) {
         // 兜底：尝试读取任意对象的 message 属性
-        errMsg = String(e.message)
+        errMsg = String((e as { message: unknown }).message)
       }
     }
 

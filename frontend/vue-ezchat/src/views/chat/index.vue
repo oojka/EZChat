@@ -1,24 +1,34 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref} from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import MessageArea from '@/views/chat/sections/MessageArea.vue'
 import InputArea from '@/views/chat/sections/InputArea.vue'
 import RightAside from '@/views/chat/sections/RightAside.vue'
 import ChatHeader from '@/views/chat/sections/ChatHeader.vue'
 import MessageSkeleton from '@/views/chat/components/MessageSkeleton.vue'
-import {useMessageStore} from '@/stores/messageStore.ts'
-import {storeToRefs} from 'pinia'
-import {ArrowLeft, ArrowRight} from '@element-plus/icons-vue'
+import { useMessageStore } from '@/stores/messageStore.ts'
+import { storeToRefs } from 'pinia'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { useIsMobile } from '@/composables/useIsMobile'
+import { useKeyboardVisible } from '@/composables/useKeyboardVisible'
 
 const messageStore = useMessageStore()
 const { chatViewIsLoading } = storeToRefs(messageStore)
+const { isMobile } = useIsMobile()
+const { isKeyboardVisible } = useKeyboardVisible()
 
 const isCollapse = ref(false)
 const toggleSidePanel = () => { isCollapse.value = !isCollapse.value }
 
+/** 移动端成员列表 Drawer 可见状态 */
+const memberDrawerVisible = ref(false)
+
+/** 桌面端输入区拖拽 resize 相关 */
 const inputPanelHeight = ref(220)
 const isResizing = ref(false)
 
-const startResizing = (e: MouseEvent) => {
+/** 移动端禁用拖拽 resize */
+const startResizing = (_e: MouseEvent) => {
+  if (isMobile.value) return
   isResizing.value = true
   window.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('mouseup', stopResizing)
@@ -44,18 +54,29 @@ const stopResizing = () => {
   document.body.style.userSelect = ''
 }
 
+/** 移动端输入区使用自增高样式，不设置固定高度 */
+const inputPanelStyle = computed(() => {
+  if (isMobile.value) return {}
+  return { height: inputPanelHeight.value + 'px' }
+})
+
 onMounted(() => {
-  const initialHeight = (window.innerHeight - 60) * 0.3
-  inputPanelHeight.value = Math.max(initialHeight, 220)
+  if (!isMobile.value) {
+    const initialHeight = (window.innerHeight - 60) * 0.3
+    inputPanelHeight.value = Math.max(initialHeight, 220)
+  }
 })
 onUnmounted(() => stopResizing())
 </script>
 
 <template>
-  <div class="chat-view-wrapper">
+  <div class="chat-view-wrapper" :class="{ 'is-mobile': isMobile, 'keyboard-visible': isKeyboardVisible }">
     <el-container class="chat-container">
       <el-header class="chat-area-header" height="60px">
-        <ChatHeader />
+        <ChatHeader
+          :is-mobile="isMobile"
+          @open-member-drawer="memberDrawerVisible = true"
+        />
       </el-header>
 
       <el-container class="chat-main-layout">
@@ -67,14 +88,21 @@ onUnmounted(() => stopResizing())
             </Transition>
           </div>
 
-          <div class="horizontal-resizer" :class="{ 'is-resizing': isResizing }" @mousedown.prevent="startResizing"></div>
+          <!-- 桌面端：拖拽分隔条 -->
+          <div
+            v-if="!isMobile"
+            class="horizontal-resizer"
+            :class="{ 'is-resizing': isResizing }"
+            @mousedown.prevent="startResizing"
+          ></div>
 
-          <div class="input-panel" :style="{ height: inputPanelHeight + 'px' }">
-            <InputArea />
+          <div class="input-panel" :class="{ 'mobile-input-panel': isMobile }" :style="inputPanelStyle">
+            <InputArea :is-mobile="isMobile" />
           </div>
         </el-main>
 
-        <el-aside class="chat-right-panel" :class="{ 'is-hidden': isCollapse }" width="300px">
+        <!-- 桌面端：右侧固定成员列表 -->
+        <el-aside v-if="!isMobile" class="chat-right-panel" :class="{ 'is-hidden': isCollapse }" width="300px">
           <div class="side-resizer-trigger" @click.stop="toggleSidePanel">
             <div class="trigger-icon-wrapper"><el-icon><ArrowLeft v-if="isCollapse" /><ArrowRight v-else /></el-icon></div>
           </div>
@@ -82,6 +110,13 @@ onUnmounted(() => stopResizing())
         </el-aside>
       </el-container>
     </el-container>
+
+    <!-- 移动端：底部抽屉成员列表 -->
+    <RightAside
+      v-if="isMobile"
+      :is-mobile="true"
+      v-model:drawer-visible="memberDrawerVisible"
+    />
   </div>
 </template>
 
@@ -99,7 +134,7 @@ onUnmounted(() => stopResizing())
 
 .chat-main-layout { overflow: hidden; height: calc(100% - 60px); }
 .chat-left-panel { padding: 0; display: flex; flex-direction: column; background-color: var(--bg-card); }
-.message-panel { flex: 1; background-color: var(--bg-page); overflow: hidden; position: relative; transition: background-color 0.3s ease; }
+.message-panel { flex: 1; background-color: var(--bg-page); overflow: hidden; position: relative; transition: background-color 0.3s ease; min-height: 0; }
 .chat-fade-enter-active, .chat-fade-leave-active { transition: opacity 0.12s ease; }
 .chat-fade-enter-from, .chat-fade-leave-to { opacity: 0; }
 
@@ -108,6 +143,13 @@ onUnmounted(() => stopResizing())
 .horizontal-resizer:hover::after, .horizontal-resizer.is-resizing::after { height: 2px; background-color: var(--text-400); }
 
 .input-panel { background-color: var(--bg-card); min-height: 220px; overflow: hidden; flex-shrink: 0; transition: background-color 0.3s ease; }
+
+/* 移动端输入区：自增高 + 最大高度限制 */
+.mobile-input-panel {
+  min-height: auto;
+  max-height: 50vh;
+  height: auto;
+}
 
 .chat-right-panel {
   position: relative;
@@ -122,4 +164,29 @@ onUnmounted(() => stopResizing())
 .chat-right-panel:hover .side-resizer-trigger, .side-resizer-trigger:hover { opacity: 1; }
 .trigger-icon-wrapper { width: 24px; height: 56px; background-color: var(--primary); color: #fff; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); font-size: 16px; }
 :deep(.el-main) { overflow: hidden; }
+
+/* 移动端整体样式调整 */
+.chat-view-wrapper.is-mobile .chat-area-header {
+  height: 56px;
+}
+.chat-view-wrapper.is-mobile .chat-main-layout {
+  height: calc(100% - 56px);
+}
+
+/* 移动端：为 Tabbar 预留底部空间 */
+.chat-view-wrapper.is-mobile .chat-left-panel {
+  padding-bottom: calc(var(--tabbar-height) + var(--safe-area-bottom, 0px));
+  transition: padding-bottom 0.3s ease;
+  box-sizing: border-box;
+}
+
+/* 键盘显示时移除底部间距 */
+.chat-view-wrapper.is-mobile.keyboard-visible .chat-left-panel {
+  padding-bottom: 0;
+}
+
+/* 移动端：输入区底部不需要额外 safe-area（已由父容器处理） */
+.chat-view-wrapper.is-mobile .mobile-input-panel {
+  padding-bottom: 0;
+}
 </style>

@@ -11,7 +11,7 @@ import type { FormInstance } from 'element-plus'
 const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
-const props = defineProps<{ active: boolean; flipped: boolean }>()
+defineProps<{ active: boolean; flipped: boolean }>()
 const emit = defineEmits<{ (e: 'flip'): void; (e: 'unflip'): void }>()
 
 // 1. 实例化模块
@@ -33,7 +33,7 @@ const {
 const handleValidateAndRedirect = async () => {
   const isValid = await joinFormRef.value?.validate()
   if (!isValid) return false
-  const payload = await validateAndGetPayload()
+  const _payload = await validateAndGetPayload()
   // 验证成功，userStore.validatedChatRoom 已更新
   // 直接跳转到加入页面
   // 注意：这里需要获取 validatedChatRoom 中的 chatCode

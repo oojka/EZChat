@@ -6,7 +6,7 @@ import { getUserInfoApi } from '@/api/User'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Avatar from '@/components/Avatar.vue'
 import { useI18n } from 'vue-i18n'
-import type { User } from '@/type'
+import type { LoginUserInfo } from '@/type'
 
 const props = defineProps<{
   uid: string
@@ -19,9 +19,9 @@ const userStore = useUserStore()
 const friendStore = useFriendStore()
 
 const loading = ref(false)
-const userInfo = ref<User | null>(null)
+const userInfo = ref<LoginUserInfo | null>(null)
 
-const isMe = computed(() => props.uid === userStore.userInfo?.uid)
+const isMe = computed(() => props.uid === userStore.loginUserInfo?.uid)
 const isFriend = computed(() => friendStore.friends.some(f => f.uid === props.uid))
 
 const fetchUserInfo = async () => {
@@ -31,7 +31,7 @@ const fetchUserInfo = async () => {
     if (res.code === 200) {
       userInfo.value = res.data
     }
-  } catch (e) {
+  } catch {
     ElMessage.error(t('dialog.network_error'))
   } finally {
     loading.value = false
@@ -54,7 +54,7 @@ const handleAddFriend = async () => {
   try {
     await friendStore.sendRequest(props.uid)
     visible.value = false
-  } catch (e) {
+  } catch {
     // Error handled in store
   }
 }

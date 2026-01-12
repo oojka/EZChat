@@ -482,26 +482,46 @@
     "confirm_password": "パスワード確認",
     "confirm_password_placeholder": "新しいパスワードを再入力",
     "change_password": "パスワードを変更",
-    "password_changed_relogin": "パスワードが変更されました。新しいパスワードで再ログインしてください。"
+    "password_changed_relogin": "パスワードが変更されました。新しいパスワードで再ログインしてください。",
+    "incorrect_old_password": "現在のパスワードが正しくありません。",
+    "password_change_failed": "パスワードの変更に失敗しました。"
   }
   ,
   "friend": {
-    "add_friend": "Add Friend",
-    "add_friend_placeholder": "Enter User ID (e.g. 1000001)",
-    "send_request": "Send Request",
-    "request_sent": "Request sent",
-    "request_failed": "Failed to send request",
-    "new_requests": "New Requests",
-    "accepted": "Accepted",
-    "rejected": "Rejected",
-    "operation_failed": "Operation failed",
-    "remove_confirm": "Are you sure you want to delete this friend?",
-    "delete": "Delete",
-    "friend_removed": "Friend removed",
-    "remove_failed": "Failed to remove friend",
-    "start_chat_failed": "Failed to start chat",
-    "no_friends": "No friends yet",
-    "no_bio": "No bio",
-    "uid": "UID: {0}"
+    "add_friend": "友達を追加",
+    "add_friend_placeholder": "ユーザーIDを入力 (例: 1000001)",
+    "send_request": "リクエストを送信",
+    "request_sent": "リクエストを送信しました",
+    "request_failed": "リクエストの送信に失敗しました",
+    "new_requests": "新しいリクエスト",
+    "accepted": "承認済み",
+    "rejected": "拒否済み",
+    "operation_failed": "操作に失敗しました",
+    "remove_confirm": "この友達を削除しますか？",
+    "delete": "削除",
+    "friend_removed": "友達を削除しました",
+    "remove_failed": "友達の削除に失敗しました",
+    "start_chat_failed": "チャットの開始に失敗しました",
+    "no_friends": "まだ友達がいません",
+    "no_bio": "自己紹介なし",
+    "uid": "UID: {0}",
+    "profile": "プロフィール"
+  },
+  "mobile": {
+    "index": {
+      "tab_guest": "ゲスト",
+      "tab_login": "ログイン",
+      "tab_register": "登録",
+      "quick_join": "クイック参加",
+      "join_hint": "ルームIDまたは招待リンクを入力"
+    },
+    "tab_chat": "チャット",
+    "tab_friends": "友達",
+    "tab_settings": "設定",
+    "friends_locked_title": "友達機能は登録ユーザー限定です",
+    "friends_locked_desc": "アップグレードして友達機能を解除し、プライベートチャットを始めましょう",
+    "upgrade_now": "今すぐアップグレード",
+    "upgrade_banner_title": "登録ユーザーにアップグレード",
+    "upgrade_banner_desc": "友達機能とその他の機能を解除"
   }
 }

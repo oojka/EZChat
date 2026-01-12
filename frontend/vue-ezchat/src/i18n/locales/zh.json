@@ -530,5 +530,22 @@
     "uid": "UID: {0}"
     ,
     "profile": "个人资料"
+  },
+  "mobile": {
+    "index": {
+      "tab_guest": "访客",
+      "tab_login": "登录",
+      "tab_register": "注册",
+      "quick_join": "快速加入",
+      "join_hint": "输入房间ID或邀请链接"
+    },
+    "tab_chat": "聊天",
+    "tab_friends": "好友",
+    "tab_settings": "设置",
+    "friends_locked_title": "好友功能仅限正式用户",
+    "friends_locked_desc": "升级为正式用户后即可使用好友功能，添加好友并开始私聊",
+    "upgrade_now": "立即升级",
+    "upgrade_banner_title": "升级为正式用户",
+    "upgrade_banner_desc": "解锁好友功能和更多特性"
   }
 }

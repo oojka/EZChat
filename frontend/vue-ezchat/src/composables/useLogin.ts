@@ -1,21 +1,18 @@
-import { reactive, ref, computed } from 'vue'
-import { type LoginForm, type LoginUser, type Result } from '@/type'
+import { reactive, ref } from 'vue'
+import { type LoginForm } from '@/type'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/appStore.ts'
 import { useUserStore } from '@/stores/userStore.ts'
-import { storeToRefs } from 'pinia'
 import { Cooldown } from '@/utils/cooldown.ts'
-import { showAppNotification, showWelcomeNotification } from '@/components/notification.ts'
+import { showAppNotification } from '@/components/notification.ts'
 import { useI18n } from 'vue-i18n'
 import { useCooldown } from '@/composables/useCooldown.ts'
-import { type PasswordOptions, isValidUsername, isValidPassword } from '@/utils/validators.ts'
+import { isValidUsername, isValidPassword } from '@/utils/validators.ts'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 import { ElMessage } from 'element-plus'
 
 // 登录冷却锁配置：3秒内最多5次尝试，超过则锁定15秒
 const loginLock = new Cooldown(3000, 5, 15000)
-// 密码验证选项：最小8位，最大20位，基础级别验证
-const passwordOption: PasswordOptions = { min: 8, max: 20, level: 'basic' }
 
 /**
  * 登录业务逻辑 Hook

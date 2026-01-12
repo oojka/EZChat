@@ -75,7 +75,7 @@ const handleAvatarClick = () => {
             } else {
                 ElMessage.error(result.message || t('upgrade.avatar_upload_failed'))
             }
-        } catch (err) {
+        } catch {
             ElMessage.error(t('upgrade.avatar_upload_failed'))
         }
     }

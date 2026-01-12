@@ -35,7 +35,7 @@ const systemText = computed(() => {
     return props.msg.text || ''
 })
 
-const timeText = computed(() => {
+const _timeText = computed(() => {
     return props.msg.createTime?.replace('T', ' ').slice(0, 16)
 })
 

@@ -1,7 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
 import type {Image} from '@/type'
-import {ElMessage, type FormInstance, type FormRules, type UploadProps, type FormItemRule, type UploadFile} from 'element-plus'
+import {ElMessage, type FormInstance, type FormRules, type UploadProps, type UploadFile} from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
@@ -16,7 +15,6 @@ import { useImageStore } from '@/stores/imageStore'
 
 export const useCreateChat = () => {
   const roomStore = useRoomStore()
-  const { createChatDialogVisible } = storeToRefs(roomStore)
   const router = useRouter()
   const { t } = useI18n()
   const imageStore = useImageStore()
@@ -424,7 +422,7 @@ export const useCreateChat = () => {
     try {
       await createFormRef.value.validateField(fieldsToValidate)
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }
@@ -490,6 +488,7 @@ export const useCreateChat = () => {
     } catch (error: unknown) {
       // 类型守卫：检查 error 是否为 Error 对象
       // 捕获异常（头像上传失败、API 错误或网络错误）
+      console.error('[ERROR] [handleCreate]', error)
       const errorMessage = error instanceof Error ? error.message : t('common.error')
       createResult.value = { success: false, message: errorMessage }
       ElMessage.error(errorMessage)

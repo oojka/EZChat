@@ -1,12 +1,12 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useWebsocket } from '@/WS/useWebsocket.ts'
 import { useUserStore } from '@/stores/userStore.ts'
 import { useMessageStore } from '@/stores/messageStore.ts'
 import { useRoomStore } from '@/stores/roomStore.ts'
 import { useFriendStore } from '@/stores/friendStore.ts'
 import { ElMessage, ElNotification } from 'element-plus'
-import type { Image, Message, ChatMember, FriendRequest } from '@/type'
+import type { ChatMember, FriendRequest, AckPayload, Image } from '@/type'
 import { useConfigStore } from '@/stores/configStore.ts'
 import { useImageStore } from '@/stores/imageStore.ts'
 import i18n from '@/i18n'
@@ -87,7 +87,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
     }
 
     connect(fullUrl, {
-      onMessage: (data: any) => {
+      onMessage: (data: unknown) => {
         const messageStore = useMessageStore()
         messageStore.receiveMessage(data).then(() => { })
       },
@@ -120,7 +120,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
       onForceLogout: async () => {
         await handleForceLogout()
       },
-      onAck: (data: any) => {
+      onAck: (data: AckPayload) => {
         const messageStore = useMessageStore()
         if (data && data.tempId && data.seqId) {
           messageStore.handleAck(data.tempId, data.seqId)

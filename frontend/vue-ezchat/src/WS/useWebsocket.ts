@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Message, UserStatus, WebSocketResult, AckPayload, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, ForceLogoutPayload, FriendRequest } from '@/type'
+import type { ChatMember, UserStatus, WebSocketResult, AckPayload, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, ForceLogoutPayload, FriendRequest } from '@/type'
 import { isAckPayload, isMemberLeavePayload, isMemberRemovedPayload, isOwnerTransferPayload, isRoomDisbandPayload, isForceLogoutPayload } from '@/utils/validators'
 import i18n from '@/i18n'
 
@@ -8,13 +8,13 @@ const { t } = i18n.global
 
 // 定义 Connect 方法需要的参数类型
 type ConnectOptions = {
-  onMessage: (data: any) => void
+  onMessage: (data: unknown) => void
   onUserStatus: (uid: string, isOnline: boolean) => void
   onAck: (data: AckPayload) => void
   getHeartbeatPayload: () => string
   getReconnectUrl?: () => Promise<string | null>
   onClose?: (event: CloseEvent) => void
-  onChatMemberAdd?: (member: any) => void
+  onChatMemberAdd?: (member: ChatMember) => void
   onChatMemberLeave?: (payload: MemberLeaveBroadcastPayload) => void
   onChatMemberRemoved?: (payload: MemberRemovedBroadcastPayload) => void
   onChatOwnerTransfer?: (payload: OwnerTransferBroadcastPayload) => void
@@ -87,8 +87,8 @@ export function useWebsocket() {
     try {
       socket.value = new WebSocket(url)
       setStatus('CONNECTING')
-    } catch (e) {
-      console.error('[ERROR] [WS] WebSocket creation failed', e)
+    } catch {
+      console.error('[ERROR] [WS] WebSocket creation failed')
       reconnect()
       return
     }
@@ -113,7 +113,7 @@ export function useWebsocket() {
           if (typeof data !== 'string') return data
           try {
             return JSON.parse(data)
-          } catch (e) {
+          } catch {
             return data
           }
         }

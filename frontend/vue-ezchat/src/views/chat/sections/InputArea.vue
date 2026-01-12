@@ -6,6 +6,13 @@ import {useRoute} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import EmojiPicker from '@/components/EmojiPicker.vue'
 
+/** Props */
+withDefaults(defineProps<{
+  isMobile?: boolean
+}>(), {
+  isMobile: false,
+})
+
 const { t } = useI18n()
 const {
   inputContent, sendSettings, uploadHeaders, beforePictureUpload,
@@ -71,7 +78,7 @@ onMounted(() => editorRef.value?.focus())
 </script>
 
 <template>
-  <div class="input-container">
+  <div class="input-container" :class="{ 'is-mobile': isMobile }">
     <div class="toolbar">
       <div class="tool-left">
         <el-popover placement="top-start" :width="420" trigger="click" popper-class="ez-emoji-popover">
@@ -105,7 +112,7 @@ onMounted(() => editorRef.value?.focus())
     <div class="bottom-container">
       <el-button-group class="send-button-group">
         <el-button class="send-button" type="primary" @click="handleSend">{{ t('chat.send') }}</el-button>
-        <el-popover placement="top-end" :width="150" trigger="click" popper-class="ez-send-settings-popover" :offset="12">
+        <el-popover v-if="!isMobile" placement="top-end" :width="150" trigger="click" popper-class="ez-send-settings-popover" :offset="12">
           <template #reference>
             <el-button class="settings-button" type="primary">
               <el-icon><ArrowUp /></el-icon>
@@ -125,6 +132,27 @@ onMounted(() => editorRef.value?.focus())
 
 <style scoped>
 .input-container { display: flex; flex-direction: column; height: 100%; padding: 8px 16px; box-sizing: border-box; background-color: var(--bg-card); border-top: 1px solid var(--el-border-color-light); transition: all 0.3s ease; }
+
+/* 移动端输入区样式 */
+.input-container.is-mobile {
+  padding: 8px 12px;
+  padding-bottom: 8px; /* Safe area is handled by parent container */
+}
+
+.input-container.is-mobile .input-wrapper {
+  min-height: 36px;
+  max-height: 120px;
+}
+
+.input-container.is-mobile .rich-editor {
+  font-size: 16px; /* 避免 iOS 自动缩放 */
+}
+
+.input-container.is-mobile .send-button {
+  height: 36px;
+  padding: 0 16px;
+}
+
 .toolbar { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; }
 .tool-left { display: flex; align-items: center; gap: 4px; }
 .processing-tip { margin-left: 6px; font-size: 12px; color: var(--text-400); }
@@ -174,7 +202,7 @@ onMounted(() => editorRef.value?.focus())
   white-space: pre-wrap;
   word-break: break-word;
   /* Web Font 方案：使用 Noto Sans 确保中日文混排时高度一致 */
-  font-family: "Noto Sans JP", "Noto Sans SC", sans-serif;
+  /* font-family: "Noto Sans JP", "Noto Sans SC", sans-serif; */
 }
 .rich-editor:empty::before { content: attr(placeholder); color: var(--text-400); }
 :deep(.input-inline-emoji) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { UserFilled, Setting } from '@element-plus/icons-vue'
+import { Setting } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'
 import type { Image } from '@/type'
 

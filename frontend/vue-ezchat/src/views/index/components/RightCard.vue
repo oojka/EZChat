@@ -17,6 +17,7 @@ import PasswordInput from '@/components/PasswordInput.vue'
 import { useImageStore } from '@/stores/imageStore'
 import { ElMessage } from 'element-plus'
 import { createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
+import type { Result, Image } from '@/type'
 
 /**
  * 右侧卡片组件 - 登录/注册界面
@@ -37,7 +38,7 @@ import { createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
  */
 
 const { t } = useI18n()                    // 国际化翻译函数
-const props = defineProps<{ active: boolean; flipped: boolean }>()  // 组件属性：激活状态和翻转状态
+defineProps<{ active: boolean; flipped: boolean }>()  // 组件属性：激活状态和翻转状态
 const emit = defineEmits<{ (e: 'flip'): void; (e: 'unflip'): void }>()  // 组件事件：翻转和取消翻转
 
 // ==================== 业务逻辑 Hook 注入 ====================
@@ -126,7 +127,7 @@ const onUnflip = () => {
  * 头像上传成功回调
  * 将上传结果传递给 useRegister hook 处理
  */
-const onAvatarSuccess = (response: any) => { handleAvatarSuccess(response) }
+const onAvatarSuccess = (response: unknown) => { handleAvatarSuccess(response as Result<Image | null>) }
 
 // ==================== 注册步骤验证 ====================
 /**
@@ -210,9 +211,9 @@ const handleRegister = async () => {
       // 不设置 registerStep = 4，保持在步骤3
 
     }
-  } catch (e: any) {
+  } catch (_e: unknown) {
     // 捕获异常（头像上传失败、API 错误或网络错误）：保持在步骤3
-    const errorMessage = t('common.error') || 'An error occurred' || e.message
+    const errorMessage = t('common.error') || 'An error occurred'
     registrationResult.value = { success: false, message: errorMessage }
     // 不设置 registerStep = 4，保持在步骤3
     throw createAppError(

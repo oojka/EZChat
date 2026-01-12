@@ -482,10 +482,12 @@
     "confirm_password": "確認密碼",
     "confirm_password_placeholder": "請再次輸入新密碼",
     "change_password": "修改密碼",
-    "password_changed_relogin": "密碼修改成功，請使用新密碼重新登入。"
+    "password_changed_relogin": "密碼修改成功，請使用新密碼重新登入。",
+    "incorrect_old_password": "目前密碼不正確。",
+    "password_change_failed": "密碼修改失敗。"
   }
   ,
-  "friend": {
+"friend": {
     "add_friend": "新增好友",
     "add_friend_placeholder": "請輸入用戶 ID (如 1000001)",
     "send_request": "發送申請",
@@ -502,6 +504,24 @@
     "start_chat_failed": "發起聊天失敗",
     "no_friends": "暫無好友",
     "no_bio": "暫無簡介",
-    "uid": "UID: {0}"
+    "uid": "UID: {0}",
+    "profile": "個人資料"
+  },
+  "mobile": {
+    "index": {
+      "tab_guest": "訪客",
+      "tab_login": "登入",
+      "tab_register": "註冊",
+      "quick_join": "快速加入",
+      "join_hint": "輸入房間ID或邀請連結"
+    },
+    "tab_chat": "聊天",
+    "tab_friends": "好友",
+    "tab_settings": "設定",
+    "friends_locked_title": "好友功能僅限正式用戶",
+    "friends_locked_desc": "升級為正式用戶後即可使用好友功能，新增好友並開始私聊",
+    "upgrade_now": "立即升級",
+    "upgrade_banner_title": "升級為正式用戶",
+    "upgrade_banner_desc": "解鎖好友功能和更多特性"
   }
 }

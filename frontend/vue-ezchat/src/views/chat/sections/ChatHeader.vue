@@ -1,30 +1,47 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useRoomStore } from '@/stores/roomStore.ts'
-import { InfoFilled, MoreFilled } from '@element-plus/icons-vue'
+import { MoreFilled, User } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'
 import { useI18n } from 'vue-i18n'
 import { useChatRoomActions } from '@/composables/useChatRoomActions'
 import RoomSettingsDialog from '@/components/dialogs/room-settings/index.vue'
 
+/** Props */
+withDefaults(defineProps<{
+  isMobile?: boolean
+}>(), {
+  isMobile: false,
+})
+
+/** Emits */
+const emit = defineEmits<{
+  openMemberDrawer: []
+}>()
+
 const { t } = useI18n()
 const roomStore = useRoomStore()
 const { currentRoom, roomSettingsDialogVisible } = storeToRefs(roomStore)
 const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatRoomActions()
+
+/** 移动端：打开成员列表抽屉 */
+const handleOpenMemberDrawer = () => {
+  emit('openMemberDrawer')
+}
 </script>
 
 <template>
-  <div class="chat-header-container">
+  <div class="chat-header-container" :class="{ 'is-mobile': isMobile }">
     <div class="header-left">
       <div class="room-info" v-if="currentRoom">
-        <Avatar :size="40" :image="currentRoom.avatar" :text="currentRoom.chatName" :border-radius-ratio="0.3"
+        <Avatar :size="isMobile ? 36 : 40" :image="currentRoom.avatar" :text="currentRoom.chatName" :border-radius-ratio="0.3"
           class="room-avatar" />
         <div class="text-info">
           <div class="name-row">
             <h2 class="room-name">{{ currentRoom.chatName }}</h2>
             <span class="member-count">({{ currentRoom.memberCount }})</span>
           </div>
-          <div class="room-status">
+          <div class="room-status" v-if="!isMobile">
             <span class="id-label">{{ t('chat.room_id') }}</span>
             <span class="room-id">{{ currentRoom.chatCode }}</span>
           </div>
@@ -34,6 +51,13 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
 
     <div class="header-right">
       <div class="action-group">
+        <!-- 移动端：成员列表入口按钮 -->
+        <el-tooltip v-if="isMobile" :content="t('chat.members')" placement="bottom" :show-after="300">
+          <div class="action-btn" @click="handleOpenMemberDrawer">
+            <el-icon><User /></el-icon>
+          </div>
+        </el-tooltip>
+
         <el-tooltip :content="t('common.menu')" placement="bottom" :show-after="300">
           <el-dropdown trigger="click" placement="bottom-end" popper-class="ez-header-popper">
             <div class="action-btn"><el-icon>
@@ -74,6 +98,11 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
   transition: all 0.3s ease;
 }
 
+/* 移动端 Header 紧凑布局 */
+.chat-header-container.is-mobile {
+  padding: 0 16px;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -83,6 +112,10 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.is-mobile .room-info {
+  gap: 10px;
 }
 
 /* .room-avatar 样式由组件内部控制 */
@@ -106,10 +139,18 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
   margin: 0;
 }
 
+.is-mobile .room-name {
+  font-size: 15px;
+}
+
 .member-count {
   font-size: 13px;
   color: var(--text-500);
   font-weight: 600;
+}
+
+.is-mobile .member-count {
+  font-size: 12px;
 }
 
 .room-status {
@@ -146,6 +187,10 @@ const { isOwner, canLeave, canDisband, confirmLeave, confirmDisband } = useChatR
 .action-group {
   display: flex;
   gap: 8px;
+}
+
+.is-mobile .action-group {
+  gap: 4px;
 }
 
 .action-btn {

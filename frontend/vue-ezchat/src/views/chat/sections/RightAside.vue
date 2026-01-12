@@ -8,6 +8,20 @@ import { storeToRefs } from 'pinia'
 import { computed, watch, ref, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+/** Props */
+withDefaults(defineProps<{
+  isMobile?: boolean
+  drawerVisible?: boolean
+}>(), {
+  isMobile: false,
+  drawerVisible: false,
+})
+
+/** Emits - v-model:drawerVisible */
+const emit = defineEmits<{
+  'update:drawerVisible': [value: boolean]
+}>()
+
 const appStore = useAppStore()
 const messageStore = useMessageStore()
 const roomStore = useRoomStore()
@@ -24,14 +38,14 @@ const memberListAreaRef = ref<InstanceType<typeof ChatMemberList> | null>(null)
  * 右侧成员列表的加载策略
  *
  * 业务目的：
- * - refresh 时避免右侧区域出现“骨架屏”（由你指定改为 AppSpinner）
+ * - refresh 时避免右侧区域出现"骨架屏"（由你指定改为 AppSpinner）
  * - 等 chatView 开始拉取消息/房间信息后再显示真实列表
  */
 const showRightSpinner = computed(() =>
   isAppInitializing.value || chatViewIsLoading.value || isCurrentRoomMembersLoading.value
 )
 
-// refresh 初始化阶段：显示“初始化...”；普通加载阶段：显示“加载中...”
+// refresh 初始化阶段：显示"初始化..."；普通加载阶段：显示"加载中..."
 const rightSpinnerText = computed(() =>
   isAppInitializing.value ? t('common.initializing') : t('common.loading')
 )
@@ -65,11 +79,43 @@ const handleOverlayHidden = async () => {
     memberListAreaRef.value?.scrollToTop()
   }, 50)
 }
+
+/** 移动端 Drawer 关闭 */
+const handleDrawerClose = () => {
+  emit('update:drawerVisible', false)
+}
 </script>
 
 <template>
-  <div class="right-aside-wrapper">
-    <!-- 成员列表区域始终渲染：这样 loading 遮罩的 backdrop-filter 才有“可模糊的内容”，不会看起来像纯白盖板 -->
+  <!-- 移动端：使用 el-drawer 包裹 -->
+  <el-drawer
+    v-if="isMobile"
+    :model-value="drawerVisible"
+    direction="btt"
+    size="60%"
+    :show-close="true"
+    :with-header="true"
+    :title="t('chat.members')"
+    class="mobile-member-drawer"
+    @close="handleDrawerClose"
+  >
+    <div class="right-aside-wrapper drawer-content">
+      <ChatMemberList ref="memberListAreaRef" />
+      <Transition name="right-aside-fade" @after-leave="handleOverlayHidden">
+        <AppSpinner
+          v-if="showRightSpinner"
+          :absolute="true"
+          :show-blobs="false"
+          :show-text="true"
+          :text="rightSpinnerText"
+        />
+      </Transition>
+    </div>
+  </el-drawer>
+
+  <!-- 桌面端：普通渲染 -->
+  <div v-else class="right-aside-wrapper">
+    <!-- 成员列表区域始终渲染：这样 loading 遮罩的 backdrop-filter 才有"可模糊的内容"，不会看起来像纯白盖板 -->
     <ChatMemberList ref="memberListAreaRef" />
     <Transition name="right-aside-fade" @after-leave="handleOverlayHidden">
       <AppSpinner
@@ -94,10 +140,40 @@ const handleOverlayHidden = async () => {
   animation: fadeIn 0.25s ease;
 }
 
+/* Drawer 内容区 */
+.drawer-content {
+  height: 100%;
+  animation: none;
+}
+
 .right-aside-fade-enter-active,
 .right-aside-fade-leave-active { transition: opacity 0.18s ease; }
 .right-aside-fade-enter-from,
 .right-aside-fade-leave-to { opacity: 0; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<style>
+/* 移动端成员列表 Drawer 全局样式 */
+.mobile-member-drawer.el-drawer {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.mobile-member-drawer .el-drawer__header {
+  padding: 16px 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.mobile-member-drawer .el-drawer__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-900);
+}
+
+.mobile-member-drawer .el-drawer__body {
+  padding: 0;
+  overflow: hidden;
+}
 </style>

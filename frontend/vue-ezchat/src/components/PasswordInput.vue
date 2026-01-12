@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type Component } from 'vue'
 import { Hide, Lock, View } from '@element-plus/icons-vue'
 
 defineOptions({
@@ -10,7 +10,7 @@ interface Props {
   modelValue: string
   placeholder?: string
   size?: 'large' | 'default' | 'small'
-  prefixIcon?: any
+  prefixIcon?: Component
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -56,6 +56,40 @@ const showPassword = ref(false)
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
   -ms-user-select: none !important;
+  padding: 0 16px 0 0 !important; /* Strict padding control */
+  text-indent: 0;
+  flex: 1;
+}
+
+/* Ensure PasswordInput matches the strict layout of other premium inputs */
+.password-input-wrapper :deep(.el-input__wrapper) {
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.password-input-wrapper :deep(.el-input__prefix) {
+  margin-right: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.password-input-wrapper :deep(.el-input__prefix-inner) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px; /* Strict fixed width for icon alignment */
+  min-width: 48px;
+  height: 100%;
+  font-size: 20px;
+}
+
+.password-input-wrapper :deep(.el-input__suffix) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  right: 12px;
 }
 
 /* 正常状态的背景色 - 已由 main.css 全局托管 */

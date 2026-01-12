@@ -153,7 +153,7 @@ onUnmounted(() => {
 <style scoped>
 .index-root {
   width: 100%;
-  min-height: 100vh;
+  min-height: var(--app-height, 100dvh);
   user-select: none;
 }
 
@@ -164,7 +164,7 @@ onUnmounted(() => {
 
 .page-wrapper {
   position: relative;
-  min-height: 100vh;
+  min-height: var(--app-height, 100dvh);
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   overflow: hidden;
   display: flex;

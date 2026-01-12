@@ -9,7 +9,6 @@ import { useImageStore } from '@/stores/imageStore'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes'
 import i18n from '@/i18n'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
-import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 /**
  * RoomStore：管理聊天室列表与“当前所在房间”
@@ -282,7 +281,8 @@ export const useRoomStore = defineStore('room', () => {
     } catch (e) {
       console.error('[ERROR] [RoomStore] Fetch members failed:', e)
     } finally {
-      const { [chatCode]: _, ...rest } = memberListLoadingMap.value
+      const { [chatCode]: _unusedLoading, ...rest } = memberListLoadingMap.value
+      void _unusedLoading
       memberListLoadingMap.value = rest
     }
   }

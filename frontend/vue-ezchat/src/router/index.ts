@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type { JoinChatCredentialsForm, JoinChatReq } from '@/type'
-import IndexView from '@/views/index/index.vue'
+import HomeView from '@/views/HomeView.vue'
 import LayoutView from '@/views/layout/index.vue'
 import ChatView from '@/views/chat/index.vue'
 import JoinView from '@/views/join/index.vue'
@@ -12,6 +11,13 @@ import { useAppStore } from '@/stores/appStore'
 import { useWebsocketStore } from '@/stores/websocketStore'
 import { processInviteRoute } from '@/services/inviteService'
 import i18n from '@/i18n'
+
+const MobileFriendsView = () => import('@/views/mobile/FriendsView.vue')
+const MobileSettingsView = () => import('@/views/mobile/SettingsView.vue')
+const MobileWelcomeView = () => import('@/views/mobile/entry/MobileWelcomeView.vue')
+const MobileGuestJoinView = () => import('@/views/mobile/entry/MobileGuestJoinView.vue')
+const MobileLoginView = () => import('@/views/mobile/entry/MobileLoginView.vue')
+const MobileRegisterView = () => import('@/views/mobile/entry/MobileRegisterView.vue')
 
 
 const { t } = i18n.global
@@ -50,12 +56,48 @@ const router = createRouter({
           component: ChatView,
           meta: { title: 'Chat Room - Guest Access' },
         },
+        {
+          path: 'friends',
+          name: 'MobileFriends',
+          component: MobileFriendsView,
+          meta: { title: 'Friends', mobileOnly: true },
+        },
+        {
+          path: 'settings',
+          name: 'MobileSettings',
+          component: MobileSettingsView,
+          meta: { title: 'Settings', mobileOnly: true },
+        },
       ],
+    },
+    {
+      path: '/m',
+      name: 'MobileWelcome',
+      component: MobileWelcomeView,
+      meta: { title: 'Welcome', mobileOnly: true },
+    },
+    {
+      path: '/m/guest',
+      name: 'MobileGuestJoin',
+      component: MobileGuestJoinView,
+      meta: { title: 'Quick Join', mobileOnly: true },
+    },
+    {
+      path: '/m/login',
+      name: 'MobileLogin',
+      component: MobileLoginView,
+      meta: { title: 'Login', mobileOnly: true },
+    },
+    {
+      path: '/m/register',
+      name: 'MobileRegister',
+      component: MobileRegisterView,
+      meta: { title: 'Register', mobileOnly: true },
     },
     {
       path: '/',
       name: 'Home',
-      component: IndexView,
+      component: HomeView,
       meta: { title: 'EZ Chat - Home' },
     },
     {

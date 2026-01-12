@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { isInviteJoinReq, isPasswordJoinReq } from '@/utils/validators.ts'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
@@ -35,7 +34,7 @@ import { ElMessage } from 'element-plus'
  * - 状态一致性保证
  */
 export const useLoginJoin = () => {
-    const { t } = useI18n()
+    useI18n()
     const userStore = useUserStore()
     const roomStore = useRoomStore()
     const appStore = useAppStore()

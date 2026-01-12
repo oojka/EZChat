@@ -8,12 +8,10 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   ArrowRight,
-  Camera,
   CircleCheckFilled,
   CircleCloseFilled,
   Close,
   DocumentCopy,
-  Picture,
 } from '@element-plus/icons-vue'
 import { useCreateChat } from '@/composables/useCreateChat.ts'
 import { storeToRefs } from 'pinia'

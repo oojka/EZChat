@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import {ref, watch, onMounted, onUnmounted} from 'vue'
+import {ref, watch, onUnmounted} from 'vue'
 import {useRoute} from 'vue-router'
 import {storeToRefs} from 'pinia'
 import {useAppStore} from '@/stores/appStore.ts'
 import AppSpinner from '@/components/AppSpinner.vue'
+import {useViewportHeight} from '@/composables/useViewportHeight.ts'
+import {useKeyboardReset} from '@/composables/useKeyboardReset.ts'
+
+useViewportHeight()
+useKeyboardReset()
 
 const route = useRoute()
 const appStore = useAppStore()
@@ -26,7 +31,8 @@ const prevIsAppLoading = ref<boolean>(isAppLoading.value)
  * - startViewTransition 是实验性 API，因此这里做能力检测并用 any 兜底类型
  */
 const runViewTransition = (applyDomChange: () => void) => {
-  const doc = document as any
+  // View Transitions API is experimental, use duck typing for type safety
+  const doc = document as Document & { startViewTransition?: (callback: () => void) => void }
   if (typeof doc.startViewTransition === 'function') {
     doc.startViewTransition(applyDomChange)
   } else {
@@ -91,7 +97,15 @@ onUnmounted(() => {
 </template>
 
 <style>
-.app-root { height: 100vh; width: 100vw; }
+.app-root {
+  /* Step 2: Force fixed inset on wrapper */
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #111827; /* Force dark background */
+}
 
 .global-loading-overlay {
   position: fixed; inset: 0; z-index: 99999;
