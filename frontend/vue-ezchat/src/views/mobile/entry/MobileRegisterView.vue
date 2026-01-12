@@ -1,4 +1,21 @@
 <script setup lang="ts">
+/**
+ * 移动端注册页组件
+ *
+ * 功能：
+ * - 两步注册向导
+ *   - Step 1: 头像上传 + 昵称 + 用户名
+ *   - Step 2: 密码设置 + 确认密码
+ * - 头像预览与上传
+ * - 表单分步验证
+ * - 注册成功后跳转登录页并预填用户名
+ *
+ * 路由：/m/register
+ *
+ * 依赖：
+ * - useRegister: 注册逻辑
+ * - MobileEntryShell: 布局壳组件
+ */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'

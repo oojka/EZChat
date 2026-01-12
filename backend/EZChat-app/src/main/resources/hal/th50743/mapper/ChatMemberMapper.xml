@@ -3,12 +3,15 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.ChatMemberMapper">
+
+    <!-- 插入聊天室成员关系 -->
     <insert id="insertChatMember">
         INSERT INTO chat_members
         (chat_id, user_id, last_seen_at, create_time, update_time)
         VALUES (#{chatId}, #{userId}, #{now}, #{now}, #{now})
     </insert>
 
+    <!-- 更新成员在聊天室中的最后活跃时间（用于未读消息计算） -->
     <update id="updateLastSeenAt">
         UPDATE chat_members
         SET last_seen_at = #{now}
@@ -16,6 +19,16 @@
         AND chat_id = #{chatId}
     </update>
 
+    <!-- 
+      获取用户关联的所有成员 ID 列表
+      
+      业务说明：
+      - 查询当前用户所在的所有聊天室中的所有成员 ID（去重）
+      - 排除已删除用户（is_deleted = 0）
+      
+      索引依赖：
+      - chat_members(user_id)
+    -->
     <select id="selectChatMembersById" resultType="java.lang.Integer">
         SELECT DISTINCT u.id
         FROM users u
@@ -27,6 +40,13 @@
           AND u.is_deleted = 0
     </select>
 
+    <!-- 
+      获取指定聊天室的所有成员 ID 列表
+      
+      业务说明：
+      - 包含权限校验（EXISTS 子查询验证请求者是成员）
+      - 仅当 userId 是该聊天室成员时才返回结果
+    -->
     <select id="selectChatMembersByUserIdAndChatId" resultType="java.lang.Integer">
         SELECT user_id
         FROM chat_members
@@ -39,6 +59,18 @@
         );
     </select>
 
+    <!-- 
+      获取用户所在所有聊天室的成员详情列表
+      
+      业务说明：
+      - 返回完整成员信息（nickname、avatar 等）
+      - 用于初始化时一次性获取所有成员数据
+      - JOIN users 和 assets 表
+      
+      索引依赖：
+      - chat_members(user_id)
+      - users(id) 主键
+    -->
     <select id="selectChatMemberListByUserId" resultType="hal.th50743.pojo.ChatMember">
         SELECT m.chat_id,
                c.chat_code,
@@ -56,6 +88,14 @@
         FROM chat_members cm WHERE cm.user_id = #{userId})
     </select>
 
+    <!-- 
+      获取用户所在所有聊天室的轻量成员列表
+      
+      业务说明：
+      - 仅返回 userId、uid、lastSeenAt、chatCode
+      - 用于初始化阶段聚合在线状态/计算在线人数
+      - 避免携带 nickname/avatar 导致数据量过大
+    -->
     <select id="selectChatMemberLiteListByUserId" resultType="hal.th50743.pojo.ChatMemberLite">
         SELECT c.chat_code  AS chatCode,
                m.user_id    AS userId,
@@ -71,6 +111,7 @@
         )
     </select>
 
+    <!-- 获取指定聊天室的所有成员详情列表 -->
     <select id="selectChatMemberListByChatId" resultType="hal.th50743.pojo.ChatMember">
         SELECT m.chat_id,
                c.chat_code,
@@ -89,6 +130,13 @@
         WHERE c.id = #{chatId}
     </select>
 
+    <!-- 
+      验证用户是否有权获取目标用户的信息
+      
+      业务说明：
+      - 校验请求者和目标用户是否在同一个聊天室中
+      - 用于用户信息接口的权限控制
+    -->
     <select id="isValidGetInfoReq" resultType="java.lang.Boolean">
         SELECT IF(COUNT(*) > 0, 1, 0)
         FROM chat_members
@@ -100,17 +148,20 @@
             )
     </select>
 
+    <!-- 删除单个成员关系（用户退出或被踢出） -->
     <delete id="deleteChatMember">
         DELETE FROM chat_members
         WHERE chat_id = #{chatId}
           AND user_id = #{userId}
     </delete>
 
+    <!-- 删除聊天室全部成员（解散聊天室时调用） -->
     <delete id="deleteChatMembersByChatId">
         DELETE FROM chat_members
         WHERE chat_id = #{chatId}
     </delete>
 
+    <!-- 批量删除聊天室成员（群主批量踢人） -->
     <delete id="deleteChatMembersByChatIdAndUserIds">
         DELETE FROM chat_members
         WHERE chat_id = #{chatId}
@@ -120,6 +171,7 @@
         </foreach>
     </delete>
 
+    <!-- 统计聊天室成员数（用于加入校验） -->
     <select id="countMembersByChatId" resultType="int">
         SELECT COUNT(*)
         FROM chat_members

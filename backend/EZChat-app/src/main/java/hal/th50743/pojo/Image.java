@@ -14,16 +14,25 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Image {
 
-    private String imageName;
-    private String imageUrl;
-    private String imageThumbUrl;
     /**
-     * 对象 ID，用于直接关联 objects 表
+     * 图片文件名（MinIO 对象名）
+     */
+    private String imageName;
+
+    /**
+     * 图片完整 URL（原图）
+     */
+    private String imageUrl;
+
+    /**
+     * 缩略图 URL（可选，仅大图片生成）
+     */
+    private String imageThumbUrl;
+
+    /**
+     * 对象ID（逻辑外键，关联 assets.id）
      * <p>
-     * 业务说明：
-     * - 可选字段，向后兼容（旧版本前端可能不包含此字段）
-     * - 如果提供，后端可以直接使用 objectId 关联 objects 表，无需根据 objectName 查询
-     * - 性能优化：避免频繁查询 objects 表
+     * 可选字段，用于后端直接关联 assets 表，避免根据 imageName 查询
      */
     private Integer assetId;
 

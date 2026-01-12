@@ -102,4 +102,13 @@ public class Chat {
      */
     private LocalDateTime updateTime;
 
+    /**
+     * 聊天室类型
+     * <ul>
+     *   <li>0 - 群聊（Group，默认）</li>
+     *   <li>1 - 私聊（Private）</li>
+     * </ul>
+     */
+    private Integer type;
+
 }

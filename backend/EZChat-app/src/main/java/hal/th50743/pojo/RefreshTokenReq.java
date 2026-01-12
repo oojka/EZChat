@@ -5,7 +5,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * RefreshToken 兑换请求对象
+ * RefreshToken 刷新请求对象
+ * <p>
+ * 用于客户端请求刷新 AccessToken。
  */
 @Data
 @AllArgsConstructor
@@ -13,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class RefreshTokenReq {
 
     /**
-     * RefreshToken
+     * RefreshToken（从 localStorage 获取）
      */
     private String refreshToken;
 }

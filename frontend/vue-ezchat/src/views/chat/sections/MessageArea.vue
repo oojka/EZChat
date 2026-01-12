@@ -1,4 +1,23 @@
 <script setup lang="ts">
+/**
+ * 消息列表区域组件
+ *
+ * 核心功能：
+ * - 消息列表渲染（支持文本/图片/系统消息）
+ * - 无限滚动加载历史消息
+ * - 新消息自动滚动到底部
+ * - 未读消息计数与提示
+ *
+ * 特性：
+ * - 使用 column-reverse 布局实现自然的消息流向
+ * - 基于 IntersectionObserver 的懒加载
+ * - 防抖处理避免频繁滚动
+ *
+ * 依赖：
+ * - messageStore: 消息状态
+ * - roomStore: 房间状态
+ * - useInfiniteScroll: 无限滚动 Hook
+ */
 import { nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ArrowDown, Loading } from '@element-plus/icons-vue'

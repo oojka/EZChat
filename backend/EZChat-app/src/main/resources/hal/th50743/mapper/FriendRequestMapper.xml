@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.FriendRequestMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO friend_requests (sender_id, receiver_id, status, create_time, update_time)
+        VALUES (#{senderId}, #{receiverId}, 0, NOW(), NOW())
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE friend_requests
+        SET status = #{status}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultType="hal.th50743.pojo.FriendRequest">
+        SELECT * FROM friend_requests WHERE id = #{id}
+    </select>
+
+    <select id="selectPendingByReceiverId" resultType="hal.th50743.pojo.FriendRequest">
+        SELECT * FROM friend_requests
+        WHERE receiver_id = #{userId} AND status = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPendingBySenderAndReceiver" resultType="hal.th50743.pojo.FriendRequest">
+        SELECT * FROM friend_requests
+        WHERE sender_id = #{senderId} AND receiver_id = #{receiverId} AND status = 0
+    </select>
+
+    <select id="selectHistoryBetweenUsers" resultType="hal.th50743.pojo.FriendRequest">
+        SELECT * FROM friend_requests
+        WHERE (sender_id = #{u1} AND receiver_id = #{u2})
+           OR (sender_id = #{u2} AND receiver_id = #{u1})
+    </select>
+
+</mapper>

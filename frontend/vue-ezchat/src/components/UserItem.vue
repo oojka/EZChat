@@ -1,4 +1,24 @@
 <script setup lang="ts">
+/**
+ * 用户信息展示项组件
+ *
+ * 功能：
+ * - 展示用户头像、昵称、UID
+ * - 在线/离线状态显示
+ * - 设置按钮入口
+ *
+ * Props：
+ * - avatar: 头像 URL
+ * - nickname: 用户昵称
+ * - uid: 用户 UID
+ * - isOnline: 在线状态
+ * - showBadge: 是否显示状态徽章
+ * - clickable: 是否可点击
+ *
+ * Emits：
+ * - click: 点击项目
+ * - setting: 点击设置按钮
+ */
 import { computed } from 'vue'
 import { Setting } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar.vue'

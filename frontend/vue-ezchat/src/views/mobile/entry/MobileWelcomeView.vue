@@ -1,4 +1,19 @@
 <script setup lang="ts">
+/**
+ * 移动端欢迎页组件
+ *
+ * 功能：
+ * - 三合一入口页面（访客加入、登录、注册）
+ * - 快速登录表单（用户名/密码）
+ * - 访客快速入口按钮
+ * - 注册链接跳转
+ *
+ * 路由：/m
+ *
+ * 依赖：
+ * - useLogin: 登录逻辑
+ * - MobileEntryShell: 布局壳组件
+ */
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { User, Search, ArrowRight } from '@element-plus/icons-vue'

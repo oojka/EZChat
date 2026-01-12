@@ -1,3 +1,19 @@
+/**
+ * 房间邀请链接管理 Composable
+ *
+ * 核心职责：
+ * - 管理邀请链接列表（获取、创建、撤销）
+ * - 处理邀请链接过期时间设置
+ * - 提供一次性链接开关
+ * - 执行复制邀请链接到剪贴板
+ *
+ * 使用示例：
+ * ```vue
+ * const { inviteList, createInvite, copyInviteUrl } = useRoomInviteManager()
+ * ```
+ *
+ * @module useRoomInviteManager
+ */
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
@@ -8,10 +24,18 @@ import type { ChatInvite } from '@/type'
 import { isChatInvite, isChatInviteList } from '@/utils/validators'
 import { showConfirmDialog } from '@/components/dialogs/confirmDialog'
 
+/** 邀请链接基础 URL */
 const INVITE_BASE_URL = 'https://ez-chat.oojka.com/invite/'
+/** 默认过期时间（分钟）：7天 */
 const DEFAULT_EXPIRY_MINUTES = 10080
+/** 最大活跃邀请链接数量 */
 const MAX_ACTIVE_INVITES = 5
 
+/**
+ * 房间邀请链接管理业务逻辑 Hook
+ *
+ * @returns 邀请列表、创建/撤销方法、复制方法等
+ */
 export const useRoomInviteManager = () => {
   const roomStore = useRoomStore()
   const { currentRoom, roomSettingsDialogVisible } = storeToRefs(roomStore)

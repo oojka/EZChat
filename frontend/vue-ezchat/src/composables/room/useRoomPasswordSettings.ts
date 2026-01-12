@@ -1,3 +1,19 @@
+/**
+ * 房间密码设置 Composable
+ *
+ * 核心职责：
+ * - 管理密码保护开关状态
+ * - 处理密码设置/修改表单及验证
+ * - 执行密码更新 API 并同步 Store
+ * - 提供编辑模式切换逻辑
+ *
+ * 使用示例：
+ * ```vue
+ * const { passwordForm, isEditing, savePasswordSettings } = useRoomPasswordSettings()
+ * ```
+ *
+ * @module useRoomPasswordSettings
+ */
 import { reactive, ref, watch } from 'vue'
 import type { FormRules, FormInstance } from 'element-plus'
 import { ElMessage } from 'element-plus'
@@ -6,6 +22,11 @@ import { useI18n } from 'vue-i18n'
 import { useRoomStore } from '@/stores/roomStore'
 import { updateChatPasswordApi } from '@/api/Chat'
 
+/**
+ * 房间密码设置业务逻辑 Hook
+ *
+ * @returns 密码表单、编辑状态、保存方法等
+ */
 export const useRoomPasswordSettings = () => {
   const { t } = useI18n()
   const roomStore = useRoomStore()

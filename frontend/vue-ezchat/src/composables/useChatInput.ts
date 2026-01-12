@@ -1,8 +1,24 @@
+/**
+ * 聊天输入框 Composable
+ *
+ * 核心职责：
+ * - 管理消息输入内容（文本 + 图片）
+ * - 处理图片上传（含去重检查、压缩、频率限制）
+ * - 执行消息发送（通过 messageStore）
+ * - 提供发送设置（回车发送等）
+ *
+ * 使用示例：
+ * ```vue
+ * const { inputContent, send, beforePictureUpload } = useChatInput()
+ * ```
+ *
+ * @module useChatInput
+ */
 import { computed, ref } from 'vue'
 import { ElMessage, type UploadProps } from 'element-plus'
 import type { Image } from '@/type'
 import { useUserStore } from '@/stores/userStore.ts'
-import { useMessageStore } from '@/stores/messageStore.ts' // 引入 messageStore
+import { useMessageStore } from '@/stores/messageStore.ts'
 import { Cooldown } from '@/utils/cooldown.ts'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
@@ -12,8 +28,14 @@ import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 import i18n from '@/i18n'
 
+/** 上传频率限制：5秒内最多10次，超过则锁定10秒 */
 const updateLock = new Cooldown(5000, 10, 10000)
 
+/**
+ * 聊天输入框业务逻辑 Hook
+ *
+ * @returns 输入内容、上传处理、发送方法等
+ */
 export const useChatInput = () => {
   const { t } = i18n.global
   const userStore = useUserStore()

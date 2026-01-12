@@ -4,6 +4,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.ChatInviteMapper">
 
+    <!-- 插入邀请码记录（useGeneratedKeys 回填 id） -->
     <insert id="insertChatInvite" parameterType="hal.th50743.pojo.ChatInvite" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chat_invites
         (chat_id, invite_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time)
@@ -11,6 +12,18 @@
         (#{chatId}, #{inviteCode}, #{codeHash}, #{expiresAt}, #{maxUses}, #{usedCount}, #{revoked}, #{createdBy}, NOW(), NOW())
     </insert>
 
+    <!-- 
+      消费邀请码（原子操作）
+      
+      业务说明：
+      - 单条 SQL 完成有效性校验和 used_count 自增
+      - 校验条件：未撤销、未过期、次数未用尽
+      - 返回 1 表示成功消费，返回 0 表示邀请码无效
+      - 高并发场景下保证数据一致性（行级锁）
+      
+      注意事项：
+      - XML 中 '<' 需要转义为 '&lt;'，否则触发 SAXParseException
+    -->
     <update id="consume">
         UPDATE chat_invites
         SET used_count = used_count + 1,
@@ -19,26 +32,36 @@
           AND code_hash = #{codeHash}
           AND revoked = 0
           AND expires_at > NOW()
-          <!-- XML 中需要转义 '<'，否则会触发 SAXParseException（把 SQL 当成标签解析） -->
           AND (max_uses = 0 OR used_count &lt; max_uses)
     </update>
 
+    <!-- 根据邀请码哈希查询邀请码信息 -->
     <select id="selectByCodeHash" resultType="hal.th50743.pojo.ChatInvite">
         SELECT id, chat_id, invite_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
         FROM chat_invites
         WHERE code_hash = #{codeHash}
     </select>
 
+    <!-- 根据邀请码哈希删除邀请码记录（物理删除） -->
     <delete id="deleteByCodeHash">
         DELETE FROM chat_invites
         WHERE code_hash = #{codeHash}
     </delete>
 
+    <!-- 删除聊天室所有邀请码（解散聊天室时调用） -->
     <delete id="deleteByChatId">
         DELETE FROM chat_invites
         WHERE chat_id = #{chatId}
     </delete>
 
+    <!-- 
+      查询聊天室下所有有效邀请码
+      
+      有效条件：
+      - revoked = 0（未撤销）
+      - expires_at > NOW()（未过期）
+      - max_uses = 0 或 used_count < max_uses（次数未用尽）
+    -->
     <select id="selectActiveInvitesByChatId" resultType="hal.th50743.pojo.ChatInvite">
         SELECT id, chat_id, invite_code, code_hash, expires_at, max_uses, used_count, revoked, created_by, create_time, update_time
         FROM chat_invites
@@ -49,6 +72,7 @@
         ORDER BY create_time DESC
     </select>
 
+    <!-- 统计聊天室下有效邀请码数量 -->
     <select id="countActiveInvitesByChatId" resultType="int">
         SELECT COUNT(*)
         FROM chat_invites
@@ -58,6 +82,7 @@
           AND (max_uses = 0 OR used_count &lt; max_uses)
     </select>
 
+    <!-- 撤销邀请码（软删除，设置 revoked=1） -->
     <update id="revokeById">
         UPDATE chat_invites
         SET revoked = 1,

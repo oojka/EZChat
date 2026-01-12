@@ -1,8 +1,7 @@
 package hal.th50743.service;
 
-import hal.th50743.pojo.req.FriendReq;
-import hal.th50743.pojo.vo.FriendRequestVO;
-import hal.th50743.pojo.vo.FriendVO;
+import hal.th50743.pojo.FriendRequestVO;
+import hal.th50743.pojo.FriendVO;
 
 import java.util.List;
 

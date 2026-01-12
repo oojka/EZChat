@@ -27,17 +27,56 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 聊天室服务实现类
+ * 聊天室服务实现类 - 聊天室核心业务逻辑的统一入口
+ *
+ * <h3>职责概述</h3>
  * <p>
- * 负责聊天室的创建、查询、加入、退出、解散等核心业务逻辑。
- * <p>
- * 主要功能：
+ * 负责聊天室全生命周期管理，包括创建、查询、加入、退出、解散等操作。
+ * 同时处理成员关系、权限验证和实时状态同步。
+ * </p>
+ *
+ * <h3>核心功能</h3>
  * <ul>
- *     <li>聊天室 CRUD 操作</li>
- *     <li>成员管理（加入、退出、踢出、转让群主）</li>
- *     <li>密码管理与邀请码验证</li>
- *     <li>私聊房间创建与复用</li>
+ *     <li><b>聊天室 CRUD</b>：创建群聊/私聊、更新信息、解散群聊</li>
+ *     <li><b>成员管理</b>：加入、退出、踢出成员、转让群主</li>
+ *     <li><b>访问控制</b>：密码验证、邀请码验证、权限检查</li>
+ *     <li><b>私聊房间</b>：自动创建与复用机制</li>
  * </ul>
+ *
+ * <h3>调用路径</h3>
+ * <ul>
+ *     <li>{@code ChatController} → 本服务：HTTP 请求入口</li>
+ *     <li>{@code AuthController} → 本服务：访客加入验证</li>
+ *     <li>{@code WebSocketServer} → 本服务：获取成员列表用于广播</li>
+ * </ul>
+ *
+ * <h3>核心不变量</h3>
+ * <ul>
+ *     <li>用户必须是聊天室成员才能访问（通过 {@link #getChatId(Integer, String)} 验证）</li>
+ *     <li>群主操作（踢人、解散、转让）需要 ownerId 验证</li>
+ *     <li>私聊房间（type=1）固定 2 人，禁止加入</li>
+ * </ul>
+ *
+ * <h3>外部依赖</h3>
+ * <ul>
+ *     <li><b>WebSocketServer</b>：成员变更时广播通知</li>
+ *     <li><b>MessageMapper</b>：插入系统消息（加入/退出通知）</li>
+ *     <li><b>ChatInviteService</b>：邀请码的创建与消费</li>
+ * </ul>
+ *
+ * <h3>关键错误码</h3>
+ * <table border="1">
+ *     <tr><td>CHAT_NOT_FOUND</td><td>聊天室不存在</td></tr>
+ *     <tr><td>NOT_A_MEMBER</td><td>用户不是成员</td></tr>
+ *     <tr><td>FORBIDDEN</td><td>无权限操作（非群主）</td></tr>
+ *     <tr><td>INVITE_CODE_INVALID/EXPIRED/REVOKED</td><td>邀请码无效</td></tr>
+ *     <tr><td>PASSWORD_REQUIRED</td><td>需要密码加入</td></tr>
+ * </table>
+ *
+ * @author 系统开发者
+ * @since 1.0
+ * @see ChatController
+ * @see WebSocketServer
  */
 @Slf4j
 @Service
@@ -54,6 +93,20 @@ public class ChatServiceImpl implements ChatService {
     private final ChatAssembler chatAssembler;
     private final ChatMemberAssembler chatMemberAssembler;
 
+    /**
+     * 获取用户的聊天室列表和成员在线状态（轻量版）
+     *
+     * <p>用于应用初始化时一次性拉取侧边栏所需的全部数据，减少 HTTP 往返。</p>
+     *
+     * <h4>返回数据</h4>
+     * <ul>
+     *     <li>chatVOList：用户所有聊天室的摘要信息（最后消息、未读数、在线人数）</li>
+     *     <li>userStatusList：去重后的用户在线状态列表</li>
+     * </ul>
+     *
+     * @param userId 当前登录用户的数据库 ID，不可为 null
+     * @return 包含聊天室列表和用户状态的初始化数据；若用户无聊天室则返回空列表
+     */
     @Override
     public AppInitVO getChatVOListAndMemberStatusListLite(Integer userId) {
         List<ChatVO> chatVOList = chatMapper.selectChatVOListByUserId(userId);
@@ -88,6 +141,19 @@ public class ChatServiceImpl implements ChatService {
         return new AppInitVO(chatVOList, new ArrayList<>(uniqueUserStatusMap.values()));
     }
 
+    /**
+     * 获取聊天室详细信息
+     *
+     * <p>进入聊天室时调用，返回完整的聊天室信息（含成员列表、在线状态）。</p>
+     *
+     * <h4>私聊特殊处理</h4>
+     * <p>type=1（私聊）时，用对方的昵称和头像覆盖聊天室名称和头像。</p>
+     *
+     * @param userId   当前用户 ID
+     * @param chatCode 聊天室对外唯一标识（8位字符串）
+     * @return 聊天室详情 VO，包含成员列表和在线人数；若不存在返回 null
+     * @throws BusinessException CHAT_NOT_FOUND 或 NOT_A_MEMBER
+     */
     @Override
     public ChatVO getChat(Integer userId, String chatCode) {
         Integer chatId = getChatId(userId, chatCode);
@@ -118,6 +184,14 @@ public class ChatServiceImpl implements ChatService {
         return chatVO;
     }
 
+    /**
+     * 获取聊天室成员列表（带在线状态）
+     *
+     * @param userId   当前用户 ID（用于权限校验）
+     * @param chatCode 聊天室代码
+     * @return 成员 VO 列表，包含 uid、昵称、头像、在线状态
+     * @throws BusinessException CHAT_NOT_FOUND 或 NOT_A_MEMBER
+     */
     @Override
     public List<ChatMemberVO> getChatMemberVOList(Integer userId, String chatCode) {
         Integer chatId = getChatId(userId, chatCode);
@@ -126,6 +200,17 @@ public class ChatServiceImpl implements ChatService {
         return chatMemberAssembler.toChatMemberVOList(members, onlineUsers);
     }
 
+    /**
+     * 获取聊天室内部 ID 并校验成员资格
+     *
+     * <p>核心权限校验方法，几乎所有聊天室操作都依赖此方法。</p>
+     *
+     * @param userId   当前用户 ID
+     * @param chatCode 聊天室对外代码
+     * @return 聊天室数据库主键 ID
+     * @throws BusinessException CHAT_NOT_FOUND - 聊天室不存在
+     * @throws BusinessException NOT_A_MEMBER - 用户不是该聊天室成员
+     */
     @Override
     public Integer getChatId(Integer userId, String chatCode) {
         Integer chatId = chatMapper.selectChatIdByChatCode(chatCode);
@@ -138,11 +223,29 @@ public class ChatServiceImpl implements ChatService {
         return chatId;
     }
 
+    /** 获取聊天室加入所需信息（密码哈希、是否允许加入等） */
     @Override
     public ChatJoinInfo getJoinInfo(Integer chatId) {
         return chatMapper.selectJoinInfoByChatId(chatId);
     }
 
+    /**
+     * 验证聊天室加入权限（访客/登录用户通用）
+     *
+     * <p>访客加入流程的第一步：验证密码或邀请码是否有效，返回脱敏后的房间信息。</p>
+     *
+     * <h4>验证方式（二选一）</h4>
+     * <ul>
+     *     <li>邀请码：验证有效性、是否过期、是否撤销、是否超过使用次数</li>
+     *     <li>密码：验证 chatCode + password 组合</li>
+     * </ul>
+     *
+     * @param req 验证请求，包含 inviteCode 或 (chatCode + password)
+     * @return 脱敏后的聊天室信息（不含成员列表和敏感数据）
+     * @throws BusinessException INVITE_CODE_INVALID/EXPIRED/REVOKED - 邀请码问题
+     * @throws BusinessException PASSWORD_REQUIRED/BAD_REQUEST - 密码问题
+     * @throws BusinessException FORBIDDEN - 聊天室禁止加入
+     */
     @Override
     public ChatVO validateChatJoin(ValidateChatJoinReq req) {
         Integer chatId = null;
@@ -194,11 +297,39 @@ public class ChatServiceImpl implements ChatService {
         return chatMapperChatVO;
     }
 
+    /** 获取用户所在的所有聊天室的成员 ID 列表（用于 WebSocket 广播） */
     @Override
     public List<Integer> getChatMembers(Integer userId) {
         return chatMemberMapper.selectChatMembersById(userId);
     }
 
+    /**
+     * 加入聊天室
+     *
+     * <p>用户通过邀请码或密码加入聊天室的核心方法。</p>
+     *
+     * <h4>执行流程</h4>
+     * <ol>
+     *     <li>验证加入方式（邀请码/密码）并获取聊天室信息</li>
+     *     <li>检查聊天室是否允许加入</li>
+     *     <li>插入成员关系记录</li>
+     *     <li>生成系统消息（"XXX 加入了聊天室"）</li>
+     *     <li>通过 WebSocket 广播给所有成员</li>
+     * </ol>
+     *
+     * <h4>副作用</h4>
+     * <ul>
+     *     <li>写入 chat_members 表</li>
+     *     <li>写入 messages 表（系统消息 type=11）</li>
+     *     <li>更新 chat_sequences 表</li>
+     *     <li>WebSocket 广播 MEMBER_JOIN 事件</li>
+     * </ul>
+     *
+     * @param joinChatReq 加入请求（含 userId + inviteCode 或 chatCode+password）
+     * @return 聊天室基本信息（id + chatCode）
+     * @throws BusinessException BAD_REQUEST - 参数无效
+     * @throws BusinessException FORBIDDEN - 聊天室禁止加入
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Chat join(JoinChatReq joinChatReq) {
@@ -250,6 +381,19 @@ public class ChatServiceImpl implements ChatService {
         return chat;
     }
 
+    /**
+     * 创建聊天室
+     *
+     * <p>创建群聊（type=0），自动生成邀请码，并将创建者加入成员列表。</p>
+     *
+     * <h4>chatCode 生成策略</h4>
+     * <p>使用 8 位随机字符串，若发生唯一键冲突则重试最多 5 次。</p>
+     *
+     * @param userId  创建者用户 ID
+     * @param chatReq 创建请求（名称、密码、头像、邀请码设置等）
+     * @return 包含 chatCode 和 inviteCode 的创建结果
+     * @throws BusinessException DATABASE_ERROR - chatCode 生成重试失败
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public CreateChatVO createChat(Integer userId, ChatReq chatReq) {
@@ -297,6 +441,15 @@ public class ChatServiceImpl implements ChatService {
         return new CreateChatVO(chatCode, invite.inviteCode());
     }
 
+    /**
+     * 退出聊天室
+     *
+     * <p>群主退出时：若仅剩自己则解散群聊，否则抛出异常提示先转让群主。</p>
+     *
+     * @param userId   当前用户 ID
+     * @param chatCode 聊天室代码
+     * @throws BusinessException BAD_REQUEST - 群主未转让所有权就退出
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void leaveChat(Integer userId, String chatCode) {
@@ -317,6 +470,13 @@ public class ChatServiceImpl implements ChatService {
         // Broadcast leave message... (Simplified)
     }
 
+    /**
+     * 解散聊天室（仅群主可操作）
+     *
+     * @param userId   当前用户 ID
+     * @param chatCode 聊天室代码
+     * @throws BusinessException FORBIDDEN - 非群主操作
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void disbandChat(Integer userId, String chatCode) {
@@ -328,6 +488,14 @@ public class ChatServiceImpl implements ChatService {
         chatMapper.deleteChatById(chatId);
     }
 
+    /**
+     * 更新聊天室密码（仅群主可操作）
+     *
+     * @param userId   当前用户 ID
+     * @param chatCode 聊天室代码
+     * @param req      密码更新请求（password 为空则清除密码）
+     * @throws BusinessException FORBIDDEN - 非群主操作
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateChatPassword(Integer userId, String chatCode, ChatPasswordUpdateReq req) {
@@ -340,6 +508,7 @@ public class ChatServiceImpl implements ChatService {
         chatMapper.updateChatPassword(chatId, hash);
     }
 
+    /** 更新聊天室基本信息（名称、最大人数、公告、头像），仅群主可操作 */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChatVO updateChatBasicInfo(Integer userId, String chatCode, ChatBasicUpdateReq req) {
@@ -351,6 +520,7 @@ public class ChatServiceImpl implements ChatService {
         return getChat(userId, chatCode);
     }
 
+    /** 踢出成员（仅群主可操作），批量移除指定 uid 的成员 */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void kickMembers(Integer userId, String chatCode, ChatKickReq req) {
@@ -367,6 +537,7 @@ public class ChatServiceImpl implements ChatService {
         chatMemberMapper.deleteChatMembersByChatIdAndUserIds(chatId, targetIds);
     }
 
+    /** 转让群主（仅当前群主可操作） */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void transferOwner(Integer userId, String chatCode, ChatOwnerTransferReq req) {
@@ -378,6 +549,23 @@ public class ChatServiceImpl implements ChatService {
         chatMapper.updateChatOwner(chatId, newOwnerId);
     }
 
+    /**
+     * 创建或获取私聊房间
+     *
+     * <p>基于好友关系的 1v1 私聊。若两人之间已存在私聊房间则复用，否则新建。</p>
+     *
+     * <h4>私聊房间特性</h4>
+     * <ul>
+     *     <li>type=1（私聊类型）</li>
+     *     <li>maxMembers=2（固定两人）</li>
+     *     <li>joinEnabled=0（禁止加入）</li>
+     * </ul>
+     *
+     * @param userId       当前用户 ID
+     * @param targetUserId 目标用户（好友）ID
+     * @return 私聊房间的 chatCode
+     * @throws BusinessException DATABASE_ERROR - chatCode 生成失败
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createPrivateChat(Integer userId, Integer targetUserId) {
@@ -410,6 +598,7 @@ public class ChatServiceImpl implements ChatService {
         return chatCode;
     }
 
+    /** 获取用户在各聊天室的未读消息数（chatCode → count） */
     private Map<String, Integer> getUnreadCountMap(Integer userId) {
         return messageMapper.selectUnreadCountMapByUserId(userId).stream()
                 .collect(Collectors.toMap(
@@ -418,6 +607,7 @@ public class ChatServiceImpl implements ChatService {
                         (v1, v2) -> v1));
     }
 
+    /** 密码方式加入：验证 chatCode + password，返回聊天室信息 */
     private ChatJoinInfo handlePasswordJoin(String chatCode, String password) {
         Integer chatId = chatMapper.selectChatIdByChatCode(chatCode);
         if (chatId == null) throw new BusinessException(ErrorCode.CHAT_NOT_FOUND);
@@ -427,6 +617,7 @@ public class ChatServiceImpl implements ChatService {
         return info;
     }
 
+    /** 邀请码方式加入：验证并消费邀请码，返回聊天室信息 */
     private ChatJoinInfo handleInviteJoin(String inviteCode) {
         String hash = InviteCodeUtils.sha256Hex(inviteCode);
         ChatInvite chatInvite = chatInviteMapper.selectByCodeHash(hash);

@@ -1,4 +1,23 @@
 <script setup lang="ts">
+/**
+ * 聊天页顶部导航栏组件
+ *
+ * 功能：
+ * - 显示房间头像、名称、成员数
+ * - 显示房间 ID（仅桌面端）
+ * - 房间操作菜单（设置/离开/解散）
+ * - 移动端成员列表入口
+ *
+ * Props：
+ * - isMobile: 是否移动端模式
+ *
+ * Emits：
+ * - openMemberDrawer: 打开成员列表抽屉
+ *
+ * 依赖：
+ * - roomStore: 房间状态
+ * - useChatRoomActions: 房间操作逻辑
+ */
 import { storeToRefs } from 'pinia'
 import { useRoomStore } from '@/stores/roomStore.ts'
 import { MoreFilled, User } from '@element-plus/icons-vue'

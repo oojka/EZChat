@@ -3,6 +3,8 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.UserMapper">
+
+    <!-- 插入用户记录（访客/正式共用，useGeneratedKeys 回填 id） -->
     <insert id="insertUser"
             parameterType="hal.th50743.pojo.User"
             useGeneratedKeys="true"
@@ -12,11 +14,19 @@
         VALUES (#{uid}, #{nickname}, #{assetId}, #{bio}, #{lastSeenAt}, #{createTime}, #{updateTime}, #{isDeleted}, #{userType})
     </insert>
 
+    <!-- 插入正式用户凭证（需先插入 users 表获取 userId） -->
     <insert id="insertFormalUser">
         INSERT INTO formal_users (user_id, username, password_hash, create_time, update_time, last_login_time)
         VALUES (#{userId}, #{username}, #{passwordHash}, #{createTime}, #{updateTime}, #{lastLoginTime})
     </insert>
 
+    <!-- 
+      动态更新用户信息
+      
+      业务说明：
+      - 仅更新非空字段，使用 MyBatis 动态 SQL
+      - 用于个人资料更新、头像更新等场景
+    -->
     <update id="update">
         UPDATE users
         <set>
@@ -29,27 +39,42 @@
         </set>
         WHERE id = #{id}
     </update>
+
+    <!-- 更新用户逻辑删除标记（软删除） -->
     <update id="updateUserDeleted">
         UPDATE users
         SET is_deleted = #{isDeleted}
         WHERE id = #{userId}
     </update>
+
+    <!-- 更新用户类型（访客转正式：0 → 1） -->
     <update id="updateUserType">
         UPDATE users
         SET user_type = #{userType}
         WHERE id = #{userId}
     </update>
+
+    <!-- 更新正式用户 RefreshToken -->
     <update id="updateFormalUserToken">
         UPDATE formal_users
         SET token = #{token}
         WHERE user_id = #{userId}
     </update>
+
+    <!-- 更新用户最后活跃时间（WebSocket 心跳/消息时调用） -->
     <update id="updateLastSeenAt">
         UPDATE users
         SET last_seen_at = #{now}
         WHERE id = #{userId}
     </update>
 
+    <!-- 
+      根据用户名查询正式用户凭证
+      
+      业务说明：
+      - 用于登录验证
+      - 返回包含密码哈希的完整凭证信息
+    -->
     <select id="selectFormalUserByUsername" resultType="hal.th50743.pojo.FormalUser">
         SELECT user_id as userId,
                username,
@@ -62,6 +87,7 @@
         WHERE username = #{username}
     </select>
 
+    <!-- 根据用户名查询用户完整信息（JOIN formal_users） -->
     <select id="selectUserByUsername" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
@@ -78,6 +104,7 @@
         WHERE f.username = #{username}
     </select>
 
+    <!-- 根据 UID 查询用户信息（LEFT JOIN 同时返回 username） -->
     <select id="selectByUid" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
@@ -94,10 +121,12 @@
         WHERE uid = #{userUid}
     </select>
 
+    <!-- 根据 UID 获取用户内部 ID（轻量查询） -->
     <select id="selectIdByUid" resultType="java.lang.Integer">
         SELECT id FROM users WHERE uid = #{uid}
     </select>
 
+    <!-- 根据内部 ID 获取用户信息（LEFT JOIN formal_users） -->
     <select id="selectUserVOById" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
@@ -115,6 +144,7 @@
 
     </select>
 
+    <!-- 根据 UID 获取用户对象（LEFT JOIN formal_users） -->
     <select id="selectUserByUid" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
@@ -132,7 +162,16 @@
         WHERE u.uid = #{uid}
     </select>
 
-    <!-- 根据 UID 查询用户信息（JOIN assets 表获取头像 asset_name） -->
+    <!-- 
+      根据 UID 查询用户信息（含头像 assetName）
+      
+      业务说明：
+      - JOIN assets 表获取头像 asset_name
+      - 用于需要头像 URL 的场景
+      
+      索引依赖：
+      - users(uid) 唯一索引
+    -->
     <select id="selectByUidWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
             u.id, u.uid, u.nickname, u.asset_id, u.bio, u.is_deleted, u.user_type, u.last_seen_at, u.create_time, u.update_time,
@@ -143,7 +182,7 @@
         LIMIT 1
     </select>
 
-    <!-- 根据 ID 查询用户信息（JOIN assets 表） -->
+    <!-- 根据内部 ID 查询用户信息（含头像 assetName） -->
     <select id="selectByIdWithAvatar" resultType="hal.th50743.pojo.User">
         SELECT 
             u.id, u.uid, u.nickname, u.asset_id, u.bio, u.is_deleted, u.user_type, u.last_seen_at, u.create_time, u.update_time,
@@ -153,18 +192,22 @@
         WHERE u.id = #{id}
         LIMIT 1
     </select>
+
+    <!-- 获取正式用户 RefreshToken -->
     <select id="selectFormalUserTokenByUserId" resultType="java.lang.String">
         SELECT token
         FROM formal_users
         WHERE user_id = #{userId}
     </select>
 
+    <!-- 根据用户 ID 获取用户名（访客返回 null） -->
     <select id="selectUsernameByUserId" resultType="java.lang.String">
         SELECT username
         FROM formal_users
         WHERE user_id = #{userId}
     </select>
 
+    <!-- 根据用户 ID 获取用户完整信息 -->
     <select id="selectUserById" resultType="hal.th50743.pojo.User">
         SELECT u.id,
                u.uid,
@@ -181,6 +224,16 @@
                  LEFT JOIN formal_users f ON u.id = f.user_id
         WHERE u.id = #{userId}
     </select>
+
+    <!-- 
+      查询需要清理的访客用户 ID 列表（GC 任务使用）
+      
+      筛选条件：
+      - user_type = 0（访客）
+      - is_deleted = 0（未删除）
+      - last_seen_at < cutoff（超过阈值未活跃）
+      - 无 formal_users 记录（未转正）
+    -->
     <select id="selectGuestCandidatesForCleanup" resultType="java.lang.Integer">
         SELECT u.id
         FROM users u
@@ -199,7 +252,7 @@
         WHERE user_id = #{userId}
     </update>
 
-    <!-- 根据用户ID获取密码哈希 -->
+    <!-- 根据用户 ID 获取密码哈希（用于修改密码时验证旧密码） -->
     <select id="selectPasswordHashByUserId" resultType="java.lang.String">
         SELECT password_hash
         FROM formal_users

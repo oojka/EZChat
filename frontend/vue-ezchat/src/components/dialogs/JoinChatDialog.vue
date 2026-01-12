@@ -1,4 +1,22 @@
 <script setup lang="ts">
+/**
+ * 加入聊天室对话框组件
+ *
+ * 功能：
+ * - 两种加入方式（房间号+密码 / 邀请链接）
+ * - 分步骤流程（表单 -> 结果）
+ * - 已登录用户直接加入
+ * - 游客需创建临时账户
+ *
+ * 布局：
+ * - Step 1: 凭证输入表单
+ * - Step 2: 加入结果反馈
+ *
+ * 依赖：
+ * - useJoinInput: 输入处理
+ * - useLoginJoin: 登录用户加入逻辑
+ * - roomStore: 房间状态
+ */
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'

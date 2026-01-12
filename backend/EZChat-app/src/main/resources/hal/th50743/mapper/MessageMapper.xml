@@ -4,6 +4,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.MessageMapper">
 
+    <!-- 插入消息记录（useGeneratedKeys 回填 id） -->
     <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO messages (sender_id, chat_id, seq_id, type, text, create_time, update_time, asset_ids)
         VALUES
@@ -11,15 +12,35 @@
              #{createTime}, #{updateTime}, #{assetIds})
     </insert>
 
+    <!-- 
+      更新聊天室消息序列号（原子自增）
+      
+      业务说明：
+      - 使用 INSERT ... ON DUPLICATE KEY UPDATE 实现原子自增
+      - 首次插入时 current_seq=1，后续每次 +1
+      - 高并发场景下保证消息序列号唯一且递增
+    -->
     <update id="updateChatSequence">
         INSERT INTO chat_sequences (chat_id, current_seq) VALUES (#{chatId}, 1)
         ON DUPLICATE KEY UPDATE current_seq = current_seq + 1
     </update>
 
+    <!-- 获取聊天室当前序列号（用于发送消息前获取 seq_id） -->
     <select id="selectCurrentSequence" resultType="java.lang.Long">
         SELECT current_seq FROM chat_sequences WHERE chat_id = #{chatId}
     </select>
 
+    <!-- 
+      获取用户所有聊天室的未读消息数
+      
+      业务说明：
+      - 未读判断：消息发送者非当前用户 且 消息时间 > last_seen_at
+      - 按 chatCode 分组统计
+      
+      索引依赖：
+      - chat_members(user_id, chat_id)
+      - messages(chat_id, create_time)
+    -->
     <select id="selectUnreadCountMapByUserId" resultType="java.util.Map">
         SELECT
             c.chat_code AS chatCode,
@@ -34,6 +55,7 @@
         GROUP BY c.chat_code
     </select>
 
+    <!-- 获取用户在指定聊天室的未读消息数 -->
     <select id="selectUnreadCountMapByUserIdAndChatId" resultType="java.lang.Integer">
         SELECT
             COUNT(m.id)
@@ -46,6 +68,14 @@
     </select>
 
 
+    <!-- 
+      获取用户所有聊天室的最后一条消息
+      
+      业务说明：
+      - 使用子查询获取每个聊天室的 max(create_time)
+      - 用于聊天室列表展示最后一条消息预览
+      - @MapKey("chatCode") 注解将结果转为 Map
+    -->
     <select id="selectLastMessageListByUserId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                ciM.chat_code AS chatCode,
@@ -65,6 +95,7 @@
             ON m.chat_id = ciM.chat_id AND m.create_time = ciM.max_create_time
     </select>
 
+    <!-- 获取指定聊天室的最后一条消息 -->
     <select id="selectLastMessageByChatId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
@@ -82,6 +113,18 @@
     </select>
 
 
+    <!-- 
+      获取聊天室消息列表（游标分页）
+      
+      业务说明：
+      - 基于 seq_id 的向前分页（非 offset 分页）
+      - cursorSeqId 为空时返回最新 30 条
+      - cursorSeqId 有值时返回 seq_id < cursorSeqId 的 30 条
+      - 保证消息顺序稳定，避免新消息插入导致分页错乱
+      
+      索引依赖：
+      - messages(chat_id, seq_id)
+    -->
     <select id="selectMessageListByChatIdAndCursor" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
@@ -101,6 +144,13 @@
         LIMIT 30
     </select>
 
+    <!-- 
+      获取 seq_id 大于 lastSeqId 的消息列表（用于 WebSocket 重连同步）
+      
+      业务说明：
+      - 获取断线期间的新消息
+      - 无 LIMIT 限制，返回所有新消息
+    -->
     <select id="selectMessagesAfterSeqId" resultType="hal.th50743.pojo.MessageVO">
         SELECT u.uid AS sender,
                c.chat_code AS chatCode,
@@ -117,11 +167,13 @@
         ORDER BY m.seq_id DESC
     </select>
 
+    <!-- 删除聊天室全部消息（解散聊天室时调用） -->
     <delete id="deleteMessagesByChatId">
         DELETE FROM messages
         WHERE chat_id = #{chatId}
     </delete>
 
+    <!-- 删除聊天室序列号记录（解散聊天室时调用） -->
     <delete id="deleteChatSequence">
         DELETE FROM chat_sequences
         WHERE chat_id = #{chatId}

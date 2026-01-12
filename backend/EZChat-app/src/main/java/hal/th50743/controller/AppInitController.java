@@ -12,8 +12,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 应用初始化控制器
- * <p>
- * 负责处理应用启动时的初始化请求。
+ *
+ * <p>提供应用初始化相关的 RESTful API 端点，用于前端首屏快速加载。
+ *
+ * <h3>API 列表</h3>
+ * <ul>
+ *   <li>GET /init/chat-list - 获取聊天室列表（轻量版）</li>
+ * </ul>
+ *
+ * <h3>认证要求</h3>
+ * <p>所有接口需要 Header: token
+ *
+ * @see ChatService
  */
 @Slf4j
 @RestController
@@ -24,12 +34,12 @@ public class AppInitController {
     private final ChatService chatService;
 
     /**
-     * 获取应用初始化状态（只用于渲染 chatList）
+     * 获取聊天室列表
      *
-     * 业务目的：
-     * - refresh 首屏更快：只返回 AsideList 必要字段，不携带每个群的成员列表
+     * <p>轻量版初始化接口，仅返回 AsideList 必要字段，不携带成员列表。
+     * 用于 refresh 首屏快速加载。
      *
-     * @return Result<AppInitVO> 包含初始化数据的统一响应结果
+     * @return 初始化数据（聊天室列表）
      */
     @GetMapping("/chat-list")
     public Result<AppInitVO> getChatListInit() {

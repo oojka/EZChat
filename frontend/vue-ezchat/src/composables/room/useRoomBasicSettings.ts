@@ -1,3 +1,19 @@
+/**
+ * 房间基础设置 Composable
+ *
+ * 核心职责：
+ * - 管理房间基本信息表单（名称、人数上限、公告、头像）
+ * - 处理头像上传（含去重检查和压缩）
+ * - 同步表单数据与当前房间信息
+ * - 执行保存 API 并更新 Store
+ *
+ * 使用示例：
+ * ```vue
+ * const { form, formRules, saveBasicSettings } = useRoomBasicSettings()
+ * ```
+ *
+ * @module useRoomBasicSettings
+ */
 import { computed, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, type FormInstance, type FormRules, type UploadProps, type UploadFile } from 'element-plus'
@@ -13,6 +29,7 @@ import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { isImage } from '@/utils/validators'
 import type { Image } from '@/type'
 
+/** 空头像对象模板 */
 const emptyAvatar: Image = {
   imageName: '',
   imageUrl: '',

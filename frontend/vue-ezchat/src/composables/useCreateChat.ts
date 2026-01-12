@@ -1,3 +1,19 @@
+/**
+ * 聊天室创建 Composable
+ *
+ * 核心职责：
+ * - 管理多步骤创建表单（房间信息 → 密码设置 → 过期时间）
+ * - 处理房间头像上传（含去重检查和压缩）
+ * - 执行创建 API 并生成邀请链接
+ * - 提供表单验证和步骤导航
+ *
+ * 使用示例：
+ * ```vue
+ * const { createChatForm, createStep, handleCreate, nextStep } = useCreateChat()
+ * ```
+ *
+ * @module useCreateChat
+ */
 import { computed, reactive, ref, watch } from 'vue'
 import type {Image} from '@/type'
 import {ElMessage, type FormInstance, type FormRules, type UploadProps, type UploadFile} from 'element-plus'
@@ -13,6 +29,11 @@ import { useRoomStore } from '@/stores/roomStore'
 import { useRouter } from 'vue-router'
 import { useImageStore } from '@/stores/imageStore'
 
+/**
+ * 聊天室创建业务逻辑 Hook
+ *
+ * @returns 表单状态、步骤控制、创建方法等
+ */
 export const useCreateChat = () => {
   const roomStore = useRoomStore()
   const router = useRouter()

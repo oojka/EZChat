@@ -1,4 +1,21 @@
 <script setup lang="ts">
+/**
+ * 应用加载动画组件
+ *
+ * 功能：
+ * - 全屏/定位加载遮罩
+ * - 动态背景光球效果
+ * - 可选加载文字提示
+ *
+ * Props：
+ * - size: 加载图标尺寸
+ * - color: 加载图标颜色
+ * - text: 加载提示文字
+ * - showText: 是否显示文字
+ * - absolute: 是否使用绝对定位
+ * - showBlobs: 是否显示背景光球
+ * - bgWhite: 是否使用白色背景
+ */
 interface Props {
   size?: number | string
   color?: string

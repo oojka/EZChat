@@ -1,3 +1,18 @@
+/**
+ * 聊天室操作 Composable
+ *
+ * 核心职责：
+ * - 提供房间权限判断（是否房主、能否退出/解散）
+ * - 处理退出房间操作（含确认弹窗）
+ * - 处理解散房间操作（仅房主可用）
+ *
+ * 使用示例：
+ * ```vue
+ * const { isOwner, canLeave, confirmLeave, confirmDisband } = useChatRoomActions()
+ * ```
+ *
+ * @module useChatRoomActions
+ */
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
@@ -6,6 +21,11 @@ import { useUserStore } from '@/stores/userStore.ts'
 import { showConfirmDialog } from '@/components/dialogs/confirmDialog'
 import { disbandChatApi, leaveChatApi } from '@/api/Chat'
 
+/**
+ * 聊天室操作业务逻辑 Hook
+ *
+ * @returns 权限状态、退出/解散方法
+ */
 export const useChatRoomActions = () => {
   const router = useRouter()
   const roomStore = useRoomStore()

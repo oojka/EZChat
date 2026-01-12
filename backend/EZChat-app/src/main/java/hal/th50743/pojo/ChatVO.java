@@ -17,23 +17,68 @@ import java.util.List;
 @NoArgsConstructor
 public class ChatVO {
 
-    private String chatCode;
-    private String chatName;
-    private String ownerUid;
-    private Image avatar;
-    private Integer joinEnabled;
     /**
-     * 是否启用房间密码（0: 未启用, 1: 已启用）
+     * 聊天室对外代码（8位数字）
+     */
+    private String chatCode;
+
+    /**
+     * 聊天室名称
+     */
+    private String chatName;
+
+    /**
+     * 所有者用户对外ID（users.uid）
+     */
+    private String ownerUid;
+
+    /**
+     * 聊天室头像
+     */
+    private Image avatar;
+
+    /**
+     * 是否允许加入（0=禁止, 1=允许）
+     */
+    private Integer joinEnabled;
+
+    /**
+     * 是否启用房间密码（0=未启用, 1=已启用）
      */
     private Integer passwordEnabled;
-    private Integer maxMembers;
+
     /**
-     * 聊天室类型（0=Group, 1=Private）
+     * 成员上限（默认 200，私聊为 2）
+     */
+    private Integer maxMembers;
+
+    /**
+     * 聊天室类型
+     * <ul>
+     *   <li>0 - 群聊（Group）</li>
+     *   <li>1 - 私聊（Private）</li>
+     * </ul>
      */
     private Integer type;
+
+    /**
+     * 群公告
+     */
     private String announcement;
+
+    /**
+     * 最后活跃时间
+     */
     private LocalDateTime lastActiveAt;
+
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
     
     /**
@@ -62,9 +107,7 @@ public class ChatVO {
     private List<ChatMemberVO> chatMembers;
 
     /**
-     * 临时字段，用于 JOIN 查询获取 object_name
-     * <p>
-     * 业务说明：通过 LEFT JOIN objects 表获取头像对象名，用于构建 Image 对象
+     * 临时字段：头像对象名（用于 JOIN 查询构建 Image 对象）
      */
     private transient String avatarAssetName;
 }

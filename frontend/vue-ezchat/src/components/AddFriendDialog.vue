@@ -1,4 +1,18 @@
 <script setup lang="ts">
+/**
+ * 添加好友对话框组件
+ *
+ * 功能：
+ * - 通过 UID 搜索并添加好友
+ * - 发送好友申请
+ * - 加载状态反馈
+ *
+ * Props（v-model）：
+ * - visible: 对话框可见状态
+ *
+ * 依赖：
+ * - friendStore: 好友状态管理
+ */
 import { ref } from 'vue'
 import { useFriendStore } from '@/stores/friendStore'
 import { User } from '@element-plus/icons-vue'

@@ -1,9 +1,29 @@
+/**
+ * 聊天室成员列表 Composable
+ *
+ * 核心职责：
+ * - 提供排序后的成员列表（本人置顶 → 在线优先 → 字母序）
+ * - 实现在线状态延迟同步（先变灰再移动，避免闪烁）
+ * - 提供当前用户的连接状态指示
+ *
+ * 使用示例：
+ * ```vue
+ * const { sortedChatMemberList, loginUserState } = useChatMemberList()
+ * ```
+ *
+ * @module useChatMemberList
+ */
 import {computed, ref, watch} from 'vue'
 import {storeToRefs} from 'pinia'
 import {useUserStore} from '@/stores/userStore.ts'
 import {useRoomStore} from '@/stores/roomStore.ts'
 import {useWebsocketStore} from '@/stores/websocketStore.ts'
 
+/**
+ * 聊天室成员列表业务逻辑 Hook
+ *
+ * @returns 排序成员列表、当前用户状态等
+ */
 export const useChatMemberList = () => {
   const userStore = useUserStore()
   const { loginUserInfo, userStatusList } = storeToRefs(userStore)

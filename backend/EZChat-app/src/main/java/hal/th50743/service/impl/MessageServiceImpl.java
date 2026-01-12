@@ -22,9 +22,47 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 消息服务实现类
+ * 消息服务实现类 - 消息核心业务逻辑处理
+ *
+ * <h3>职责概述</h3>
  * <p>
- * 负责消息的发送、存储、查询及文件上传。
+ * 负责消息的发送、存储、查询和同步。作为实时通信的核心服务，
+ * 与 WebSocket 服务和资产服务紧密协作。
+ * </p>
+ *
+ * <h3>核心功能</h3>
+ * <ul>
+ *     <li><b>消息处理</b>：接收 WebSocket 消息，验证并存储</li>
+ *     <li><b>消息存储</b>：生成 seqId，存储消息和附件关联</li>
+ *     <li><b>消息查询</b>：基于 seqId 的游标分页查询</li>
+ *     <li><b>消息同步</b>：拉取指定 seqId 之后的新消息</li>
+ *     <li><b>图片上传</b>：消息图片上传（委托 AssetService）</li>
+ * </ul>
+ *
+ * <h3>调用路径</h3>
+ * <ul>
+ *     <li>{@code WebSocketServer} → 本服务：实时消息处理</li>
+ *     <li>{@code MessageController} → 本服务：消息查询和上传</li>
+ * </ul>
+ *
+ * <h3>核心不变量</h3>
+ * <ul>
+ *     <li>seqId 在聊天室内单调递增且唯一</li>
+ *     <li>消息类型：0=文本，1=图片，2=图文混合</li>
+ *     <li>图片通过 assetIds（JSON 数组）关联 assets 表</li>
+ * </ul>
+ *
+ * <h3>外部依赖</h3>
+ * <ul>
+ *     <li><b>ChatService</b>：验证聊天室成员资格</li>
+ *     <li><b>AssetService</b>：图片上传和激活</li>
+ *     <li><b>MessageAssembler</b>：填充消息附件信息</li>
+ * </ul>
+ *
+ * @author 系统开发者
+ * @since 1.0
+ * @see WebSocketServer
+ * @see MessageController
  */
 @Slf4j
 @Service
@@ -44,11 +82,21 @@ public class MessageServiceImpl implements MessageService {
     private final ChatService chatService;
 
     /**
-     * 处理WebSocket传入的新消息
-     * 
-     * @param userId     发送用户ID
-     * @param messageReq 消息请求对象
-     * @return 处理结果（包含接收用户列表和 seqId）
+     * 处理 WebSocket 传入的新消息
+     *
+     * <p>验证用户是否为聊天室成员，存储消息并返回接收者列表。
+     *
+     * <h4>处理流程</h4>
+     * <ol>
+     *     <li>通过 chatCode 获取 chatId</li>
+     *     <li>验证发送者是否为成员</li>
+     *     <li>存储消息并获取 seqId</li>
+     *     <li>返回所有成员 ID 用于广播</li>
+     * </ol>
+     *
+     * @param userId     发送用户 ID
+     * @param messageReq 消息请求对象（含 chatCode、text、images）
+     * @return 处理结果，包含接收用户列表和 seqId；验证失败返回空列表
      */
     @Override
     public WSMessageResult handleWSMessage(Integer userId, MessageReq messageReq) {
@@ -74,12 +122,20 @@ public class MessageServiceImpl implements MessageService {
 
     /**
      * 添加消息到数据库
-     * 
-     * @param userId 发送用户ID
-     * @param chatId 聊天ID
-     * @param text   文本内容
-     * @param images 从客户端传来的对象存储URL数组
-     * @return 消息的 Sequence ID
+     *
+     * <p>生成 seqId，存储消息，并激活关联的图片文件。
+     *
+     * <h4>seqId 生成机制</h4>
+     * <ol>
+     *     <li>原子递增 chat_sequences 表的当前值</li>
+     *     <li>获取递增后的值作为本消息的 seqId</li>
+     * </ol>
+     *
+     * @param userId 发送用户 ID
+     * @param chatId 聊天室内部 ID
+     * @param text   文本内容（可为 null）
+     * @param images 图片列表（可为 null）
+     * @return 消息的 seqId
      */
     @Override
     @Transactional
@@ -146,11 +202,15 @@ public class MessageServiceImpl implements MessageService {
     }
 
     /**
-     * 根据聊天代码获取未读消息列表
-     * 
-     * @param userId   当前用户ID
-     * @param chatCode 聊天室的公开代码
-     * @return 经过处理的消息视图对象列表
+     * 根据聊天代码获取消息列表（游标分页）
+     *
+     * <p>进入聊天室时调用，返回指定 seqId 之前的消息，并更新用户的 lastSeenAt。
+     *
+     * @param userId      当前用户 ID
+     * @param chatCode    聊天室代码
+     * @param cursorSeqId 游标 seqId，获取此值之前的消息；null 表示获取最新消息
+     * @return 消息列表 VO，包含消息列表和聊天室详情
+     * @throws BusinessException CHAT_NOT_FOUND 或 NOT_A_MEMBER
      */
     @Override
     public MessageListVO getMessagesByChatCode(Integer userId, String chatCode, Long cursorSeqId) {
@@ -174,12 +234,15 @@ public class MessageServiceImpl implements MessageService {
     }
 
     /**
-     * 同步消息（拉取指定序列号之后的消息）
+     * 同步消息（拉取指定 seqId 之后的新消息）
      *
-     * @param userId    当前用户ID
+     * <p>用于客户端增量同步场景，获取 lastSeqId 之后的所有消息。
+     *
+     * @param userId    当前用户 ID
      * @param chatCode  聊天室代码
-     * @param lastSeqId 上次同步的最后序列号
-     * @return 消息列表
+     * @param lastSeqId 上次同步的最后 seqId
+     * @return lastSeqId 之后的消息列表（不含 lastSeqId）
+     * @throws BusinessException CHAT_NOT_FOUND 或 NOT_A_MEMBER
      */
     @Override
     public List<MessageVO> syncMessages(Integer userId, String chatCode, Long lastSeqId) {
@@ -196,11 +259,12 @@ public class MessageServiceImpl implements MessageService {
     }
 
     /**
-     * 消息的上传文件
-     * 存在private路径中
-     * 
-     * @param file 文件对象
-     * @return Image 图片对象
+     * 上传消息图片
+     *
+     * <p>上传后的图片初始状态为 PENDING，待消息发送成功后激活为 MESSAGE_IMG。
+     *
+     * @param file 图片文件
+     * @return Image 对象，包含 assetName、url、thumbUrl、assetId
      */
     @Override
     public Image upload(MultipartFile file) {

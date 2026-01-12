@@ -1,4 +1,18 @@
 <script setup lang="ts">
+/**
+ * 密码输入框组件
+ *
+ * 功能：
+ * - 密码明文/密文切换（按住显示）
+ * - 防止复制/粘贴/右键菜单
+ * - 支持 v-model 双向绑定
+ * - 支持回车键触发事件
+ *
+ * 特性：
+ * - 移动端触控优化（touchstart/touchend）
+ * - 禁用状态玻璃拟态样式
+ * - 暗黑模式适配
+ */
 import { computed, ref, type Component } from 'vue'
 import { Hide, Lock, View } from '@element-plus/icons-vue'
 

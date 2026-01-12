@@ -1,4 +1,20 @@
 <script setup lang="ts">
+/**
+ * 移动端登录页组件
+ *
+ * 功能：
+ * - 用户名/密码登录表单
+ * - 支持从注册页跳转时自动填充用户名
+ * - 登录成功后跳转到主页
+ * - 提供注册页面入口
+ *
+ * 路由：/m/login
+ * 查询参数：username（可选，自动填充）
+ *
+ * 依赖：
+ * - useLogin: 登录逻辑
+ * - MobileEntryShell: 布局壳组件
+ */
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'

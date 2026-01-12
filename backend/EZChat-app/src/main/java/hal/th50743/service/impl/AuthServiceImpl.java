@@ -30,9 +30,56 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 认证服务实现类
+ * 认证服务实现类 - 用户认证与授权核心逻辑
+ *
+ * <h3>职责概述</h3>
  * <p>
- * 负责用户登录、正式用户注册（含转正）及访客准入逻辑。
+ * 负责用户身份认证的全流程处理，包括登录、注册、访客准入和 Token 管理。
+ * 作为认证入口，协调用户服务、Token 服务和在线状态服务。
+ * </p>
+ *
+ * <h3>核心功能</h3>
+ * <ul>
+ *     <li><b>用户登录</b>：验证凭证，签发双 Token（Access + Refresh）</li>
+ *     <li><b>用户注册</b>：新用户注册或访客转正式用户</li>
+ *     <li><b>访客准入</b>：通过密码或邀请码加入聊天室</li>
+ *     <li><b>Token 刷新</b>：RefreshToken 兑换新 AccessToken</li>
+ *     <li><b>单点登录</b>：同账号多设备登录时强制下线旧会话</li>
+ * </ul>
+ *
+ * <h3>调用路径</h3>
+ * <ul>
+ *     <li>{@code AuthController} → 本服务：所有认证 API 入口</li>
+ * </ul>
+ *
+ * <h3>核心不变量</h3>
+ * <ul>
+ *     <li>AccessToken 有效期短（配置文件定义），存内存缓存</li>
+ *     <li>RefreshToken 有效期长，正式用户存 DB，访客存缓存</li>
+ *     <li>同账号同时只能一个会话在线，新登录踢掉旧会话</li>
+ * </ul>
+ *
+ * <h3>外部依赖</h3>
+ * <ul>
+ *     <li><b>JwtUtils</b>：Token 生成与解析</li>
+ *     <li><b>TokenCacheService</b>：AccessToken 缓存管理</li>
+ *     <li><b>FormalUserService</b>：正式用户凭证验证</li>
+ *     <li><b>ChatService</b>：访客加入聊天室</li>
+ *     <li><b>PresenceService</b>：在线状态检测</li>
+ *     <li><b>WebSocketServer</b>：强制下线通知</li>
+ * </ul>
+ *
+ * <h3>Token 类型说明</h3>
+ * <table border="1">
+ *     <tr><td>tokenType</td><td>用途</td><td>有效期</td></tr>
+ *     <tr><td>access</td><td>API 认证</td><td>短（分钟级）</td></tr>
+ *     <tr><td>refresh</td><td>刷新 AccessToken</td><td>长（天级）</td></tr>
+ * </table>
+ *
+ * @author 系统开发者
+ * @since 1.0
+ * @see AuthController
+ * @see TokenCacheService
  */
 @Slf4j
 @Service
@@ -55,13 +102,19 @@ public class AuthServiceImpl implements AuthService {
     // ============================================================
 
     /**
-     * 构建并缓存双 Token
+     * 构建并缓存双 Token（Access + Refresh）
      *
-     * @param uid      用户UID
-     * @param username 用户名
-     * @param userId   用户ID
+     * <p>根据用户类型决定 RefreshToken 的存储位置：
+     * <ul>
+     *     <li>正式用户：存入数据库 formal_users 表</li>
+     *     <li>访客：存入 Caffeine 缓存</li>
+     * </ul>
+     *
+     * @param uid      用户 UID
+     * @param username 用户名（访客为 "guest"）
+     * @param userId   用户内部 ID
      * @param isFormal 是否为正式用户
-     * @return LoginVO 登录视图对象
+     * @return 登录视图对象，包含双 Token 和过期时间
      */
     private LoginVO issueTokens(String uid, String username, Integer userId, boolean isFormal) {
         long refreshExpireMinutes = isFormal
@@ -84,9 +137,17 @@ public class AuthServiceImpl implements AuthService {
     /**
      * 登录前强制下线已在线的同账号会话
      *
-     * @param userId   用户ID
-     * @param uid      用户UID
-     * @param isFormal 是否正式用户
+     * <p>实现单点登录（Single Sign-On）机制：
+     * <ol>
+     *     <li>检测账号是否在线</li>
+     *     <li>清除旧 Token（缓存和/或数据库）</li>
+     *     <li>通过 WebSocket 发送强制下线通知</li>
+     *     <li>主动关闭旧的 WebSocket 连接</li>
+     * </ol>
+     *
+     * @param userId   用户内部 ID
+     * @param uid      用户 UID
+     * @param isFormal 是否为正式用户
      */
     private void forceLogoutIfOnline(Integer userId, String uid, boolean isFormal) {
         if (userId == null || uid == null || uid.isBlank()) {
@@ -127,7 +188,7 @@ public class AuthServiceImpl implements AuthService {
      * 校验注册请求参数的合法性
      *
      * @param req 注册请求对象
-     * @return 如果参数无效返回 true，否则返回 false
+     * @return 参数无效返回 true，有效返回 false
      */
     private boolean isRegisterReqInvalid(FormalUserRegisterReq req) {
         return req.getUsername() == null || req.getUsername().trim().isEmpty() ||
@@ -142,8 +203,12 @@ public class AuthServiceImpl implements AuthService {
     /**
      * 用户登录
      *
-     * @param loginReq 登录请求对象
-     * @return LoginVO 登录成功后的视图对象（包含 Token）
+     * <p>验证用户凭证，成功后签发双 Token 并更新用户类型。
+     * 若账号已在线则强制下线旧会话。
+     *
+     * @param loginReq 登录请求（username + password）
+     * @return 登录视图对象，包含 accessToken、refreshToken 及过期时间
+     * @throws BusinessException INVALID_CREDENTIALS - 用户名或密码错误
      */
     @Override
     public LoginVO login(LoginReq loginReq) {
@@ -162,11 +227,25 @@ public class AuthServiceImpl implements AuthService {
 
     /**
      * 用户注册
-     * <p>
-     * 支持新用户注册和临时用户转正。
      *
-     * @param req 注册请求对象
-     * @return LoginVO 注册成功后的视图对象（包含 Token）
+     * <p>支持两种场景：
+     * <ul>
+     *     <li><b>新用户注册</b>：创建 User + FormalUser，签发 Token</li>
+     *     <li><b>访客转正</b>：为已存在的临时用户创建 FormalUser 凭证</li>
+     * </ul>
+     *
+     * <h4>注册流程（新用户）</h4>
+     * <ol>
+     *     <li>参数校验（用户名、密码、昵称必填）</li>
+     *     <li>创建 User 记录（生成 UID）</li>
+     *     <li>创建 FormalUser 记录（BCrypt 加密密码）</li>
+     *     <li>签发双 Token</li>
+     * </ol>
+     *
+     * @param req 注册请求（username、password、nickname、avatar、bio）
+     * @return 登录视图对象，包含 Token
+     * @throws BusinessException BAD_REQUEST - 参数不完整或密码不匹配
+     * @throws BusinessException USER_NOT_FOUND - 访客转正时用户不存在
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -272,20 +351,26 @@ public class AuthServiceImpl implements AuthService {
 
     /**
      * 访客加入聊天室
-     * <p>
-     * 支持两种验证模式：
-     * 1. 密码模式：chatCode + password + nickName + avatar
-     * 2. 邀请码模式：inviteCode + nickName + avatar
-     * <p>
-     * 业务流程：
-     * 1. 验证请求参数
-     * 2. 处理头像（关联现有或上传新）
-     * 3. 创建用户记录
-     * 4. 加入聊天室
-     * 5. 生成 JWT token
      *
-     * @param req 访客加入请求（包含头像）
-     * @return 登录成功后的视图对象（包含 Token）
+     * <p>支持两种验证模式（互斥）：
+     * <ul>
+     *     <li><b>密码模式</b>：chatCode + password + nickName + avatar</li>
+     *     <li><b>邀请码模式</b>：inviteCode + nickName + avatar</li>
+     * </ul>
+     *
+     * <h4>业务流程</h4>
+     * <ol>
+     *     <li>参数校验（昵称、头像必填，验证模式互斥）</li>
+     *     <li>处理头像（关联现有或解析新上传）</li>
+     *     <li>创建访客用户记录（userType=0）</li>
+     *     <li>调用 ChatService.join() 加入聊天室</li>
+     *     <li>签发访客 Token（RefreshToken 存缓存）</li>
+     * </ol>
+     *
+     * @param req 访客加入请求
+     * @return 登录视图对象，包含 Token
+     * @throws BusinessException BAD_REQUEST - 参数校验失败
+     * @throws BusinessException SYSTEM_ERROR - 加入聊天室失败
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -370,8 +455,23 @@ public class AuthServiceImpl implements AuthService {
     /**
      * RefreshToken 兑换 AccessToken
      *
-     * @param req RefreshToken 请求对象
-     * @return LoginVO 返回新的 AccessToken
+     * <p>Token 刷新流程：
+     * <ol>
+     *     <li>解析并验证 RefreshToken（签名、类型、过期时间）</li>
+     *     <li>若用户不在线，校验 RefreshToken 是否与存储的一致</li>
+     *     <li>签发新的 AccessToken，RefreshToken 保持不变</li>
+     *     <li>更新 AccessToken 缓存</li>
+     * </ol>
+     *
+     * <h4>安全机制</h4>
+     * <ul>
+     *     <li>正式用户：RefreshToken 存 DB，可跨设备校验</li>
+     *     <li>访客：RefreshToken 存缓存，重启后失效</li>
+     * </ul>
+     *
+     * @param req RefreshToken 请求
+     * @return 新的登录视图对象（仅更新 accessToken）
+     * @throws BusinessException UNAUTHORIZED - Token 无效、过期或不匹配
      */
     @Override
     public LoginVO refreshToken(RefreshTokenReq req) {

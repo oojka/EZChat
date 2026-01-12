@@ -1,4 +1,18 @@
 <script setup lang="ts">
+/**
+ * 移动端访客加入页组件
+ *
+ * 功能：
+ * - 两种加入方式切换（房间号+密码 / 邀请链接）
+ * - 表单验证与凭证校验
+ * - 校验成功后跳转到加入确认页
+ *
+ * 路由：/m/guest
+ *
+ * 依赖：
+ * - useJoinInput: 加入房间输入逻辑
+ * - MobileEntryShell: 布局壳组件
+ */
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'

@@ -12,9 +12,25 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 认证控制器
- * <p>
- * 处理用户登录、注册和访客加入等认证相关请求。
- * 这些接口路径在WebConfig中被排除在Token拦截器之外。
+ *
+ * <p>提供用户认证相关的 RESTful API 端点，包括登录、注册、访客加入等功能。
+ *
+ * <h3>API 列表</h3>
+ * <ul>
+ *   <li>POST /auth/login - 用户登录</li>
+ *   <li>POST /auth/register - 正式用户注册</li>
+ *   <li>POST /auth/register/upload - 注册时上传头像</li>
+ *   <li>POST /auth/validate - 验证聊天室加入请求</li>
+ *   <li>POST /auth/join - 访客加入聊天室</li>
+ *   <li>POST /auth/refresh - 刷新访问令牌</li>
+ * </ul>
+ *
+ * <h3>认证要求</h3>
+ * <p>本控制器下所有接口无需 token，路径在 WebConfig 中被排除在拦截器之外。
+ *
+ * @see AuthService
+ * @see UserService
+ * @see ChatService
  */
 @Slf4j
 @RestController
@@ -28,10 +44,12 @@ public class AuthController {
     private final ChatService chatService;
 
     /**
-     * 用户登录接口。
+     * 用户登录
      *
-     * @param loginReq 包含用户名和密码的登录请求体。
-     * @return 登录成功返回包含Token等信息的结果，失败则返回错误信息。
+     * <p>正式用户通过用户名和密码登录系统。
+     *
+     * @param loginReq 登录请求（用户名、密码）
+     * @return 登录成功返回令牌信息，失败返回错误
      */
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginReq loginReq) {
@@ -50,10 +68,12 @@ public class AuthController {
     }
 
     /**
-     * 正式用户注册接口。
+     * 正式用户注册
      *
-     * @param formalUserRegisterReq 包含用户注册信息的请求体。
-     * @return 注册成功返回包含Token等信息的结果。
+     * <p>创建新的正式用户账号，注册成功后自动登录。
+     *
+     * @param formalUserRegisterReq 注册请求（用户名、密码、昵称等）
+     * @return 注册成功返回令牌信息
      */
     @PostMapping("/register")
     public Result<LoginVO> register(@RequestBody FormalUserRegisterReq formalUserRegisterReq) {
@@ -64,10 +84,12 @@ public class AuthController {
     }
 
     /**
-     * 注册时上传头像接口
+     * 注册时上传头像
      *
-     * @param file 头像文件
-     * @return 上传成功后的图片信息
+     * <p>在注册流程中预上传用户头像。
+     *
+     * @param file 头像图片文件
+     * @return 上传成功的图片信息
      */
     @PostMapping("/register/upload")
     public Result<Image> upload(@RequestParam("file") MultipartFile file) {
@@ -77,22 +99,16 @@ public class AuthController {
 
     /**
      * 验证聊天室加入请求
-     * <p>
-     * 业务目的：
-     * - 轻量级验证接口，仅验证房间是否存在、密码是否正确、是否允许加入
-     * - 不执行实际的加入操作（不创建用户、不添加成员）
-     * - 用于前端在用户提交加入表单前进行预验证
-     * <p>
+     *
+     * <p>轻量级预验证接口，仅验证房间是否存在、密码是否正确，不执行实际加入操作。
      * 支持两种验证模式：
      * <ul>
-     * <li><b>模式1：chatCode + password</b> - 通过房间ID和密码验证（两者必须同时提供）</li>
-     * <li><b>模式2：inviteCode</b> - 通过邀请码验证（可单独使用，当前未实现）</li>
+     *   <li>密码模式：chatCode + password</li>
+     *   <li>邀请码模式：inviteCode</li>
      * </ul>
-     * <p>
-     * 注意：此接口必须放在 AuthController 中，因为只有 `/auth` 路径可以跳过 token 检查
      *
-     * @param req 验证请求对象（包含 chatCode + password 或 inviteCode）
-     * @return 统一响应结果（简化的 ChatVO，仅包含 chatCode, chatName, avatar, memberCount）
+     * @param req 验证请求
+     * @return 验证通过返回聊天室简要信息
      */
     @PostMapping("/validate")
     public Result<ChatVO> validateChatJoin(@RequestBody ValidateChatJoinReq req) {
@@ -101,21 +117,16 @@ public class AuthController {
     }
 
     /**
-     * 访客加入聊天室（支持头像）
-     * <p>
-     * 支持两种验证模式：
-     * 1. 密码模式：chatCode + password + nickName + avatar
-     * 2. 邀请码模式：inviteCode + nickName + avatar
-     * <p>
-     * 业务流程：
-     * 1. 验证请求参数
-     * 2. 处理头像（关联现有或上传新）
-     * 3. 创建用户记录
-     * 4. 加入聊天室
-     * 5. 生成 JWT token
+     * 访客加入聊天室
      *
-     * @param req 访客加入请求（包含头像）
-     * @return 统一响应结果（LoginGuestVO，包含登录信息和头像信息）
+     * <p>访客用户加入指定聊天室，支持两种验证模式：
+     * <ul>
+     *   <li>密码模式：chatCode + password + nickName</li>
+     *   <li>邀请码模式：inviteCode + nickName</li>
+     * </ul>
+     *
+     * @param req 访客加入请求
+     * @return 登录凭证信息
      */
     @PostMapping("/join")
     public Result<LoginVO> joinChat(@RequestBody GuestJoinReq req) {
@@ -124,10 +135,12 @@ public class AuthController {
     }
 
     /**
-     * RefreshToken 兑换 AccessToken
+     * 刷新访问令牌
      *
-     * @param req RefreshToken 请求对象
-     * @return 兑换成功后的登录信息
+     * <p>使用 RefreshToken 兑换新的 AccessToken。
+     *
+     * @param req 刷新请求（RefreshToken）
+     * @return 新的令牌信息
      */
     @PostMapping("/refresh")
     public Result<LoginVO> refreshToken(@RequestBody RefreshTokenReq req) {

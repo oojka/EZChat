@@ -37,6 +37,9 @@ public class JoinChatReq {
      */
     private String inviteCode;
 
+    /**
+     * 用户内部ID（后端从 Token 获取，前端无需传递）
+     */
     private Integer userId;
 
 }

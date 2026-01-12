@@ -1,4 +1,22 @@
 <script setup lang="ts">
+/**
+ * 移动端入口页布局壳组件
+ *
+ * 功能：
+ * - 提供移动端认证流程的统一布局框架
+ * - 动态背景动画（浮动光球效果）
+ * - 玻璃拟态卡片容器
+ * - 键盘弹出时自动收起 Header
+ *
+ * 使用场景：
+ * - MobileWelcomeView（欢迎页）
+ * - MobileLoginView（登录页）
+ * - MobileGuestJoinView（访客加入页）
+ * - MobileRegisterView（注册页）
+ *
+ * 插槽：
+ * - default: 主内容区域
+ */
 import { useKeyboardVisible } from '@/composables/useKeyboardVisible'
 import AppLogo from '@/components/AppLogo.vue'
 

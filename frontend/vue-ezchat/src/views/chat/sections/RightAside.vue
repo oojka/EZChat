@@ -1,4 +1,25 @@
 <script setup lang="ts">
+/**
+ * 聊天室右侧成员列表区域组件
+ *
+ * 功能：
+ * - 展示当前房间成员列表
+ * - 区分在线/离线状态
+ * - 移动端使用底部抽屉展示
+ *
+ * Props：
+ * - isMobile: 是否移动端模式
+ * - drawerVisible: 抽屉可见状态（v-model）
+ *
+ * 特性：
+ * - 与消息加载并行获取成员数据
+ * - 加载中显示 AppSpinner
+ * - 加载完成后自动滚动到顶部
+ *
+ * 依赖：
+ * - roomStore: 房间状态与成员数据
+ * - ChatMemberList: 成员列表子组件
+ */
 import ChatMemberList from '../components/ChatMemberList.vue'
 import AppSpinner from '@/components/AppSpinner.vue'
 import { useAppStore } from '@/stores/appStore'

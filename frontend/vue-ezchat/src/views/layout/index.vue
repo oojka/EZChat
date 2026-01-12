@@ -1,4 +1,23 @@
 <script setup lang="ts">
+/**
+ * 主布局组件
+ *
+ * 功能：
+ * - 应用整体布局框架（Header + Aside + Main）
+ * - 响应式适配桌面端与移动端
+ * - 移动端 Tabbar 导航
+ * - 聊天列表快速入口（移动端 /chat 根路由）
+ *
+ * 布局结构：
+ * - MainHeader: 顶部导航栏（仅桌面端显示）
+ * - MainAside: 左侧边栏/聊天列表（仅桌面端显示）
+ * - RouterView: 主内容区域
+ * - MobileTabbar: 底部导航栏（仅移动端显示）
+ *
+ * 依赖：
+ * - appStore: 应用全局状态
+ * - useIsMobile: 设备类型检测
+ */
 import MainHeader from '@/views/layout/sections/MainHeader.vue'
 import MainAside from '@/views/layout/sections/MainAside.vue'
 import MobileTabbar from '@/views/layout/components/MobileTabbar.vue'

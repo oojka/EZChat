@@ -11,9 +11,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 消息相关的API控制器
- * <p>
- * 处理消息的获取、上传等请求。
+ * 消息控制器
+ *
+ * <p>提供消息相关的 RESTful API 端点，包括消息获取、同步、附件上传等功能。
+ *
+ * <h3>API 列表</h3>
+ * <ul>
+ *   <li>GET /message - 获取消息列表（分页）</li>
+ *   <li>GET /message/sync - 同步缺失消息</li>
+ *   <li>POST /message/upload - 上传消息附件</li>
+ * </ul>
+ *
+ * <h3>认证要求</h3>
+ * <p>所有接口需要 Header: token
+ *
+ * @see MessageService
  */
 @Slf4j
 @RestController
@@ -24,12 +36,13 @@ public class MessageController {
     private final MessageService messageService;
 
     /**
-     * 根据聊天室代码获取消息列表 (分页)
-     * URL 示例: /message?chatCode=ABC&cursorSeqId=100
+     * 获取消息列表
      *
-     * @param chatCode    聊天室的唯一代码
-     * @param cursorSeqId 游标序列号 (查询小于此序列号的消息)，为空时不限制 (查最新)
-     * @return 包含消息列表的统一响应结果
+     * <p>基于游标分页获取指定聊天室的历史消息。
+     *
+     * @param chatCode 聊天室对外唯一标识
+     * @param cursorSeqId 游标序列号（查询小于此值的消息，空则查最新）
+     * @return 消息列表（包含是否还有更多）
      */
     @GetMapping
     public Result<hal.th50743.pojo.MessageListVO> getMessagesByChatCode(@RequestParam String chatCode,
@@ -41,10 +54,11 @@ public class MessageController {
     }
 
     /**
-     * 同步消息（拉取指定序列号之后的消息）
-     * 用于前端检测到 seqId 不连续时或重连时补齐消息
+     * 同步缺失消息
      *
-     * @param chatCode  聊天室代码
+     * <p>拉取指定序列号之后的消息，用于前端检测到 seqId 不连续或重连时补齐。
+     *
+     * @param chatCode 聊天室对外唯一标识
      * @param lastSeqId 本地最后一条消息的序列号
      * @return 缺失的消息列表
      */
@@ -56,10 +70,12 @@ public class MessageController {
     }
 
     /**
-     * 上传消息附件（如图片）
+     * 上传消息附件
+     *
+     * <p>上传图片等消息附件，返回可用于发送消息的图片信息。
      *
      * @param file 附件文件
-     * @return 上传成功后的图片信息
+     * @return 上传成功的图片信息
      */
     @PostMapping("/upload")
     public Result<Image> upload(@RequestParam("file") MultipartFile file) {

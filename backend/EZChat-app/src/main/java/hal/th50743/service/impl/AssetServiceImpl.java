@@ -25,10 +25,59 @@ import java.util.concurrent.TimeUnit;
 import static hal.th50743.utils.FileNameFormater.getSafeName;
 
 /**
- * 对象存储服务实现类
+ * 资产服务实现类 - 文件上传与对象存储核心逻辑
+ *
+ * <h3>职责概述</h3>
  * <p>
- * 将上传与图片处理逻辑、数据库生命周期管理集中在此处，
- * 业务 Service（User/Message/Chat...）只负责业务校验与编排。
+ * 统一管理文件上传、图片处理、对象存储和生命周期管理。
+ * 将上传逻辑与业务服务解耦，提供标准化的资产操作接口。
+ * </p>
+ *
+ * <h3>核心功能</h3>
+ * <ul>
+ *     <li><b>头像上传</b>：用户/聊天室头像（公开存储）</li>
+ *     <li><b>消息图片</b>：聊天图片上传（私有存储，预签名访问）</li>
+ *     <li><b>图片处理</b>：规范化（旋转、压缩）、缩略图生成</li>
+ *     <li><b>图片去重</b>：基于规范化哈希的重复检测</li>
+ *     <li><b>URL 刷新</b>：按需生成预签名链接</li>
+ *     <li><b>状态管理</b>：PENDING → ACTIVE 激活流程</li>
+ * </ul>
+ *
+ * <h3>调用路径</h3>
+ * <ul>
+ *     <li>{@code MediaController} → 本服务：图片检查和 URL 获取</li>
+ *     <li>{@code UserService} → 本服务：头像上传</li>
+ *     <li>{@code MessageService} → 本服务：消息图片上传和激活</li>
+ *     <li>{@code GuestCleanupService} → 本服务：垃圾文件清理</li>
+ * </ul>
+ *
+ * <h3>核心不变量</h3>
+ * <ul>
+ *     <li>上传后初始状态为 PENDING（status=0）</li>
+ *     <li>消息发送/资料保存成功后激活为 ACTIVE（status=1）</li>
+ *     <li>GIF 文件跳过规范化处理，保留动画效果</li>
+ *     <li>公开资产（头像）存 public/ 目录，私有资产存 private/ 目录</li>
+ * </ul>
+ *
+ * <h3>外部依赖</h3>
+ * <ul>
+ *     <li><b>MinioOSSOperator</b>：MinIO 对象存储操作</li>
+ *     <li><b>ImageUtils</b>：图片规范化处理</li>
+ *     <li><b>ObjectHashUtils</b>：SHA-256 哈希计算</li>
+ * </ul>
+ *
+ * <h3>图片处理参数</h3>
+ * <table border="1">
+ *     <tr><td>规范化最大边</td><td>2048px</td></tr>
+ *     <tr><td>规范化质量</td><td>0.85</td></tr>
+ *     <tr><td>缩略图最大尺寸</td><td>400x400</td></tr>
+ *     <tr><td>预签名有效期</td><td>30 分钟</td></tr>
+ * </table>
+ *
+ * @author 系统开发者
+ * @since 1.0
+ * @see MediaController
+ * @see MinioOSSOperator
  */
 @Slf4j
 @Service

@@ -124,3 +124,55 @@ mvn test             # All tests
 - IntelliJ sync: `Ctrl+Alt+Y` after backend changes
 - Image upload: Frontend pre-compress → Backend normalize → MinIO
 - Dual-hash dedup: raw hash (frontend) + normalized hash (backend)
+
+## CODE COMMENT STANDARDS (Batch 3)
+
+We have established strict comment standards for the codebase to ensure maintainability and clarity.
+
+### 1. General Principles
+- **Language**: Comments in **Chinese (Simplified)**.
+- **Logs**: Log messages in **English** (for server compatibility).
+- **Style**: Use Javadoc/Kdoc style (`/** ... */`) for all public interfaces (Classes, Methods, Fields, Components, Props).
+
+### 2. Backend (Java)
+- **Class Level**: Describe the class responsibility.
+- **Field Level**: Explain the field meaning, especially business rules (e.g., status codes, default values).
+- **Method Level**: Describe logic, `@param`, `@return`, and potential exceptions.
+
+**Example (`ChatReq.java`):**
+```java
+/**
+ * 聊天室代码（8位数字，可选）
+ * <p>
+ * 业务规则：
+ * - 如果提供：使用指定的代码（需确保唯一性）
+ * - 如果为空：后端自动生成8位数字代码
+ */
+private String chatCode;
+```
+
+### 3. Frontend (Vue/TS)
+- **Component Level**: Top-level comment in `<script setup>` describing:
+  - Core functionality
+  - Routing parameters
+  - Layout structure
+  - Key dependencies
+- **Props/Types**: Document all props and complex types.
+- **Complex Logic**: Explain non-obvious logic steps.
+
+**Example (`index.vue`):**
+```typescript
+/**
+ * 聊天页面组件
+ *
+ * 核心功能：
+ * - 消息列表展示与实时接收
+ * - 消息发送（文本/图片）
+ */
+```
+
+### 4. Coverage Status (Batch 3)
+- **POJO/DTO**: 100% Complete
+- **Exceptions**: 100% Complete
+- **Views/Components**: ~45% Complete (Key core views done)
+

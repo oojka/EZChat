@@ -46,10 +46,23 @@ type RestoreLoginOptions = SyncUserStateOptions
 /**
  * UserStore：管理登录态与当前用户信息
  *
- * 业务职责：
+ * 核心职责：
  * - 维护 loginUser（uid/username/accessToken/refreshToken）：用于 HTTP header 与 WS 连接
  * - 维护 loginUserInfo（昵称/头像/简介）：用于 UI 展示
  * - 维护 userStatusList：在线状态表（与 RoomStore 联动）
+ *
+ * 调用路径：
+ * - 登录流程：useLogin -> userStore.loginRequest()
+ * - 访客加入：useGuest -> userStore.guestJoinRequest()
+ * - 页面刷新：App.vue -> userStore.restoreLoginStateIfNeeded()
+ *
+ * 核心不变量：
+ * - accessToken 仅存内存，refreshToken 存 localStorage
+ * - loginUser.type 决定当前身份（formal/guest/none）
+ *
+ * 外部系统：
+ * - AuthAPI - 认证接口
+ * - UserAPI - 用户信息接口
  */
 export const useUserStore = defineStore('user', () => {
   const router = useRouter()

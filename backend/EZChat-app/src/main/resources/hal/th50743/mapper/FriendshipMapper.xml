@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hal.th50743.mapper.FriendshipMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO friendships (user_id, friend_id, alias, create_time)
+        VALUES (#{userId}, #{friendId}, #{alias}, NOW())
+    </insert>
+
+    <delete id="deleteBiDirectional">
+        DELETE FROM friendships
+        WHERE (user_id = #{userId} AND friend_id = #{friendId})
+           OR (user_id = #{friendId} AND friend_id = #{userId})
+    </delete>
+
+    <select id="selectByUserId" resultType="hal.th50743.pojo.Friendship">
+        SELECT * FROM friendships WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectByUserIdAndFriendId" resultType="hal.th50743.pojo.Friendship">
+        SELECT * FROM friendships
+        WHERE user_id = #{userId} AND friend_id = #{friendId}
+    </select>
+
+    <update id="updateAlias">
+        UPDATE friendships
+        SET alias = #{alias}
+        WHERE user_id = #{userId} AND friend_id = #{friendId}
+    </update>
+
+</mapper>

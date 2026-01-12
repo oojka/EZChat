@@ -4,13 +4,18 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hal.th50743.mapper.AssetMapper">
 
-    <!-- 插入文件记录 -->
+    <!-- 插入资产记录（useGeneratedKeys 回填 id） -->
     <insert id="insertAsset" parameterType="hal.th50743.pojo.Asset" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO assets (asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time)
         VALUES (#{assetName}, #{originalName}, #{contentType}, #{fileSize}, #{category}, #{messageId}, #{status}, #{rawAssetHash}, #{normalizedAssetHash}, NOW(), NOW())
     </insert>
 
-    <!-- 根据 ID 查询文件记录（使用主键索引） -->
+    <!-- 
+      根据 ID 查询资产记录
+      
+      索引依赖：
+      - assets(id) 主键索引
+    -->
     <select id="selectById" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
@@ -18,7 +23,12 @@
         LIMIT 1
     </select>
 
-    <!-- 根据 assetName 查询文件记录（使用 idx_asset_name 索引） -->
+    <!-- 
+      根据 assetName 查询资产记录
+      
+      索引依赖：
+      - assets(asset_name) idx_asset_name 索引
+    -->
     <select id="selectByAssetName" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
@@ -26,14 +36,26 @@
         LIMIT 1
     </select>
 
-    <!-- 根据 messageId 查询关联的文件列表（使用 idx_message_id 索引） -->
+    <!-- 
+      根据 messageId 查询关联的资产列表
+      
+      索引依赖：
+      - assets(message_id) idx_message_id 索引
+    -->
     <select id="selectByMessageId" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
         WHERE message_id = #{messageId}
     </select>
 
-    <!-- 批量更新文件状态（用于消息图片激活，一次 SQL 完成所有图片的状态更新） -->
+    <!-- 
+      批量更新资产状态
+      
+      业务说明：
+      - 用于消息图片激活（一条消息可能包含多张图片）
+      - 一次 SQL 完成所有图片的状态更新
+      - 同时更新 status、category、messageId
+    -->
     <update id="updateStatusBatch">
         UPDATE assets
         SET status = #{status},
@@ -46,7 +68,7 @@
         </foreach>
     </update>
 
-    <!-- 更新单个文件的状态和分类 -->
+    <!-- 更新单个资产的状态和分类（用于头像/封面激活） -->
     <update id="updateStatusAndCategory">
         UPDATE assets
         SET status = #{status},
@@ -57,7 +79,7 @@
         WHERE asset_name = #{assetName}
     </update>
 
-    <!-- 更新单个文件的状态 -->
+    <!-- 更新单个资产的状态 -->
     <update id="updateStatus">
         UPDATE assets
         SET status = #{status},
@@ -65,7 +87,17 @@
         WHERE asset_name = #{assetName}
     </update>
 
-    <!-- 分页查询待清理的 PENDING 文件（用于 GC，使用 idx_gc_cleanup 索引） -->
+    <!-- 
+      分页查询待清理的 PENDING 资产（GC 任务使用）
+      
+      业务说明：
+      - 查询 status=0（PENDING）且 create_time < beforeTime 的记录
+      - 采用分页避免一次加载大量数据导致 OOM
+      - 按 create_time 升序，优先清理最旧的
+      
+      索引依赖：
+      - assets(status, create_time) idx_gc_cleanup 索引
+    -->
     <select id="selectPendingFilesBefore" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
@@ -74,12 +106,12 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 根据 ID 删除文件记录 -->
+    <!-- 根据 ID 删除资产记录 -->
     <delete id="deleteById">
         DELETE FROM assets WHERE id = #{id}
     </delete>
 
-    <!-- 批量删除文件记录（可选，用于提升 GC 性能） -->
+    <!-- 批量删除资产记录（GC 批量清理时使用） -->
     <delete id="deleteByIds">
         DELETE FROM assets WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
@@ -87,7 +119,16 @@
         </foreach>
     </delete>
 
-    <!-- 根据原始对象哈希查询已激活的对象（用于前端轻量级比对，使用 idx_raw_asset_hash 索引） -->
+    <!-- 
+      根据原始资产哈希查询已激活的资产
+      
+      业务说明：
+      - 用于前端轻量级去重比对
+      - 仅查询 status=1（ACTIVE）的记录
+      
+      索引依赖：
+      - assets(raw_asset_hash) idx_raw_asset_hash 索引
+    -->
     <select id="selectByRawHashAndActive" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets
@@ -95,7 +136,16 @@
         LIMIT 1
     </select>
 
-    <!-- 根据规范化对象哈希查询已激活的对象（用于后端最终去重，使用 idx_normalized_asset_hash 索引） -->
+    <!-- 
+      根据规范化资产哈希查询已激活的资产
+      
+      业务说明：
+      - 用于后端最终去重
+      - 仅查询 status=1（ACTIVE）的记录
+      
+      索引依赖：
+      - assets(normalized_asset_hash) idx_normalized_asset_hash 索引
+    -->
     <select id="selectByNormalizedHashAndActive" resultType="hal.th50743.pojo.Asset">
         SELECT id, asset_name, original_name, content_type, file_size, category, message_id, status, raw_asset_hash, normalized_asset_hash, create_time, update_time
         FROM assets

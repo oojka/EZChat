@@ -1,6 +1,5 @@
-package hal.th50743.pojo.vo;
+package hal.th50743.pojo;
 
-import hal.th50743.pojo.Image;
 import lombok.Data;
 import java.time.LocalDateTime;
 

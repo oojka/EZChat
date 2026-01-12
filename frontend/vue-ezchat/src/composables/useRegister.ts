@@ -1,3 +1,19 @@
+/**
+ * 用户注册 Composable
+ *
+ * 核心职责：
+ * - 管理注册表单状态和验证规则
+ * - 处理头像上传（含去重检查和压缩）
+ * - 执行用户注册 API 调用
+ * - 提供表单重置功能
+ *
+ * 使用示例：
+ * ```vue
+ * const { registerForm, register, registerFormRules } = useRegister()
+ * ```
+ *
+ * @module useRegister
+ */
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { registerApi } from '@/api/Auth.ts'
@@ -14,6 +30,11 @@ import { useImageStore } from '@/stores/imageStore'
 import type { RegisterInfo, Result, Image} from '@/type'
 import type { InternalRuleItem } from 'async-validator'
 
+/**
+ * 用户注册业务逻辑 Hook
+ *
+ * @returns 注册表单、验证规则、头像处理方法等
+ */
 export function useRegister() {
   const { t } = useI18n()
   const registerFormRef = ref()

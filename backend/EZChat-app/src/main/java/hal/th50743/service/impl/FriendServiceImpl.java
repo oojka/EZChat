@@ -11,8 +11,8 @@ import hal.th50743.pojo.FriendRequest;
 import hal.th50743.pojo.Friendship;
 import hal.th50743.pojo.Image;
 import hal.th50743.pojo.User;
-import hal.th50743.pojo.vo.FriendRequestVO;
-import hal.th50743.pojo.vo.FriendVO;
+import hal.th50743.pojo.FriendRequestVO;
+import hal.th50743.pojo.FriendVO;
 import hal.th50743.service.AssetService;
 import hal.th50743.service.ChatService;
 import hal.th50743.service.FriendService;
@@ -30,17 +30,54 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 好友服务实现类
+ * 好友服务实现类 - 好友系统核心业务逻辑
+ *
+ * <h3>职责概述</h3>
  * <p>
- * 负责好友系统的核心业务逻辑，包括：
+ * 负责好友关系的全生命周期管理，包括好友申请、关系维护和私聊房间创建。
+ * 作为社交功能的核心服务，与聊天服务紧密协作。
+ * </p>
+ *
+ * <h3>核心功能</h3>
  * <ul>
- *     <li>好友列表查询（包含在线状态）</li>
- *     <li>好友申请发送与处理（同意/拒绝）</li>
- *     <li>好友关系维护（删除、备注）</li>
- *     <li>私聊房间创建与复用</li>
+ *     <li><b>好友列表</b>：查询好友列表（含在线状态、头像、备注）</li>
+ *     <li><b>好友申请</b>：发送申请、查询待处理申请、处理申请（同意/拒绝）</li>
+ *     <li><b>关系维护</b>：删除好友、修改备注</li>
+ *     <li><b>私聊创建</b>：创建或复用私聊房间</li>
  * </ul>
- * <p>
- * 注意：好友功能仅对正式用户开放。
+ *
+ * <h3>调用路径</h3>
+ * <ul>
+ *     <li>{@code FriendController} → 本服务：所有好友 API 入口</li>
+ * </ul>
+ *
+ * <h3>核心不变量</h3>
+ * <ul>
+ *     <li>好友关系为双向：A 添加 B 成功后，双方互为好友</li>
+ *     <li>好友功能仅对正式用户开放（userType=1）</li>
+ *     <li>不能添加自己为好友</li>
+ *     <li>重复申请或已是好友时抛出异常</li>
+ * </ul>
+ *
+ * <h3>外部依赖</h3>
+ * <ul>
+ *     <li><b>ChatService</b>：创建私聊房间</li>
+ *     <li><b>PresenceService</b>：查询好友在线状态</li>
+ *     <li><b>AssetService</b>：获取好友头像</li>
+ *     <li><b>WebSocketServer</b>：好友申请实时通知</li>
+ * </ul>
+ *
+ * <h3>好友申请状态</h3>
+ * <table border="1">
+ *     <tr><td>0</td><td>Pending（待处理）</td></tr>
+ *     <tr><td>1</td><td>Accepted（已同意）</td></tr>
+ *     <tr><td>2</td><td>Rejected（已拒绝）</td></tr>
+ * </table>
+ *
+ * @author 系统开发者
+ * @since 1.0
+ * @see FriendController
+ * @see ChatService#createPrivateChat
  */
 @Slf4j
 @Service
@@ -55,6 +92,12 @@ public class FriendServiceImpl implements FriendService {
     private final ChatMapper chatMapper;
     private final ChatService chatService;
 
+    /**
+     * 根据 assetId 获取头像 Image 对象
+     *
+     * @param assetId 资产 ID
+     * @return Image 对象（包含 URL），不存在返回 null
+     */
     private Image getImageByAssetId(Integer assetId) {
         if (assetId == null) return null;
         Asset asset = assetService.findById(assetId);
@@ -64,6 +107,14 @@ public class FriendServiceImpl implements FriendService {
         return null;
     }
 
+    /**
+     * 获取当前用户的好友列表
+     *
+     * <p>返回所有好友的详细信息，包含在线状态、头像、备注等。
+     *
+     * @param currentUserId 当前用户 ID
+     * @return 好友 VO 列表，无好友时返回空列表
+     */
     @Override
     public List<FriendVO> getFriendList(Integer currentUserId) {
         List<Friendship> friendships = friendshipMapper.selectByUserId(currentUserId);
@@ -91,6 +142,14 @@ public class FriendServiceImpl implements FriendService {
         return vos;
     }
 
+    /**
+     * 获取待处理的好友申请列表
+     *
+     * <p>查询发送给当前用户且状态为 Pending（0）的申请。
+     *
+     * @param currentUserId 当前用户 ID
+     * @return 好友申请 VO 列表
+     */
     @Override
     public List<FriendRequestVO> getPendingRequests(Integer currentUserId) {
         List<FriendRequest> requests = friendRequestMapper.selectPendingByReceiverId(currentUserId);
@@ -113,6 +172,24 @@ public class FriendServiceImpl implements FriendService {
         return vos;
     }
 
+    /**
+     * 发送好友申请
+     *
+     * <p>业务规则：
+     * <ul>
+     *     <li>不能添加自己</li>
+     *     <li>已是好友不能重复添加</li>
+     *     <li>已有待处理申请不能重复发送</li>
+     *     <li>若对方已向自己发送申请，则自动同意（双向确认）</li>
+     * </ul>
+     *
+     * <p>发送成功后通过 WebSocket 通知目标用户。
+     *
+     * @param currentUserId 当前用户 ID
+     * @param targetUid     目标用户 UID
+     * @throws BusinessException USER_NOT_FOUND - 目标用户不存在
+     * @throws BusinessException BAD_REQUEST - 不能添加自己、已是好友、申请已发送
+     */
     @Override
     @Transactional
     public void sendFriendRequest(Integer currentUserId, String targetUid) {
@@ -165,6 +242,17 @@ public class FriendServiceImpl implements FriendService {
         }
     }
 
+    /**
+     * 处理好友申请（同意或拒绝）
+     *
+     * <p>同意申请后创建双向好友关系。
+     *
+     * @param currentUserId 当前用户 ID（必须是申请的接收者）
+     * @param requestId     申请 ID
+     * @param accept        是否同意：true=同意，false=拒绝
+     * @throws BusinessException BAD_REQUEST - 申请不存在或已处理
+     * @throws BusinessException FORBIDDEN - 不是申请的接收者
+     */
     @Override
     @Transactional
     public void handleFriendRequest(Integer currentUserId, Integer requestId, Boolean accept) {
@@ -196,6 +284,14 @@ public class FriendServiceImpl implements FriendService {
         }
     }
 
+    /**
+     * 删除好友
+     *
+     * <p>删除双向好友关系。
+     *
+     * @param currentUserId 当前用户 ID
+     * @param friendUid     好友 UID
+     */
     @Override
     @Transactional
     public void removeFriend(Integer currentUserId, String friendUid) {
@@ -204,6 +300,13 @@ public class FriendServiceImpl implements FriendService {
         friendshipMapper.deleteBiDirectional(currentUserId, friend.getId());
     }
 
+    /**
+     * 更新好友备注
+     *
+     * @param currentUserId 当前用户 ID
+     * @param friendUid     好友 UID
+     * @param alias         新备注名
+     */
     @Override
     @Transactional
     public void updateAlias(Integer currentUserId, String friendUid, String alias) {
@@ -212,6 +315,17 @@ public class FriendServiceImpl implements FriendService {
         friendshipMapper.updateAlias(currentUserId, friend.getId(), alias);
     }
 
+    /**
+     * 获取或创建私聊房间
+     *
+     * <p>基于好友关系的 1v1 私聊。若已存在私聊房间则返回其 chatCode，
+     * 否则调用 ChatService 创建新的私聊房间。
+     *
+     * @param currentUserId 当前用户 ID
+     * @param targetUid     目标好友 UID
+     * @return 私聊房间的 chatCode
+     * @throws BusinessException USER_NOT_FOUND - 目标用户不存在
+     */
     @Override
     @Transactional
     public String getOrCreatePrivateChat(Integer currentUserId, String targetUid) {

@@ -1,4 +1,18 @@
 <script setup lang="ts">
+/**
+ * 表情选择器组件
+ *
+ * 功能：
+ * - 显示常用表情网格
+ * - 记录并展示最近使用的表情（localStorage 持久化）
+ * - 点击表情触发选择事件
+ *
+ * Emits：
+ * - select: 选中表情时触发，参数为 emoji 字符串
+ *
+ * 依赖：
+ * - COMMON_EMOJIS: 常用表情常量
+ */
 import { COMMON_EMOJIS } from '@/constants/emojis'
 import { useI18n } from 'vue-i18n'
 import { ref, onMounted } from 'vue'

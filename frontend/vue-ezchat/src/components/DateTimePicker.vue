@@ -1,4 +1,21 @@
 <script setup lang="ts">
+/**
+ * 日期时间选择器组件
+ *
+ * 功能：
+ * - 快捷选项（1天/7天/30天）
+ * - 自定义日期选择器
+ * - 一次性链接开关
+ *
+ * 使用场景：
+ * - 创建聊天室时设置邀请链接过期时间
+ *
+ * Props：
+ * - modelValue: 选中的日期（v-model）
+ * - radioValue: 快捷选项值（v-model:radioValue）
+ * - oneTimeLink: 是否一次性链接（v-model:oneTimeLink）
+ * - disabledDate: 禁用日期判断函数
+ */
 import { Calendar, EditPen } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'

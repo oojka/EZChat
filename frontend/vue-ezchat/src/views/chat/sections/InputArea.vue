@@ -1,4 +1,25 @@
 <script setup lang="ts">
+/**
+ * 消息输入区域组件
+ *
+ * 核心功能：
+ * - 富文本消息输入（contenteditable）
+ * - 表情选择器集成
+ * - 图片上传（支持多图）
+ * - 快捷键发送（Enter）
+ *
+ * 特性：
+ * - 光标位置保存与恢复（用于表情插入）
+ * - 内联表情渲染
+ * - 图片预览与删除
+ * - 房间切换时自动重置
+ *
+ * Props：
+ * - isMobile: 是否移动端模式
+ *
+ * 依赖：
+ * - useChatInput: 输入逻辑
+ */
 import {nextTick, onMounted, ref, watch} from 'vue'
 import {ArrowUp, Close, Picture} from '@element-plus/icons-vue'
 import {useChatInput} from '@/composables/useChatInput.ts'

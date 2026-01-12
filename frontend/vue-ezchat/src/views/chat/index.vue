@@ -1,4 +1,27 @@
 <script setup lang="ts">
+/**
+ * 聊天页面组件
+ *
+ * 核心功能：
+ * - 消息列表展示与实时接收
+ * - 消息发送（文本/图片）
+ * - 成员列表管理
+ * - 输入区域拖拽调整高度（桌面端）
+ *
+ * 路由参数：
+ * - chatCode: 8 位房间号
+ *
+ * 布局结构：
+ * - ChatHeader: 顶部房间信息栏
+ * - MessageArea: 消息列表区域（支持无限滚动）
+ * - InputArea: 底部输入区域
+ * - RightAside: 右侧成员列表（桌面端固定/移动端抽屉）
+ *
+ * 依赖：
+ * - messageStore: 消息状态管理
+ * - useIsMobile: 设备类型检测
+ * - useKeyboardVisible: 移动端键盘状态检测
+ */
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import MessageArea from '@/views/chat/sections/MessageArea.vue'
 import InputArea from '@/views/chat/sections/InputArea.vue'

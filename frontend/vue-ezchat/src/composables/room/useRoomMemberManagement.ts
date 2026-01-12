@@ -1,3 +1,19 @@
+/**
+ * 房间成员管理 Composable
+ *
+ * 核心职责：
+ * - 管理成员选择状态（踢出、转让）
+ * - 执行踢出成员操作（含确认弹窗）
+ * - 执行房主转让操作（含确认弹窗）
+ * - 自动同步选择状态与成员列表
+ *
+ * 使用示例：
+ * ```vue
+ * const { members, selectedUids, kickSelected, transferOwner } = useRoomMemberManagement()
+ * ```
+ *
+ * @module useRoomMemberManagement
+ */
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
@@ -7,6 +23,11 @@ import { kickChatMembersApi, transferChatOwnerApi } from '@/api/Chat'
 import { showConfirmDialog } from '@/components/dialogs/confirmDialog'
 import type { ChatMember } from '@/type'
 
+/**
+ * 房间成员管理业务逻辑 Hook
+ *
+ * @returns 成员列表、选择状态、踢出/转让方法等
+ */
 export const useRoomMemberManagement = () => {
   const { t } = useI18n()
   const roomStore = useRoomStore()

@@ -1,4 +1,4 @@
-package hal.th50743.pojo.req;
+package hal.th50743.pojo;
 
 import lombok.Data;
 

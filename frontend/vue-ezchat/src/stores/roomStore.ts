@@ -10,13 +10,33 @@ import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/Er
 import i18n from '@/i18n'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 import { useRouter } from 'vue-router'
+
 /**
- * RoomStore：管理聊天室列表与“当前所在房间”
+ * RoomStore：聊天室列表与当前房间的核心状态管理
  *
- * 业务职责：
- * - 维护房间列表（排序、更新、未读数）
- * - 维护当前激活房间 code（用于消息列表、心跳等）
- * - 维护成员在线状态（WS USER_STATUS 推送后更新）
+ * ## 职责
+ * 管理用户的聊天室列表、当前激活房间、成员在线状态，以及房间操作（加入、退出、广播处理）。
+ *
+ * ## 调用路径
+ * - `AppInit.vue` → `initRoomList()`: 应用启动时加载房间列表
+ * - `ChatView.vue` → `currentRoom`: 获取当前房间详情
+ * - `WebsocketStore` → `updateMemberStatus()`, `addRoomMember()`: WS 推送触发状态更新
+ * - `RoomList.vue` → `roomList`: 渲染侧边栏房间列表
+ *
+ * ## 核心不变量
+ * - `currentRoomCode` 必须存在于 `_roomList` 中（或为空）
+ * - 房间列表按 `lastActiveAt` 倒序排列
+ * - 成员在线状态从 `userStatusList`（来自 userStore）同步
+ *
+ * ## 与外部系统的契约
+ * - **后端 API**: `initApi`, `getChatMembersApi`, `joinChatApi`, `validateChatJoinApi`
+ * - **WebSocket**: 接收 MEMBER_JOIN, MEMBER_LEAVE, USER_STATUS 等事件
+ * - **ImageStore**: 头像 Blob URL 缓存管理
+ *
+ * ## 状态同步时机
+ * - 列表初始化: `initRoomList()` 在 token 验证后调用
+ * - 成员变更: WS 推送后立即更新
+ * - 头像缓存: 异步预取，不阻塞主流程
  */
 export const useRoomStore = defineStore('room', () => {
   // =========================================

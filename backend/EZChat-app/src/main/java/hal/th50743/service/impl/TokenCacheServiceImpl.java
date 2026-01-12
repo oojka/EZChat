@@ -7,9 +7,38 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Token 缓存服务实现
+ * Token 缓存服务实现类 - JWT Token 缓存管理
+ *
+ * <h3>职责概述</h3>
  * <p>
- * 统一管理 AccessToken 与访客 RefreshToken 的缓存操作。
+ * 统一管理 AccessToken 和访客 RefreshToken 的内存缓存操作。
+ * 使用 Caffeine 高性能缓存库，支持自动过期和容量限制。
+ * </p>
+ *
+ * <h3>核心功能</h3>
+ * <ul>
+ *     <li><b>AccessToken 缓存</b>：所有用户的 AccessToken（内存存储）</li>
+ *     <li><b>访客 RefreshToken 缓存</b>：访客的 RefreshToken（正式用户存 DB）</li>
+ * </ul>
+ *
+ * <h3>调用路径</h3>
+ * <ul>
+ *     <li>{@code AuthService} → 本服务：Token 签发和刷新时缓存</li>
+ *     <li>{@code WebSocketServer} → 本服务：连接时验证 AccessToken</li>
+ *     <li>{@code JwtAuthInterceptor} → 本服务：API 请求时验证 AccessToken</li>
+ * </ul>
+ *
+ * <h3>设计考量</h3>
+ * <ul>
+ *     <li>AccessToken 存缓存而非 DB，降低验证延迟</li>
+ *     <li>访客 RefreshToken 存缓存，服务重启后失效（符合访客临时性）</li>
+ *     <li>正式用户 RefreshToken 存 DB，支持持久化和跨服务校验</li>
+ * </ul>
+ *
+ * @author 系统开发者
+ * @since 1.0
+ * @see AuthService
+ * @see com.github.benmanes.caffeine.cache.Cache
  */
 @Slf4j
 @Service
