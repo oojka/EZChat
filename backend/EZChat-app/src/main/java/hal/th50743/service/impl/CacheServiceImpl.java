@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TokenCacheServiceImpl implements TokenCacheService {
+public class CacheServiceImpl implements TokenCacheService {
 
     private final Cache<Integer, String> accessTokenCache;
     private final Cache<Integer, String> guestRefreshTokenCache;
