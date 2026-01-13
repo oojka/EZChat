@@ -2,6 +2,7 @@ package hal.th50743.config;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import hal.th50743.service.CacheService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -33,11 +34,11 @@ import java.time.Duration;
  *   <li>Value：Token 字符串（String）</li>
  * </ul>
  *
- * @see hal.th50743.service.TokenCacheService Token 缓存服务
- * @see TokenProperties Token 过期时间配置
+ * @see CacheService Token 缓存服务
+ * @see CacheProperties Token 过期时间配置
  */
 @Configuration
-public class TokenCacheConfig {
+public class CacheConfig {
 
     /**
      * AccessToken 缓存（5分钟过期）

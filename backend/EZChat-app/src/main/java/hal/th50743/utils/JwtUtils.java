@@ -1,5 +1,6 @@
 package hal.th50743.utils;
 
+import hal.th50743.service.CacheService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtException;
@@ -44,7 +45,7 @@ import java.util.Map;
  * </ul>
  *
  * @see hal.th50743.interceptor.TokenInterceptor Token 验证拦截器
- * @see hal.th50743.service.TokenCacheService Token 缓存服务
+ * @see CacheService Token 缓存服务
  */
 @Component
 public class JwtUtils {

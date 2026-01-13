@@ -2,7 +2,7 @@ package hal.th50743.service.impl;
 
 import hal.th50743.mapper.UserMapper;
 import hal.th50743.service.PresenceService;
-import hal.th50743.service.TokenCacheService;
+import hal.th50743.service.CacheService;
 import jakarta.websocket.Session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,7 @@ import java.util.Map;
 public class GuestCleanupService {
 
     private final UserMapper userMapper;
-    private final TokenCacheService tokenCacheService;
+    private final CacheService cacheService;
     private final PresenceService presenceService;
 
     /**
@@ -46,8 +46,8 @@ public class GuestCleanupService {
             if (onlineUsers.containsKey(userId)) {
                 continue;
             }
-            tokenCacheService.evictAccessToken(userId);
-            tokenCacheService.evictGuestRefreshToken(userId);
+            cacheService.evictAccessToken(userId);
+            cacheService.evictGuestRefreshToken(userId);
             userMapper.updateUserDeleted(userId, 1);
             log.info("Cleaned up offline guest: userId={}", userId);
         }

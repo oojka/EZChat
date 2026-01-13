@@ -5,7 +5,7 @@ package hal.th50743.service;
  * <p>
  * 负责 AccessToken 与访客 RefreshToken 的缓存管理。
  */
-public interface TokenCacheService {
+public interface CacheService {
 
     /**
      * 缓存 AccessToken

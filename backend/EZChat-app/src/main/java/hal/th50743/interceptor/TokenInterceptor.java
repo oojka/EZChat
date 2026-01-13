@@ -3,7 +3,7 @@ package hal.th50743.interceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hal.th50743.exception.ErrorCode;
 import hal.th50743.pojo.Result;
-import hal.th50743.service.TokenCacheService;
+import hal.th50743.service.CacheService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.CurrentHolder;
 import hal.th50743.utils.JwtUtils;
@@ -33,7 +33,7 @@ public class TokenInterceptor implements HandlerInterceptor {
     private UserService userService;
 
     @Autowired
-    private TokenCacheService tokenCacheService;
+    private CacheService cacheService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -80,7 +80,7 @@ public class TokenInterceptor implements HandlerInterceptor {
                 writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "User not found");
                 return false;
             }
-            String cachedToken = tokenCacheService.getAccessToken(userId);
+            String cachedToken = cacheService.getAccessToken(userId);
             if (cachedToken == null || !cachedToken.equals(token)) {
                 log.warn("AccessToken cache validation failed: userId={}", userId);
                 writeUnauthorizedResponse(response, ErrorCode.UNAUTHORIZED, "AccessToken mismatch");

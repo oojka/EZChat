@@ -14,7 +14,7 @@ import hal.th50743.pojo.UserStatus; // 用户状态对象
 // 服务层接口
 import hal.th50743.service.ChatService; // 聊天服务
 import hal.th50743.service.MessageService; // 消息服务
-import hal.th50743.service.TokenCacheService; // Token 缓存服务
+import hal.th50743.service.CacheService; // Token 缓存服务
 import hal.th50743.service.UserService; // 用户服务
 
 // 工具类
@@ -164,7 +164,7 @@ public class WebSocketServer {
     private static MessageService messageService;
 
     /** Token 缓存服务 - 校验 AccessToken 有效性 */
-    private static TokenCacheService tokenCacheService;
+    private static CacheService cacheService;
 
     /**
      * Service 依赖注入方法
@@ -185,16 +185,16 @@ public class WebSocketServer {
      * @param userService       用户服务实例
      * @param chatService       聊天服务实例
      * @param messageService    消息服务实例
-     * @param tokenCacheService Token 缓存服务实例
+     * @param cacheService Token 缓存服务实例
      */
     @Autowired
     public void setServices(JwtUtils jwtUtils, UserService userService,
-            ChatService chatService, MessageService messageService, TokenCacheService tokenCacheService) {
+            ChatService chatService, MessageService messageService, CacheService cacheService) {
         WebSocketServer.jwtUtils = jwtUtils;
         WebSocketServer.userService = userService;
         WebSocketServer.chatService = chatService;
         WebSocketServer.messageService = messageService;
-        WebSocketServer.tokenCacheService = tokenCacheService;
+        WebSocketServer.cacheService = cacheService;
     }
 
     /**
@@ -252,7 +252,7 @@ public class WebSocketServer {
             this.uid = claims.get("uid", String.class); // 获取用户唯一标识
             this.userId = Integer.valueOf(userService.getIdByUid(this.uid).toString()); // 转换为数据库用户ID
 
-            String cachedToken = tokenCacheService.getAccessToken(this.userId);
+            String cachedToken = cacheService.getAccessToken(this.userId);
             if (cachedToken == null || !cachedToken.equals(token)) {
                 log.warn("WS Connection Rejected: AccessToken Cache Validation Failed userId={}", this.userId);
                 closeSession(session, 4002, "Authentication Failed");

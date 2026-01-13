@@ -1,7 +1,10 @@
 package hal.th50743.service.impl;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import hal.th50743.service.TokenCacheService;
+import hal.th50743.pojo.ChatVO;
+import hal.th50743.pojo.MessageVO;
+import hal.th50743.service.AuthService;
+import hal.th50743.service.CacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,10 +46,14 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CacheServiceImpl implements TokenCacheService {
+public class CacheServiceImpl implements CacheService {
 
     private final Cache<Integer, String> accessTokenCache;
     private final Cache<Integer, String> guestRefreshTokenCache;
+    //
+    private final Cache<Integer, ChatVO> chatVOReadCache;
+    //
+    private final Cache<Integer, MessageVO> messageVOReadCache;
 
     /**
      * 缓存 AccessToken

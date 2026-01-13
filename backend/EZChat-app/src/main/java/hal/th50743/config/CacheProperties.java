@@ -1,5 +1,6 @@
 package hal.th50743.config;
 
+import hal.th50743.service.CacheService;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -32,13 +33,13 @@ import org.springframework.stereotype.Component;
  *   <li><b>RefreshToken</b>：长期有效，用于刷新 AccessToken</li>
  * </ul>
  *
- * @see TokenCacheConfig Token 缓存配置
- * @see hal.th50743.service.TokenCacheService Token 缓存服务
+ * @see CacheConfig Token 缓存配置
+ * @see CacheService Token 缓存服务
  */
 @Data
 @Component
 @ConfigurationProperties(prefix = "jwt.token")
-public class TokenProperties {
+public class CacheProperties {
 
     /**
      * AccessToken 过期时间（分钟）

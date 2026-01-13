@@ -1,7 +1,7 @@
 package hal.th50743.service.impl;
 
 import hal.th50743.assembler.LoginAssembler;
-import hal.th50743.config.TokenProperties;
+import hal.th50743.config.CacheProperties;
 import hal.th50743.assembler.UserAssembler;
 import hal.th50743.exception.BusinessException;
 import hal.th50743.exception.ErrorCode;
@@ -10,7 +10,7 @@ import hal.th50743.service.AuthService;
 import hal.th50743.service.ChatService;
 import hal.th50743.service.FormalUserService;
 import hal.th50743.service.PresenceService;
-import hal.th50743.service.TokenCacheService;
+import hal.th50743.service.CacheService;
 import hal.th50743.service.UserService;
 import hal.th50743.utils.JwtUtils;
 import hal.th50743.utils.MessageUtils;
@@ -79,7 +79,7 @@ import java.util.List;
  * @author 系统开发者
  * @since 1.0
  * @see AuthController
- * @see TokenCacheService
+ * @see CacheService
  */
 @Slf4j
 @Service
@@ -89,12 +89,12 @@ public class AuthServiceImpl implements AuthService {
     private static final String TOKEN_TYPE_REFRESH = "refresh";
 
     private final JwtUtils jwtUtils;
-    private final TokenProperties tokenProperties;
+    private final CacheProperties cacheProperties;
     private final FormalUserService formalUserService;
     private final UserService userService;
     private final ChatService chatService;
     private final UserAssembler userAssembler;
-    private final TokenCacheService tokenCacheService;
+    private final CacheService cacheService;
     private final PresenceService presenceService;
 
     // ============================================================
@@ -118,17 +118,17 @@ public class AuthServiceImpl implements AuthService {
      */
     private LoginVO issueTokens(String uid, String username, Integer userId, boolean isFormal) {
         long refreshExpireMinutes = isFormal
-                ? tokenProperties.getFormalRefreshExpireMinutes()
-                : tokenProperties.getGuestRefreshExpireMinutes();
+                ? cacheProperties.getFormalRefreshExpireMinutes()
+                : cacheProperties.getGuestRefreshExpireMinutes();
         LoginVO loginVO = LoginAssembler.build(uid, username, jwtUtils,
-                tokenProperties.getAccessExpireMinutes(), refreshExpireMinutes);
+                cacheProperties.getAccessExpireMinutes(), refreshExpireMinutes);
 
-        tokenCacheService.cacheAccessToken(userId, loginVO.getAccessToken());
+        cacheService.cacheAccessToken(userId, loginVO.getAccessToken());
 
         if (isFormal) {
             formalUserService.updateRefreshToken(userId, loginVO.getRefreshToken());
         } else {
-            tokenCacheService.cacheGuestRefreshToken(userId, loginVO.getRefreshToken());
+            cacheService.cacheGuestRefreshToken(userId, loginVO.getRefreshToken());
         }
 
         return loginVO;
@@ -161,11 +161,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("Account is online, initiating force logout: userId={}, uid={}", userId, uid);
 
         // 1) 删除旧 Token
-        tokenCacheService.evictAccessToken(userId);
+        cacheService.evictAccessToken(userId);
         if (isFormal) {
             formalUserService.clearRefreshToken(userId);
         } else {
-            tokenCacheService.evictGuestRefreshToken(userId);
+            cacheService.evictGuestRefreshToken(userId);
         }
 
         // 2) 发送强制下线通知
@@ -518,7 +518,7 @@ public class AuthServiceImpl implements AuthService {
                     throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
                 }
             } else {
-                String cachedToken = tokenCacheService.getGuestRefreshToken(userId);
+                String cachedToken = cacheService.getGuestRefreshToken(userId);
                 if (cachedToken == null || !cachedToken.equals(req.getRefreshToken())) {
                     log.warn("RefreshToken exchange failed: Guest token mismatch userId={}", userId);
                     throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
@@ -527,14 +527,14 @@ public class AuthServiceImpl implements AuthService {
         }
 
         long refreshExpireMinutes = (userType != null && userType == 1)
-                ? tokenProperties.getFormalRefreshExpireMinutes()
-                : tokenProperties.getGuestRefreshExpireMinutes();
+                ? cacheProperties.getFormalRefreshExpireMinutes()
+                : cacheProperties.getGuestRefreshExpireMinutes();
         LoginVO loginVO = LoginAssembler.build(uid, username, jwtUtils,
-                tokenProperties.getAccessExpireMinutes(), refreshExpireMinutes);
+                cacheProperties.getAccessExpireMinutes(), refreshExpireMinutes);
         // 保持原 RefreshToken 不变
         loginVO.setRefreshToken(req.getRefreshToken());
 
-        tokenCacheService.cacheAccessToken(userId, loginVO.getAccessToken());
+        cacheService.cacheAccessToken(userId, loginVO.getAccessToken());
 
         return loginVO;
     }
