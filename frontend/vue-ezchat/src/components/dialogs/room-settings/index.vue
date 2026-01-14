@@ -10,6 +10,7 @@ import RoomInviteCreate from './RoomInviteCreate.vue'
 import RoomPasswordSettings from './RoomPasswordSettings.vue'
 import RoomBasicSettings from './RoomBasicSettings.vue'
 import RoomMemberManagement from './RoomMemberManagement.vue'
+import QrCodeDialog from '@/components/dialogs/QrCodeDialog.vue'
 
 const roomStore = useRoomStore()
 const { roomSettingsDialogVisible, currentRoom } = storeToRefs(roomStore)
@@ -38,6 +39,9 @@ const {
   confirmRevoke,
   copyInviteUrl,
   resetForm,
+  qrDialogVisible,
+  qrDialogUrl,
+  showQrCode,
 } = useRoomInviteManager()
 
 const closeDialog = () => {
@@ -184,7 +188,7 @@ const contentTitle = computed(() => {
                 <!-- List View -->
                 <RoomInviteList v-if="currentStep === 1" :invite-list="inviteList" :invite-limit-tip="inviteLimitTip"
                   :is-loading="isLoading" :revoking-id="revokingId" :can-create="canCreate" @create="handleGoToCreate"
-                  @revoke="confirmRevoke" @copy="copyInviteUrl" />
+                  @revoke="confirmRevoke" @copy="copyInviteUrl" @showQr="showQrCode" />
 
                 <!-- Create View -->
                 <RoomInviteCreate v-else :is-creating="isCreating" :disabled-date="disabledDate" v-model="selectedDate"
@@ -198,6 +202,7 @@ const contentTitle = computed(() => {
         </div>
       </div>
     </div>
+    <QrCodeDialog v-model="qrDialogVisible" :url="qrDialogUrl" />
   </el-dialog>
 </template>
 

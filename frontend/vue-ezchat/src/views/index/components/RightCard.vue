@@ -259,7 +259,7 @@ const handleRegister = async () => {
           @submit.prevent>
           <!-- 用户名输入框 -->
           <el-form-item class="username-input">
-            <el-input v-model="loginForm.username" :placeholder="t('auth.username')" size="large">
+            <el-input v-model="loginForm.username" :placeholder="t('auth.username')" size="large" @keydown.enter.prevent="login">
               <template #prefix><el-icon>
                   <User />
                 </el-icon></template>

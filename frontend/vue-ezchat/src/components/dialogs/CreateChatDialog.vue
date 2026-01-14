@@ -12,7 +12,9 @@ import {
   CircleCloseFilled,
   Close,
   DocumentCopy,
+  Iphone,
 } from '@element-plus/icons-vue'
+import QrCodeDialog from '@/components/dialogs/QrCodeDialog.vue'
 import { useCreateChat } from '@/composables/useCreateChat.ts'
 import { storeToRefs } from 'pinia'
 import { useRoomStore } from '@/stores/roomStore.ts'
@@ -54,6 +56,9 @@ const {
   copyInviteLink,
   copyRoomId,
 } = useCreateChat()
+
+/** 二维码弹窗状态 */
+const qrDialogVisible = ref(false)
 
 /** 用于展示的默认头像URL（不上传） */
 const defaultAvatarUrl = ref('')
@@ -207,6 +212,10 @@ const progressPercentage = computed(() => {
                       {{ createResult.inviteUrl }}
                     </div>
                     <div v-else class="invite-empty">-</div>
+                    <el-tooltip content="QR Code" placement="top">
+                      <el-button class="copy-icon-btn" :icon="Iphone"
+                        @click="qrDialogVisible = true" :disabled="!createResult.inviteUrl" />
+                    </el-tooltip>
                     <el-tooltip :content="tf('common.copy', '复制')" placement="top">
                       <el-button class="copy-icon-btn copy-icon-btn--primary" :icon="DocumentCopy"
                         @click="copyInviteLink" />
@@ -258,6 +267,7 @@ const progressPercentage = computed(() => {
         </div>
       </el-form>
     </div>
+    <QrCodeDialog v-model="qrDialogVisible" :url="createResult.inviteUrl || ''" />
   </el-dialog>
 </template>
 
@@ -304,7 +314,7 @@ html.dark :deep(.ez-modern-dialog) {
   display: flex;
   flex-direction: column;
   /* 增加高度以容纳内容而不滚动 */
-  min-height: 400px;
+  min-height: 520px;
   overflow: visible;
 }
 
@@ -874,7 +884,7 @@ html.dark .invite-block {
 
 .step-container {
   /* 压缩 Step 区域高度（整体 dialog 高度也同步缩短） */
-  height: 320px;
+  height: 440px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1072,9 +1082,9 @@ html.dark .invite-block {
   text-align: center;
   /* Step4 撑满容器高度，让 flex 子项可分配 */
   justify-content: flex-start;
-  padding-top: 0;
-  /* 整体上移，留出底部空间 */
-  margin-top: -15px;
+  padding-top: 20px;
+  /* 移除负边距，恢复正常布局 */
+  margin-top: 0;
 }
 
 .result-content {
@@ -1082,8 +1092,8 @@ html.dark .invite-block {
   flex-direction: column;
   /* 使用 stretch 确保子元素宽度不超出父容器 */
   align-items: stretch;
-  /* 极度紧凑 */
-  gap: 4px;
+  /* 恢复舒适间距 */
+  gap: 16px;
   /* 撑满高度，让 result-details 可分配剩余空间 */
   height: 100%;
   min-height: 0;
@@ -1095,7 +1105,7 @@ html.dark .invite-block {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
+  gap: 12px;
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
@@ -1167,8 +1177,8 @@ html.dark .invite-block {
 
 .invite-block {
   width: 100%;
-  /* 进一步缩小内边距 */
-  padding: 10px 14px;
+  /* 恢复标准内边距 */
+  padding: 20px;
   box-sizing: border-box;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-glass);
@@ -1177,8 +1187,8 @@ html.dark .invite-block {
   -webkit-backdrop-filter: var(--blur-glass);
   display: flex;
   flex-direction: column;
-  /* 紧凑间距 */
-  gap: 8px;
+  /* 恢复舒适间距 */
+  gap: 16px;
 }
 
 /* 成功页字段标题（ルームID / 招待リンク） */
@@ -1197,11 +1207,11 @@ html.dark .invite-block {
 .credential-roomid-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
   box-sizing: border-box;
-  /* 极小垂直边距 */
-  margin: 2px 0 4px;
+  /* 恢复垂直边距 */
+  margin: 4px 0 8px;
 }
 
 /* 左侧占位：与右侧复制按钮等宽，使数字视觉居中 */
@@ -1217,7 +1227,7 @@ html.dark .invite-block {
   text-align: center;
   font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
   /* 进一步缩小 Room ID 字体 */
-  font-size: clamp(28px, 5vw, 36px);
+  font-size: clamp(24px, 4vw, 32px);
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--text-900);

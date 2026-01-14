@@ -93,10 +93,7 @@ const showPassword = ref(false)
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px; /* Strict fixed width for icon alignment */
-  min-width: 48px;
   height: 100%;
-  font-size: 20px;
 }
 
 .password-input-wrapper :deep(.el-input__suffix) {

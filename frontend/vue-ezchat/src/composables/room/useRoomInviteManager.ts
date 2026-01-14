@@ -51,6 +51,11 @@ export const useRoomInviteManager = () => {
   const oneTimeLink = ref(false)
   const joinLinkExpiryMinutes = ref<number | null>(DEFAULT_EXPIRY_MINUTES)
 
+  /** 二维码弹窗可见状态 */
+  const qrDialogVisible = ref(false)
+  /** 二维码弹窗显示的 URL */
+  const qrDialogUrl = ref('')
+
   const tf = (key: string, fallback: string) => {
     const translated = t(key)
     const result = typeof translated === 'string' ? translated : String(translated)
@@ -199,6 +204,16 @@ export const useRoomInviteManager = () => {
     }
   }
 
+  /**
+   * 显示二维码弹窗
+   * @param inviteCode 邀请码
+   */
+  const showQrCode = (inviteCode: string) => {
+    if (!inviteCode) return
+    qrDialogUrl.value = buildInviteUrl(inviteCode)
+    qrDialogVisible.value = true
+  }
+
   watch(roomSettingsDialogVisible, (visible) => {
     if (visible) {
       inviteList.value = []
@@ -227,5 +242,8 @@ export const useRoomInviteManager = () => {
     confirmRevoke,
     copyInviteUrl,
     resetForm,
+    qrDialogVisible,
+    qrDialogUrl,
+    showQrCode,
   }
 }

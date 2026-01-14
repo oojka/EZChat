@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Plus, Ticket, DocumentCopy, Delete } from '@element-plus/icons-vue'
+import { Plus, Ticket, DocumentCopy, Delete, Iphone } from '@element-plus/icons-vue'
 import type { ChatInvite } from '@/type'
 
 const { t } = useI18n()
@@ -19,6 +19,7 @@ defineEmits<{
     (e: 'create'): void
     (e: 'revoke', id: number): void
     (e: 'copy', code: string): void
+    (e: 'showQr', code: string): void
 }>()
 
 const formatUsage = (invite: ChatInvite) => {
@@ -80,6 +81,13 @@ const formatDateTime = (dateStr: string) => {
                         </div>
                     </div>
                     <div class="invite-actions">
+                        <el-tooltip content="QR Code" placement="top">
+                            <button class="action-mini-btn" @click="$emit('showQr', invite.inviteCode)">
+                                <el-icon>
+                                    <Iphone />
+                                </el-icon>
+                            </button>
+                        </el-tooltip>
                         <el-tooltip :content="t('common.copy')" placement="top">
                             <button class="action-mini-btn" @click="$emit('copy', invite.inviteCode)">
                                 <el-icon>
