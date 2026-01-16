@@ -162,8 +162,6 @@ export const useAppStore = defineStore('app', () => {
     document.startViewTransition(apply)
   }
 
-  const createRoomVisible = ref(false)
-  const joinDialogVisible = ref(false)
   const userSettingsDialogVisible = ref(false)
 
   /**
@@ -374,8 +372,6 @@ export const useAppStore = defineStore('app', () => {
     isDark,
     toggleTheme,
     changeLanguage,
-    createRoomVisible,
-    joinDialogVisible,
     userSettingsDialogVisible,
     initializeApp,
     setFavicon,

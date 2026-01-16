@@ -397,7 +397,7 @@ export const isImage = (data: unknown): data is Image => {
  * @returns 是否为包含 images 属性的消息类型
  */
 export const hasImages = (msg: Message): msg is TextMessage | ImageMessage | MixedMessage => {
-  return 'images' in msg
+  return 'images' in msg && Array.isArray((msg as any).images)
 }
 
 /**
@@ -521,3 +521,13 @@ export const extractErrorCode = (payload: unknown): string | number | null => {
   }
   return null
 }
+
+export const buildRoomAvatarKey = (chatCode?: string) => {
+  return chatCode ? `room:${chatCode}` : ''
+}
+
+export const buildUserAvatarKey = (uid?: string) => {
+  return uid ? `user:${uid}` : ''
+}
+
+

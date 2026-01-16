@@ -25,7 +25,7 @@ const { isKeyboardVisible } = useKeyboardVisible()
 
 <template>
   <div class="mobile-entry-shell">
-    <!-- Animated Background -->
+     <!-- 动画背景 -->
     <div class="ambient-bg">
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
@@ -33,7 +33,7 @@ const { isKeyboardVisible } = useKeyboardVisible()
       <div class="noise-overlay"></div>
     </div>
 
-    <!-- Header (Logo only, no text) -->
+     <!-- 头部（仅Logo，无文字） -->
     <div class="index-header" :class="{ 'is-hidden': isKeyboardVisible }">
       <div class="logo-area">
         <div class="logo-glow"></div>
@@ -41,7 +41,7 @@ const { isKeyboardVisible } = useKeyboardVisible()
       </div>
     </div>
 
-    <!-- Main Card -->
+     <!-- 主卡片 -->
     <div class="auth-card glass-panel" :class="{ 'expanded': isKeyboardVisible }">
       <div class="content-wrapper">
         <slot></slot>

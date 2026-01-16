@@ -16,7 +16,6 @@ const MobileFriendsView = () => import('@/views/mobile/FriendsView.vue')
 const MobileSettingsView = () => import('@/views/mobile/SettingsView.vue')
 const MobileWelcomeView = () => import('@/views/mobile/entry/MobileWelcomeView.vue')
 const MobileGuestJoinView = () => import('@/views/mobile/entry/MobileGuestJoinView.vue')
-const MobileLoginView = () => import('@/views/mobile/entry/MobileLoginView.vue')
 const MobileRegisterView = () => import('@/views/mobile/entry/MobileRegisterView.vue')
 
 
@@ -71,9 +70,10 @@ const router = createRouter({
       ],
     },
     {
+      // /m 路由保持兼容但重定向到首页（HomeView会根据设备类型渲染MobileWelcomeView）
       path: '/m',
       name: 'MobileWelcome',
-      component: MobileWelcomeView,
+      redirect: (to) => ({ path: '/', query: to.query, hash: to.hash }),
       meta: { title: 'Welcome', mobileOnly: true },
     },
     {
@@ -85,7 +85,7 @@ const router = createRouter({
     {
       path: '/m/login',
       name: 'MobileLogin',
-      component: MobileLoginView,
+      redirect: (to) => ({ path: '/', query: to.query, hash: to.hash }),
       meta: { title: 'Login', mobileOnly: true },
     },
     {

@@ -53,7 +53,7 @@ type RestoreLoginOptions = SyncUserStateOptions
  *
  * 调用路径：
  * - 登录流程：useLogin -> userStore.loginRequest()
- * - 访客加入：useGuest -> userStore.guestJoinRequest()
+ * - 访客加入：useGuestJoin -> userStore.executeGuestJoin()
  * - 页面刷新：App.vue -> userStore.restoreLoginStateIfNeeded()
  *
  * 核心不变量：
@@ -122,25 +122,6 @@ export const useUserStore = defineStore('user', () => {
   let refreshTokenPromise: Promise<string | null> | null = null
   let userInfoSyncPromise: Promise<void> | null = null
   let userInfoSyncKey: string | null = null
-
-  /**
-   * 获取当前登录用户（formal 或 guest）
-   * 
-   * 业务逻辑：
-   * - 根据 loginUser 的 type 字段返回对应的用户对象
-   * - 如果状态为 'none'，返回 null
-   * 
-   * @returns 当前登录用户，如果没有则返回 null
-   */
-  const getCurrentLoginUser = (): LoginUser | null => {
-    if (loginUser.value.type === 'formal') {
-      return loginUser.value.formal
-    }
-    if (loginUser.value.type === 'guest') {
-      return loginUser.value.guest
-    }
-    return null
-  }
 
   /**
    * 是否为正式用户 (Computed)
@@ -600,21 +581,6 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
-   * 清除访客登录状态
-   *
-   * 业务逻辑：
-   * - 将 loginUser 状态重置为 'none'
-   * - 仅清除内存状态，不删除 localStorage
-   */
-  const clearLoginGuest = () => {
-    loginUser.value = {
-      type: 'none',
-      formal: undefined,
-      guest: undefined
-    }
-  }
-
-  /**
    * 设置正式用户登录状态
    *
    * 业务逻辑：
@@ -731,16 +697,13 @@ export const useUserStore = defineStore('user', () => {
   // =========================
 
   /**
-   * 获取有效的 Access Token
+   * 获取当前内存中的 Access Token
    * 
    * 业务逻辑：
-   * - 检查 accessToken 是否过期
-   * - 如果过期，自动使用 refreshToken 刷新
-   * - 返回有效的 accessToken
+   * - 直接返回内存中存储的 accessToken
+   * - 不会自动刷新，刷新逻辑由 request interceptor 和 websocket 处理
    * 
-   * TODO: 后续可在此方法内处理自动刷新逻辑
-   * 
-   * @returns 有效的 access token
+   * @returns 当前 access token（可能为空字符串）
    */
   const getAccessToken = (): string => {
     return token.value.accessToken?.token || ''
@@ -1048,17 +1011,12 @@ export const useUserStore = defineStore('user', () => {
     // =========================
     // 3.4 用户状态管理方法
     // =========================
-    setLoginGuest,
-    restoreLoginGuestFromStorage,
-    clearLoginGuest,
     initLoginUserInfo,
-    restoreLoginUserFromStorage,
 
     // =========================
     // 3.5 API 封装方法
     // =========================
     loginRequest,
-    guestJoinRequest,
     executeGuestJoin,
 
     // =========================

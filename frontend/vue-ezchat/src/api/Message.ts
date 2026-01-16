@@ -62,13 +62,4 @@ export const uploadMessageImageApi = (
   })
 }
 
-/**
- * 删除已上传的图片对象（如果后端支持）
- *
- * - 后端接口：DELETE `/message/image?objectName=...`
- * - 业务目的：用户撤回/删除图片资源时释放对象存储空间
- *
- * 注意：当前后端 Controller 未看到该接口实现，若返回 404 说明后端暂未提供。
- */
-export const deleteImageApi = (objectName: string): Promise<null> =>
-  request.delete('/message/image?objectName=' + objectName)
+

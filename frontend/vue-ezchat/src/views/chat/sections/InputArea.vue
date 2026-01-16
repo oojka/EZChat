@@ -20,12 +20,13 @@
  * 依赖：
  * - useChatInput: 输入逻辑
  */
-import {nextTick, onMounted, ref, watch} from 'vue'
-import {ArrowUp, Close, Picture} from '@element-plus/icons-vue'
-import {useChatInput} from '@/composables/useChatInput.ts'
-import {useRoute} from 'vue-router'
-import {useI18n} from 'vue-i18n'
+import { nextTick, onMounted, ref, watch } from 'vue'
+import { ArrowUp, Close, Picture } from '@element-plus/icons-vue'
+import { useChatInput } from '@/composables/useChatInput.ts'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import EmojiPicker from '@/components/EmojiPicker.vue'
+import PreviewImageItem from './PreviewImageItem.vue'
 
 /** Props */
 withDefaults(defineProps<{
@@ -105,14 +106,23 @@ onMounted(() => editorRef.value?.focus())
         <el-popover placement="top-start" :width="420" trigger="click" popper-class="ez-emoji-popover">
           <template #reference>
             <div class="tool-btn">
-              <el-icon><svg viewBox="0 0 1024 1024"><path fill="currentColor" d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896zm0 80a368 368 0 1 0 0 736 368 368 0 0 0 0-736zm-144 240a40 40 0 1 1 0 80 40 40 0 0 1 0-80zm288 0a40 40 0 1 1 0 80 40 40 0 0 1 0-80zm-144 200c92.784 0 174.624 53.984 214.752 132.56a40 40 0 0 1-70.912 37.136C473.328 680.16 418.672 644 368 644c-50.672 0-105.328 36.16-131.84 85.696a40 40 0 0 1-70.912-37.136C205.376 613.984 287.216 560 380 560h132z"/></svg></el-icon>
+              <el-icon><svg viewBox="0 0 1024 1024">
+                  <path fill="currentColor"
+                    d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896zm0 80a368 368 0 1 0 0 736 368 368 0 0 0 0-736zm-144 240a40 40 0 1 1 0 80 40 40 0 0 1 0-80zm288 0a40 40 0 1 1 0 80 40 40 0 0 1 0-80zm-144 200c92.784 0 174.624 53.984 214.752 132.56a40 40 0 0 1-70.912 37.136C473.328 680.16 418.672 644 368 644c-50.672 0-105.328 36.16-131.84 85.696a40 40 0 0 1-70.912-37.136C205.376 613.984 287.216 560 380 560h132z" />
+                </svg></el-icon>
             </div>
           </template>
           <EmojiPicker @select="onSelectEmoji" />
         </el-popover>
 
-        <el-upload class="picture-uploader" action="/api/message/upload" :headers="uploadHeaders" multiple :limit="5" :show-file-list="false" :on-success="handlePictureSuccess" :before-upload="beforePictureUpload" :on-exceed="handleExceed">
-          <template #trigger><div class="tool-btn"><el-icon><Picture /></el-icon></div></template>
+        <el-upload class="picture-uploader" action="/api/message/upload" :headers="uploadHeaders" multiple :limit="5"
+          :show-file-list="false" :on-success="handlePictureSuccess" :before-upload="beforePictureUpload"
+          :on-exceed="handleExceed">
+          <template #trigger>
+            <div class="tool-btn"><el-icon>
+                <Picture />
+              </el-icon></div>
+          </template>
         </el-upload>
 
         <span v-if="isImageProcessing" class="processing-tip">Processing image...</span>
@@ -121,22 +131,28 @@ onMounted(() => editorRef.value?.focus())
 
     <div v-if="inputContent.images.length > 0" class="preview-area">
       <div v-for="(img, index) in inputContent.images" :key="index" class="preview-item">
-        <img :src="img.imageThumbUrl || img.imageUrl" />
-        <div class="preview-delete" @click="removeImage(index)"><el-icon><Close /></el-icon></div>
+        <PreviewImageItem :image="img" />
+        <div class="preview-delete" @click="removeImage(index)"><el-icon>
+            <Close />
+          </el-icon></div>
       </div>
     </div>
 
     <div class="input-wrapper">
-      <div ref="editorRef" class="rich-editor" contenteditable="true" @input="onInput" @keydown="onKeyDown" :placeholder="t('chat.input_placeholder')"></div>
+      <div ref="editorRef" class="rich-editor" contenteditable="true" @input="onInput" @keydown="onKeyDown"
+        :placeholder="t('chat.input_placeholder')"></div>
     </div>
 
     <div class="bottom-container">
       <el-button-group class="send-button-group">
         <el-button class="send-button" type="primary" @click="handleSend">{{ t('chat.send') }}</el-button>
-        <el-popover v-if="!isMobile" placement="top-end" :width="150" trigger="click" popper-class="ez-send-settings-popover" :offset="12">
+        <el-popover v-if="!isMobile" placement="top-end" :width="150" trigger="click"
+          popper-class="ez-send-settings-popover" :offset="12">
           <template #reference>
             <el-button class="settings-button" type="primary">
-              <el-icon><ArrowUp /></el-icon>
+              <el-icon>
+                <ArrowUp />
+              </el-icon>
             </el-button>
           </template>
           <div class="settings-menu">
@@ -152,12 +168,22 @@ onMounted(() => editorRef.value?.focus())
 </template>
 
 <style scoped>
-.input-container { display: flex; flex-direction: column; height: 100%; padding: 8px 16px; box-sizing: border-box; background-color: var(--bg-card); border-top: 1px solid var(--el-border-color-light); transition: all 0.3s ease; }
+.input-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  background-color: var(--bg-card);
+  border-top: 1px solid var(--el-border-color-light);
+  transition: all 0.3s ease;
+}
 
 /* 移动端输入区样式 */
 .input-container.is-mobile {
   padding: 8px 12px;
-  padding-bottom: 8px; /* Safe area is handled by parent container */
+  padding-bottom: 8px;
+  /* Safe area is handled by parent container */
 }
 
 .input-container.is-mobile .input-wrapper {
@@ -166,7 +192,8 @@ onMounted(() => editorRef.value?.focus())
 }
 
 .input-container.is-mobile .rich-editor {
-  font-size: 16px; /* 避免 iOS 自动缩放 */
+  font-size: 16px;
+  /* 避免 iOS 自动缩放 */
 }
 
 .input-container.is-mobile .send-button {
@@ -174,15 +201,78 @@ onMounted(() => editorRef.value?.focus())
   padding: 0 16px;
 }
 
-.toolbar { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; }
-.tool-left { display: flex; align-items: center; gap: 4px; }
-.processing-tip { margin-left: 6px; font-size: 12px; color: var(--text-400); }
-.picture-uploader { display: inline-block; line-height: 0; }
-.tool-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; border-radius: var(--radius-sm); color: var(--text-500); background: transparent; }
-.tool-btn:hover { color: var(--text-900); background-color: var(--bg-page); }
-.preview-area { flex-shrink: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--el-border-color-light); margin-bottom: 4px; }
-.preview-item { position: relative; width: 56px; height: 56px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--el-border-color-light); flex-shrink: 0; }
-.preview-item img { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--bg-page); }
+.toolbar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.tool-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.processing-tip {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-400);
+}
+
+.picture-uploader {
+  display: inline-block;
+  line-height: 0;
+}
+
+.tool-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: var(--radius-sm);
+  color: var(--text-500);
+  background: transparent;
+}
+
+.tool-btn:hover {
+  color: var(--text-900);
+  background-color: var(--bg-page);
+}
+
+.preview-area {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--el-border-color-light);
+  margin-bottom: 4px;
+}
+
+.preview-item {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--el-border-color-light);
+  flex-shrink: 0;
+}
+
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: var(--bg-page);
+}
+
 .preview-delete {
   position: absolute;
   top: 2px;
@@ -201,19 +291,35 @@ onMounted(() => editorRef.value?.focus())
   transform: scale(0.9);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
 .preview-item:hover .preview-delete {
   opacity: 1;
   transform: scale(1);
 }
+
 @media (hover: none) {
   .preview-delete {
     opacity: 1;
     transform: scale(1);
   }
 }
-.input-wrapper { flex: 1; min-height: 40px; overflow-y: auto; }
-.input-wrapper::-webkit-scrollbar { width: 4px; }
-.input-wrapper::-webkit-scrollbar-thumb { background: var(--text-400); border-radius: var(--radius-round); opacity: 0.2; }
+
+.input-wrapper {
+  flex: 1;
+  min-height: 40px;
+  overflow-y: auto;
+}
+
+.input-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.input-wrapper::-webkit-scrollbar-thumb {
+  background: var(--text-400);
+  border-radius: var(--radius-round);
+  opacity: 0.2;
+}
+
 .rich-editor {
   height: 100%;
   outline: none;
@@ -225,7 +331,12 @@ onMounted(() => editorRef.value?.focus())
   /* Web Font 方案：使用 Noto Sans 确保中日文混排时高度一致 */
   /* font-family: "Noto Sans JP", "Noto Sans SC", sans-serif; */
 }
-.rich-editor:empty::before { content: attr(placeholder); color: var(--text-400); }
+
+.rich-editor:empty::before {
+  content: attr(placeholder);
+  color: var(--text-400);
+}
+
 :deep(.input-inline-emoji) {
   display: inline-block;
   font-size: 1.2em;
@@ -239,11 +350,13 @@ onMounted(() => editorRef.value?.focus())
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 8px 0 12px; /* 增加底部内边距 (12px) */
+  padding: 8px 0 12px;
+  /* 增加底部内边距 (12px) */
 }
 
 .send-button-group {
-  border-radius: var(--radius-base); overflow: hidden;
+  border-radius: var(--radius-base);
+  overflow: hidden;
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
   transition: all 0.3s var(--ease-out-expo);
   border: 1px solid transparent;
@@ -258,26 +371,46 @@ html.dark .send-button-group {
 }
 
 .send-button {
-  height: 40px; padding: 0 24px; font-weight: 800; font-size: 14px; letter-spacing: 0.5px;
+  height: 40px;
+  padding: 0 24px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
   border: none !important;
   background: var(--primary) !important;
 }
-html.dark .send-button { background: transparent !important; }
+
+html.dark .send-button {
+  background: transparent !important;
+}
 
 .settings-button {
-  height: 40px; width: 36px; padding: 0;
+  height: 40px;
+  width: 36px;
+  padding: 0;
   border: none !important;
   border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
   background: var(--primary) !important;
 }
+
 html.dark .settings-button {
   background: transparent !important;
   border-left-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-.send-button:active, .settings-button:active { transform: scale(0.96); }
+.send-button:active,
+.settings-button:active {
+  transform: scale(0.96);
+}
 
-:global(.ez-emoji-popover) { background: var(--bg-card) !important; border: 1px solid var(--el-border-color-light) !important; border-radius: var(--radius-md) !important; box-shadow: var(--shadow-glass) !important; padding: 0 !important; }
+:global(.ez-emoji-popover) {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--el-border-color-light) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-glass) !important;
+  padding: 0 !important;
+}
+
 :global(.ez-send-settings-popover) {
   background: var(--bg-card) !important;
   border: 1px solid var(--el-border-color-light) !important;
@@ -286,7 +419,23 @@ html.dark .settings-button {
   box-shadow: var(--shadow-glass) !important;
 }
 
-.settings-menu { display: flex; flex-direction: column; gap: 8px; }
-.settings-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.item-label { font-size: 12px; font-weight: 800; color: var(--text-700); white-space: nowrap; }
+.settings-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-700);
+  white-space: nowrap;
+}
 </style>

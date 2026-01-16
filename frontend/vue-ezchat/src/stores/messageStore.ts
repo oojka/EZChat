@@ -1,19 +1,19 @@
 // =========================================
 // 导入依赖
 // =========================================
-import { defineStore, storeToRefs } from 'pinia'           // Pinia 状态管理
-import type { ChatRoom, Image, Message } from '@/type'    // 类型定义
-import { ref, watch } from 'vue'                          // Vue 响应式 API
-import { useRouter } from 'vue-router'                    // 路由管理
-import { getMessageListApi, syncMessageApi } from '@/api/Message.ts'      // 消息相关 API
-import { useRoomStore } from '@/stores/roomStore.ts'      // 房间状态管理
-import { useAppStore } from '@/stores/appStore.ts'        // 应用全局状态
-import { useUserStore } from '@/stores/userStore.ts'      // 用户状态管理
+import { defineStore, storeToRefs } from 'pinia' // Pinia 状态管理
+import type { ChatRoom, Image, Message } from '@/type' // 类型定义
+import { ref, watch } from 'vue' // Vue 响应式 API
+import { useRouter } from 'vue-router' // 路由管理
+import { getMessageListApi, syncMessageApi } from '@/api/Message.ts' // 消息相关 API
+import { useRoomStore } from '@/stores/roomStore.ts' // 房间状态管理
+import { useAppStore } from '@/stores/appStore.ts' // 应用全局状态
+import { useUserStore } from '@/stores/userStore.ts' // 用户状态管理
 import { useWebsocketStore } from '@/stores/websocketStore.ts' // WebSocket 状态管理
 import { showMessageNotification } from '@/components/notification.ts' // 消息通知组件
-import i18n from '@/i18n'                               // 国际化
-import { useImageStore } from '@/stores/imageStore'     // 图片状态管理
-import { isValidMessage } from '@/utils/validators'     // [NEW] 引入消息验证器
+import i18n from '@/i18n' // 国际化
+import { useImageStore } from '@/stores/imageStore' // 图片状态管理
+import { hasImages, isValidMessage } from '@/utils/validators'
 
 // =========================================
 // 工具函数
@@ -78,9 +78,9 @@ export const useMessageStore = defineStore('message', () => {
   // =========================================
   // 依赖注入
   // =========================================
-  const router = useRouter()                    // 路由实例，用于监听路由变化
-  const { t } = i18n.global                    // 国际化翻译函数
-  const imageStore = useImageStore()           // 图片存储，用于管理图片 Blob URL
+  const router = useRouter() // 路由实例，用于监听路由变化
+  const { t } = i18n.global // 国际化翻译函数
+  const imageStore = useImageStore() // 图片存储，用于管理图片 Blob URL
 
   // =========================================
   // 状态定义
@@ -175,7 +175,7 @@ export const useMessageStore = defineStore('message', () => {
       if (!('images' in msg) || !msg.images || msg.images.length === 0) continue
       for (const img of msg.images) {
         if (img.blobThumbUrl) continue
-        imageStore.ensureThumbBlobUrl(img).then(() => { })
+        imageStore.ensureThumbBlobUrl(img).then(() => {})
       }
     }
   }
@@ -199,9 +199,9 @@ export const useMessageStore = defineStore('message', () => {
    * - 应用重置状态时
    */
   const revokeAllBlobs = () => {
-    currentMessageList.value.forEach(msg => {
+    currentMessageList.value.forEach((msg) => {
       if ('images' in msg && msg.images) {
-        msg.images.forEach(img => {
+        msg.images.forEach((img) => {
           imageStore.revokeImageBlobs(img)
         })
       }
@@ -267,7 +267,10 @@ export const useMessageStore = defineStore('message', () => {
   const buildMessageKey = (m: Message): string => {
     const textPart = (m.text ?? '').trim()
     const images = 'images' in m ? m.images : []
-    const imagePart = (images ?? []).map(i => i.imageName).filter(Boolean).join(',')
+    const imagePart = (images ?? [])
+      .map((i) => i.imageName)
+      .filter(Boolean)
+      .join(',')
     return `${m.sender}_${m.createTime}_${m.type}_${textPart}_${imagePart}`
   }
 
@@ -290,7 +293,7 @@ export const useMessageStore = defineStore('message', () => {
       // 2. 一个有 seqId 一个没有
       // 本地发送的消息（status='sending'/'error'）通常没有 seqId，应该排在已有 seqId 消息（历史消息）的前面
       if (a.seqId === undefined && b.seqId !== undefined) return -1 // a 排在 b 前面
-      if (a.seqId !== undefined && b.seqId === undefined) return 1  // b 排在 a 前面
+      if (a.seqId !== undefined && b.seqId === undefined) return 1 // b 排在 a 前面
 
       // 3. 都没有 seqId：按 createTime 倒序
       const timeA = new Date(a.createTime).getTime()
@@ -327,7 +330,6 @@ export const useMessageStore = defineStore('message', () => {
     const { currentRoomCode } = storeToRefs(roomStore)
     if (!currentRoomCode.value) return
 
-
     try {
       // 首次加载时显示加载动画，分页加载时不显示（避免UI跳动）
       if (!cursorSeqId) loadingMessages.value = true
@@ -345,7 +347,7 @@ export const useMessageStore = defineStore('message', () => {
 
         // 处理空数据情况
         if (newMessages.length === 0) {
-          if (cursorSeqId) noMoreMessages.value = true  // 分页加载时无数据，标记为已加载完
+          if (cursorSeqId) noMoreMessages.value = true // 分页加载时无数据，标记为已加载完
           return
         }
 
@@ -368,7 +370,7 @@ export const useMessageStore = defineStore('message', () => {
 
         // 更新消息列表：首次加载替换，分页加载追加
         if (!cursorSeqId) {
-          currentMessageList.value = sortMessages(uniqueMessages)  // 首次进入，替换整个列表并排序
+          currentMessageList.value = sortMessages(uniqueMessages) // 首次进入，替换整个列表并排序
         } else {
           // 分页加载，追加到末尾（历史消息），由于是追加更旧的消息，
           // 理论上 uniqueMessages 都是更旧的，但为了保险，合并后整体重排
@@ -486,9 +488,9 @@ export const useMessageStore = defineStore('message', () => {
     // 异步处理图片，不阻塞消息发送流程
     // [FIX] 不再强制构造 Message 对象，而是直接处理图片数组，避免因 Message 联合类型（如 MemberJoinMessage 无 images）导致的 createType 错误
     if (imagesCopy.length > 0) {
-      imagesCopy.forEach(img => {
+      imagesCopy.forEach((img) => {
         if (!img.blobThumbUrl) {
-          imageStore.ensureThumbBlobUrl(img).then(() => { })
+          imageStore.ensureThumbBlobUrl(img).then(() => {})
         }
       })
     }
@@ -499,7 +501,7 @@ export const useMessageStore = defineStore('message', () => {
     // 计算消息类型
     const hasText = !!text && text.trim().length > 0
     const hasImages = imagesCopy.length > 0
-    const type = hasText && hasImages ? 2 : (hasImages ? 1 : 0)
+    const type = hasText && hasImages ? 2 : hasImages ? 1 : 0
 
     // 构建新消息对象
     const newMessage: Message = {
@@ -510,7 +512,7 @@ export const useMessageStore = defineStore('message', () => {
       images: imagesCopy,
       createTime: getLocalISOString(),
       tempId: tempId,
-      status: 'sending'  // 初始状态：发送中
+      status: 'sending', // 初始状态：发送中
     }
 
     // 乐观更新：立即插入到消息列表最前面（最新消息在最前面）
@@ -523,32 +525,33 @@ export const useMessageStore = defineStore('message', () => {
       text: text,
       images: imagesCopy,
       tempId: tempId,
-      sender: currentUserId
+      sender: currentUserId,
     }
     websocketStore.sendData(payload)
 
     // 超时兜底：防止网络波动导致 ACK 永远不到
     // 优化策略：先通过 HTTP 同步拉取验证消息是否已到达服务端，避免误报
     setTimeout(async () => {
-      const msg = currentMessageList.value.find(m => m.tempId === tempId)
+      const msg = currentMessageList.value.find((m) => m.tempId === tempId)
       if (!msg || msg.status !== 'sending') return // 已收到 ACK 或已处理，无需继续
 
       try {
         // 尝试通过 HTTP 同步接口拉取最新消息
-        const latestSynced = currentMessageList.value.find(m => m.seqId !== undefined)
+        const latestSynced = currentMessageList.value.find((m) => m.seqId !== undefined)
         if (latestSynced?.seqId) {
           const res = await syncMessageApi({
             chatCode: currentRoomCode.value,
-            lastSeqId: latestSynced.seqId
+            lastSeqId: latestSynced.seqId,
           })
 
           if (res?.data) {
             // 在同步结果中查找匹配的消息（通过 sender + chatCode + 相近的 createTime）
             const msgTime = new Date(msg.createTime).getTime()
-            const matchedMsg = res.data.find(m =>
-              m.sender === msg.sender &&
-              m.chatCode === msg.chatCode &&
-              Math.abs(new Date(m.createTime).getTime() - msgTime) < 5000 // 5秒内的消息
+            const matchedMsg = res.data.find(
+              (m) =>
+                m.sender === msg.sender &&
+                m.chatCode === msg.chatCode &&
+                Math.abs(new Date(m.createTime).getTime() - msgTime) < 5000, // 5秒内的消息
             )
 
             if (matchedMsg) {
@@ -570,7 +573,7 @@ export const useMessageStore = defineStore('message', () => {
       if (msg.status === 'sending') {
         msg.status = 'error'
       }
-    }, 10000)  // 10秒超时
+    }, 10000) // 10秒超时
   }
 
   /**
@@ -593,10 +596,10 @@ export const useMessageStore = defineStore('message', () => {
    * @param {number} seqId - 服务端生成的序列号
    */
   const handleAck = (tempId: string, seqId: number) => {
-    const msg = currentMessageList.value.find(m => m.tempId === tempId)
+    const msg = currentMessageList.value.find((m) => m.tempId === tempId)
     if (msg) {
-      msg.status = 'sent'  // 标记为发送成功
-      msg.seqId = seqId    // 更新 seqId (用于后续断层检测)
+      msg.status = 'sent' // 标记为发送成功
+      msg.seqId = seqId // 更新 seqId (用于后续断层检测)
 
       // ACK 收到后更新房间预览（最后消息、时间），确保列表排序更新
       const roomStore = useRoomStore()
@@ -641,15 +644,11 @@ export const useMessageStore = defineStore('message', () => {
       return
     }
 
-
-    const message = rawMessage as Message // 校验通过，安全断言
+    const message = rawMessage as Message // TODO:不使用类型断言
     const roomStore = useRoomStore()
-    const { currentRoomCode } = storeToRefs(roomStore)
-
-
 
     // 分支1：当前房间的消息
-    if (message.chatCode === currentRoomCode.value) {
+    if (message.chatCode === roomStore.currentRoomCode) {
       const userStore = useUserStore()
 
       // 排除自己发送的消息（避免重复显示）
@@ -660,18 +659,20 @@ export const useMessageStore = defineStore('message', () => {
 
       // Gap Detection: 检查 seqId 是否连续
       // 找到当前列表最新的已同步消息 (跳过本地 sending 消息)
-      const latestSynced = currentMessageList.value.find(m => m.seqId !== undefined)
+      const latestSynced = currentMessageList.value.find((m) => m.seqId !== undefined)
 
       // 分支2：检测到 seqId 不连续
       // 如果有最新消息，且新消息 seqId > 最新 + 1，说明中间有缺漏
       if (latestSynced?.seqId && message.seqId && message.seqId > latestSynced.seqId + 1) {
-        console.warn(`[MessageStore] Gap detected: Last=${latestSynced.seqId}, New=${message.seqId}. Syncing...`)
+        console.warn(
+          `[MessageStore] Gap detected: Last=${latestSynced.seqId}, New=${message.seqId}. Syncing...`,
+        )
         try {
           isSyncing.value = true // 开始同步
           // 调用 sync 接口补齐断层
           const res = await syncMessageApi({
-            chatCode: currentRoomCode.value,
-            lastSeqId: latestSynced.seqId
+            chatCode: roomStore.currentRoomCode,
+            lastSeqId: latestSynced.seqId,
           })
 
           if (res && res.data) {
@@ -684,7 +685,7 @@ export const useMessageStore = defineStore('message', () => {
 
             // 去重
             const existingKeys = new Set<string>()
-            const uniqueMessages = combined.filter(m => {
+            const uniqueMessages = combined.filter((m) => {
               const key = buildMessageKey(m)
               if (existingKeys.has(key)) return false
               existingKeys.add(key)
@@ -700,7 +701,7 @@ export const useMessageStore = defineStore('message', () => {
             }
             return
           }
-    } catch (syncError) {
+        } catch (syncError) {
           console.error('[MessageStore] Sync failed, falling back to full refresh', syncError)
           await getMessageList()
           return
@@ -721,34 +722,34 @@ export const useMessageStore = defineStore('message', () => {
 
     // 分支3：其他房间的消息
     const chat = roomStore.getRoomByCode(message.chatCode)
-    const sender = chat?.chatMembers?.find((m) => m.uid === message.sender)
 
-    if (chat && sender) {
-      // 格式化预览消息：图片消息用 [画像] 标签避免空文本
-      message.text = formatPreviewMessage(message)
+    if (chat) {
+      const sender = chat.chatMembers?.find((m) => m.uid === message.sender) ?? null
+      const previewText = formatPreviewMessage(message)
 
-      // 显示桌面通知（浏览器通知）
-      showMessageNotification(message, sender, chat.chatName)
+      showMessageNotification({
+        chatCode: message.chatCode,
+        chatName: chat.chatName,
+        chatCover: chat.avatar,
+        sender: sender ? { nickname: sender.nickname } : null,
+        previewText,
+      })
 
-      // 更新房间预览信息（未读消息数、最后消息等）
       roomStore.updateRoomPreview(message)
-    } else {
-      // 房间或发送者信息不存在，重新初始化房间列表
-      await roomStore.initRoomList()
     }
   }
 
   const formatPreviewMessage = (message?: Message | null): string => {
-    if (!message) return `[${t('chat.new_message')}]`
+    if (!message) return ''
+    
+    const rawText = message.text
+    const base = (typeof rawText === 'string' ? rawText : '').trim()
 
-    let result = message.text || ''
-
-    // 处理图片消息：追加图片标签
-    if ('images' in message && message.images && message.images.length > 0) {
-      result += `[${t('chat.image')}]`.repeat(message.images.length)
+    if (hasImages(message) && Array.isArray(message.images) && message.images.length > 0) {
+      return base + `[${t('chat.image')}]`.repeat(message.images.length)
     }
 
-    return result || `[${t('chat.new_message')}]`
+    return base
   }
 
   // =========================================
@@ -785,7 +786,12 @@ export const useMessageStore = defineStore('message', () => {
    * - 资源清理：切换房间时及时释放图片资源
    */
   watch(
-    () => [router.currentRoute.value.params.chatCode, useAppStore().isAppInitializing, router.currentRoute.value.path] as const,
+    () =>
+      [
+        router.currentRoute.value.params.chatCode,
+        useAppStore().isAppInitializing,
+        router.currentRoute.value.path,
+      ] as const,
     async ([newCode, isAppInitializing, currentPath]) => {
       const roomStore = useRoomStore()
       const appStore = useAppStore()
@@ -823,11 +829,11 @@ export const useMessageStore = defineStore('message', () => {
         await getMessageList()
 
         // 步骤7：短暂延迟后隐藏加载骨架屏（避免闪烁）
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
         chatViewIsLoading.value = false
       }
     },
-    { immediate: true },  // 组件挂载时立即执行一次
+    { immediate: true }, // 组件挂载时立即执行一次
   )
 
   // =========================================
@@ -854,7 +860,7 @@ export const useMessageStore = defineStore('message', () => {
 
     try {
       // 找到最新的已同步消息
-      const latestSynced = currentMessageList.value.find(m => m.seqId !== undefined)
+      const latestSynced = currentMessageList.value.find((m) => m.seqId !== undefined)
       if (!latestSynced?.seqId) {
         // 没有已同步的消息，直接重新加载
         await getMessageList()
@@ -866,7 +872,7 @@ export const useMessageStore = defineStore('message', () => {
       // 调用 sync 接口拉取新消息
       const res = await syncMessageApi({
         chatCode: currentRoomCode.value,
-        lastSeqId: latestSynced.seqId
+        lastSeqId: latestSynced.seqId,
       })
 
       if (res?.data && res.data.length > 0) {
@@ -876,13 +882,14 @@ export const useMessageStore = defineStore('message', () => {
         await processMessageImages(syncedMessages)
 
         // 检查 sending 状态的消息是否在同步结果中
-        const sendingMessages = currentMessageList.value.filter(m => m.status === 'sending')
+        const sendingMessages = currentMessageList.value.filter((m) => m.status === 'sending')
         for (const msg of sendingMessages) {
           const msgTime = new Date(msg.createTime).getTime()
-          const matchedMsg = syncedMessages.find(m =>
-            m.sender === msg.sender &&
-            m.chatCode === msg.chatCode &&
-            Math.abs(new Date(m.createTime).getTime() - msgTime) < 5000
+          const matchedMsg = syncedMessages.find(
+            (m) =>
+              m.sender === msg.sender &&
+              m.chatCode === msg.chatCode &&
+              Math.abs(new Date(m.createTime).getTime() - msgTime) < 5000,
           )
 
           if (matchedMsg) {
@@ -895,7 +902,7 @@ export const useMessageStore = defineStore('message', () => {
         // 合并消息并去重
         const combined = [...currentMessageList.value, ...syncedMessages]
         const existingKeys = new Set<string>()
-        const uniqueMessages = combined.filter(m => {
+        const uniqueMessages = combined.filter((m) => {
           const key = buildMessageKey(m)
           if (existingKeys.has(key)) return false
           existingKeys.add(key)
@@ -918,28 +925,28 @@ export const useMessageStore = defineStore('message', () => {
 
   return {
     // 状态
-    currentMessageList,     // 当前房间的消息列表（响应式）
-    chatViewIsLoading,      // 聊天视图加载状态（骨架屏控制）
-    loadingMessages,        // 消息加载中状态（分页加载控制）
-    isLoadingHistory,       // 历史消息加载中状态
-    noMoreMessages,         // 没有更多消息标志（分页边界控制）
-    isLoading,              // 通用加载状态（按钮禁用控制）
-    isSyncing,              // 消息同步中状态
+    currentMessageList, // 当前房间的消息列表（响应式）
+    chatViewIsLoading, // 聊天视图加载状态（骨架屏控制）
+    loadingMessages, // 消息加载中状态（分页加载控制）
+    isLoadingHistory, // 历史消息加载中状态
+    noMoreMessages, // 没有更多消息标志（分页边界控制）
+    isLoading, // 通用加载状态（按钮禁用控制）
+    isSyncing, // 消息同步中状态
 
     // 消息操作
-    getMessageList,         // 拉取消息列表（首次/分页）
-    loadMoreHistory,        // 上拉加载更多历史消息
-    sendMessage,            // 发送消息（WebSocket）
+    getMessageList, // 拉取消息列表（首次/分页）
+    loadMoreHistory, // 上拉加载更多历史消息
+    sendMessage, // 发送消息（WebSocket）
 
     // WebSocket 事件处理
-    handleAck,              // 处理服务端 ACK（消息发送确认）
-    receiveMessage,         // 接收服务端推送的消息
-    syncAfterReconnect,     // 重连后同步消息
+    handleAck, // 处理服务端 ACK（消息发送确认）
+    receiveMessage, // 接收服务端推送的消息
+    syncAfterReconnect, // 重连后同步消息
 
     // 工具函数
-    formatPreviewMessage,   // 格式化预览消息（国际化适配）
+    formatPreviewMessage, // 格式化预览消息（国际化适配）
 
     // 状态管理
-    resetState,             // 重置 Store 业务数据
+    resetState, // 重置 Store 业务数据
   }
 })

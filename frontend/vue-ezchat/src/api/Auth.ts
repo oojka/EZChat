@@ -13,23 +13,6 @@ export const loginApi = (
 ): Promise<Result<LoginUser>> =>
   request.post('/auth/login', data)
 
-export type GuestApiReq = {
-  chatCode: string
-  password: string
-  nickName: string
-}
-
-/**
- * 访客加入聊天
- *
- * - 后端接口：POST `/auth/guest`
- * - 业务目的：无需注册即可进入指定 chatCode（通常用于临时体验）
- */
-export const guestApi = (
-  data: GuestApiReq
-): Promise<Result<LoginUser>> =>
-  request.post('/auth/guest', data)
-
 /**
  * 正式用户注册
  *

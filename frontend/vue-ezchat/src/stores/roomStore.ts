@@ -10,6 +10,7 @@ import { isAppError, createAppError, ErrorType, ErrorSeverity } from '@/error/Er
 import i18n from '@/i18n'
 import { showAlertDialog } from '@/components/dialogs/AlertDialog'
 import { useRouter } from 'vue-router'
+import { buildRoomAvatarKey, buildUserAvatarKey, isImage } from '@/utils/validators'
 
 /**
  * RoomStore：聊天室列表与当前房间的核心状态管理
@@ -116,20 +117,7 @@ export const useRoomStore = defineStore('room', () => {
   // 3. 核心操作 (Actions)
   // =========================================
 
-  /**
-   * 类型守卫：验证 avatar 是否为有效的 Image 对象
-   */
-  const isImage = (avatar: Image | null | undefined): avatar is Image => {
-    return avatar !== null && avatar !== undefined
-  }
 
-  const buildRoomAvatarKey = (chatCode?: string) => {
-    return chatCode ? `room:${chatCode}` : ''
-  }
-
-  const buildUserAvatarKey = (uid?: string) => {
-    return uid ? `user:${uid}` : ''
-  }
 
   const resolveRoomAvatar = (room: ChatRoom, imageStore: ReturnType<typeof useImageStore>) => {
     if (!room.avatar) return

@@ -1,5 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+/**
+ * 移动端聊天列表页组件
+ *
+ * 功能：
+ * - 显示用户加入的聊天室列表
+ * - 支持创建新聊天室和加入现有聊天室
+ * - 访客用户升级提示
+ * - 聊天室项点击跳转至对应聊天页面
+ *
+ * 路由：/chat/list（移动端聊天列表页）
+ *
+ * 依赖：
+ * - useRoomStore: 聊天室状态管理
+ * - useUserStore: 用户状态管理
+ * - CreateChatDialog: 创建聊天室对话框
+ * - JoinChatDialog: 加入聊天室对话框
+ */
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRoomStore } from '@/stores/roomStore'
@@ -20,10 +37,27 @@ const { roomList, currentRoomCode, isRoomListLoading, createChatDialogVisible, j
 
 const isGuest = computed(() => userStore.loginUserInfo?.userType === 'guest')
 
+/**
+ * 处理聊天室项点击事件
+ *
+ * 功能：
+ * - 当用户点击聊天室列表项时调用
+ * - 路由跳转到对应的聊天页面
+ *
+ * @param chatCode - 聊天室代码（8位数字）
+ */
 const handleSelectChat = (chatCode: string) => {
   router.push(`/chat/${chatCode}`)
 }
 
+/**
+ * 组件挂载时的初始化逻辑
+ *
+ * 功能：
+ * - 检查房间列表是否已加载
+ * - 如果列表为空，调用房间存储的初始化方法
+ * - 避免重复加载已存在的房间列表
+ */
 onMounted(() => {
   // 确保房间列表已加载
   if (!roomList.value || roomList.value.length === 0) {
@@ -52,13 +86,8 @@ onMounted(() => {
         <el-skeleton animated :rows="6" />
       </div>
       <div v-else-if="roomList && roomList.length > 0" class="chat-items">
-        <ChatItem
-          v-for="chat in roomList"
-          :key="chat.chatCode"
-          :chat="chat"
-          :is-active="chat.chatCode === currentRoomCode"
-          @click="handleSelectChat(chat.chatCode)"
-        />
+        <ChatItem v-for="chat in roomList" :key="chat.chatCode" :chat="chat"
+          :is-active="chat.chatCode === currentRoomCode" @click="handleSelectChat(chat.chatCode)" />
       </div>
       <div v-else class="empty-state">
         <el-empty :description="t('aside.no_chats')" :image-size="80" />

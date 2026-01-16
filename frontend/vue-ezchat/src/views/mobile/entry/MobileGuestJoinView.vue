@@ -38,6 +38,15 @@ const {
 
 const guestFormRef = ref<FormInstance>()
 
+/**
+ * 处理访客加入逻辑
+ *
+ * 步骤：
+ * 1. 验证表单有效性
+ * 2. 获取验证后的加入凭证
+ * 3. 如果验证成功，跳转到对应聊天室
+ * 4. 否则显示错误消息
+ */
 const handleGuestJoin = async () => {
   if (!guestFormRef.value) return
   const isValid = await guestFormRef.value.validate().catch(() => false)
@@ -54,11 +63,16 @@ const handleGuestJoin = async () => {
   ElMessage.error(t('api.retry_required'))
 }
 
-// Reset on mount (optional, but good practice)
-// resetJoinForm() // useJoinInput might reset on its own or we might want to keep state. 
-// IndexView resets on tab switch. Here we are a fresh view.
+// 组件挂载时重置表单
 resetJoinForm()
 
+/**
+ * 监听加入模式切换，清除表单验证状态
+ *
+ * 说明：
+ * - 当用户在"房间号+密码"和"邀请链接"模式间切换时
+ * - 清除之前的验证错误，避免跨模式验证规则冲突
+ */
 watch(
   () => joinChatCredentialsForm.value.joinMode,
   () => {

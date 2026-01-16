@@ -334,6 +334,7 @@ html.dark .user-avatar {
   flex-direction: column;
   gap: 3px;
   max-width: 100%;
+  align-items: flex-start;
 }
 
 .message-row.is-me .message-stack {
@@ -461,6 +462,11 @@ html.dark .message-row.is-me .message-text-bubble {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.message-row.is-me .message-img-container.multi-imgs {
+  justify-content: flex-end;
 }
 
 .img-item {

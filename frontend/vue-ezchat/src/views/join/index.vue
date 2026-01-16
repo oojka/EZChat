@@ -331,9 +331,10 @@ html.dark .join-root {
 
 .page-wrapper {
   position: relative;
-  min-height: 100vh;
+  min-height: var(--app-height, 100dvh);
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -351,7 +352,7 @@ html.dark .page-wrapper {
 
 /* --- 背景动效 --- */
 .bg-blobs {
-  position: absolute;
+  position: fixed;
   inset: -50%;
   z-index: 0;
   pointer-events: none;
@@ -394,21 +395,21 @@ html.dark .page-wrapper {
   animation-delay: -5s;
 }
 
-:deep(.dark) .blob {
+html.dark .blob {
   filter: blur(180px);
 }
 
-:deep(.dark) .blob-1 {
+html.dark .blob-1 {
   background: #080808;
   opacity: 0.02;
 }
 
-:deep(.dark) .blob-2 {
+html.dark .blob-2 {
   background: #0a0a0a;
   opacity: 0.02;
 }
 
-:deep(.dark) .blob-3 {
+html.dark .blob-3 {
   opacity: 0.01;
 }
 
@@ -444,7 +445,8 @@ html.dark .page-wrapper {
   align-items: center;
   position: relative;
   z-index: 2;
-  padding: 30px 20px 20px;
+  padding: 30px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .logo-container {
@@ -455,8 +457,8 @@ html.dark .page-wrapper {
 /* --- 顶部按钮 --- */
 .index-actions {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: calc(24px + env(safe-area-inset-top, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
   z-index: 50;
   display: flex;
   gap: 12px;
@@ -491,7 +493,7 @@ html.dark .glass-btn:hover {
 .join-card {
   position: relative;
   display: flex;
-  width: 900px;
+  width: min(900px, 100%);
   min-height: 400px;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -501,6 +503,7 @@ html.dark .glass-btn:hover {
   -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 /* --- 左侧：信息展示区 --- */
@@ -703,6 +706,8 @@ html.dark .meta-badge {
   font-family: 'Monaco', 'Courier New', monospace;
   letter-spacing: 0.5px;
   opacity: 0.8;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* --- 右侧：表单区 --- */
@@ -1020,5 +1025,129 @@ html.dark .icon-circle {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateX(-20px);
+}
+
+@media (max-width: 768px) {
+  .join-card {
+    flex-direction: column;
+    min-height: auto;
+  }
+  
+  .left-section {
+    width: 100%;
+    padding: 24px 20px;
+  }
+  
+  .right-section {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--glass-border);
+    padding: 24px 20px;
+  }
+  
+  .logo-container {
+    margin-bottom: 16px;
+  }
+  
+  .welcome-title {
+    font-size: 24px;
+  }
+  
+  .status-badge {
+    padding: 8px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  
+  .room-card-preview {
+    margin-top: 20px;
+    padding: 16px;
+  }
+  
+  .room-avatar-wrapper :deep(.avatar-component) {
+    width: 80px !important;
+    height: 80px !important;
+  }
+  
+  .room-name {
+    font-size: 18px;
+  }
+  
+  .form-container {
+    max-width: 100%;
+    min-height: auto;
+    padding-top: 16px;
+  }
+  
+  .mode-toggle-link {
+    position: static;
+    text-align: right;
+    margin-bottom: 16px;
+  }
+  
+  .index-actions {
+    top: 16px;
+    right: 16px;
+  }
+
+  .action-btn {
+    min-height: 48px;
+  }
+  
+  .input-group :deep(.el-input__wrapper) {
+    padding: 10px 16px;
+  }
+  
+  .avatar-wrapper {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-wrapper {
+    padding: 20px 12px;
+  }
+  
+  .left-section,
+  .right-section {
+    padding: 20px 16px;
+  }
+  
+  .welcome-title {
+    font-size: 20px;
+  }
+  
+  .welcome-desc {
+    font-size: 12px;
+  }
+  
+  .room-card-preview {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+  
+  .room-details {
+    text-align: center;
+    align-items: center;
+  }
+  
+  .form-header h3 {
+    font-size: 14px;
+  }
+  
+  .action-btn {
+    height: 48px;
+  }
+  
+  .glass-btn {
+    width: 38px;
+    height: 38px;
+  }
+  
+  .blob-1, .blob-2, .blob-3 {
+    opacity: 0.2;
+  }
 }
 </style>

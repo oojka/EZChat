@@ -19,24 +19,21 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, ArrowRight, Upload, Check, User, Postcard, Lock, Plus, View, Hide } from '@element-plus/icons-vue'
-import type { UploadRequestOptions } from 'element-plus'
+import { ArrowLeft, ArrowRight, Upload, User, Postcard, Lock, Plus, View, Hide } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import MobileEntryShell from './MobileEntryShell.vue'
-import PasswordInput from '@/components/PasswordInput.vue'
-import Avatar from '@/components/Avatar.vue'
 import { useRegister } from '@/composables/useRegister'
-import { uploadAvatarApi } from '@/api/Auth'
+import type { Result, Image } from '@/type'
 
 const router = useRouter()
 const { t } = useI18n()
 
-const { 
-  registerForm, 
-  register, 
-  registerFormRules, 
-  registerFormRef, 
-  beforeAvatarUpload, 
+const {
+  registerForm,
+  register,
+  registerFormRules,
+  registerFormRef,
+  beforeAvatarUpload,
   handleAvatarSuccess,
   resetRegisterForm
 } = useRegister()
@@ -46,23 +43,50 @@ const isRegisterLoading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
+/**
+ * 进入注册流程的下一步（从步骤1到步骤2）
+ *
+ * 步骤：
+ * 1. 验证步骤1的必填字段（昵称和用户名）
+ * 2. 验证成功后切换到步骤2
+ * 3. 验证失败时停留在当前步骤
+ */
 const nextRegisterStep = async () => {
   if (!registerFormRef.value) return
-  
-  // Validate Step 1 fields
+
+  // 验证步骤1的字段
   try {
     await registerFormRef.value.validateField(['nickname', 'username'])
     registerStep.value = 2
   } catch {
-    // Validation failed
+    // 验证失败
     return
   }
 }
 
+/**
+ * 返回到注册流程的上一步（从步骤2回到步骤1）
+ *
+ * 说明：
+ * - 用户点击返回按钮时调用
+ * - 仅用于两步注册流程中的导航
+ */
 const prevRegisterStep = () => {
   registerStep.value = 1
 }
 
+/**
+ * 处理用户注册提交
+ *
+ * 步骤：
+ * 1. 设置加载状态
+ * 2. 调用 useRegister 的 register() 方法执行注册
+ * 3. 注册成功后：
+ *    - 显示成功消息
+ *    - 重定向到登录页并预填充用户名
+ *    - 重置注册表单状态
+ * 4. 无论成功失败，最终都清除加载状态
+ */
 const handleRegister = async () => {
   if (!registerFormRef.value) return
   isRegisterLoading.value = true
@@ -70,49 +94,23 @@ const handleRegister = async () => {
     const success = await register()
     if (success) {
       ElMessage.success(t('auth.register_success_msg'))
-      // Redirect to login with username prefilled
-      router.push({
-        path: '/m/login',
+      // 重定向到首页并预填充用户名（统一入口，HomeView会根据设备类型渲染对应组件）
+      router.replace({
+        path: '/',
         query: { username: registerForm.value.username }
       })
       resetRegisterForm()
     }
   } catch (e) {
-    // Error handled in useRegister or global handler
+    // 错误由 useRegister 或全局错误处理器处理
+    throw e
   } finally {
     isRegisterLoading.value = false
   }
 }
 
-interface UploadError extends Error {
-  status: number
-  method: string
-  url: string
-}
-
-const createUploadError = (message: string): UploadError => {
-  const error = new Error(message) as UploadError
-  error.status = 0
-  error.method = 'POST'
-  error.url = '/auth/register/upload'
-  return error
-}
-
-const customUploadRequest = async (options: UploadRequestOptions) => {
-  const { file, onSuccess, onError } = options
-  try {
-    const uploadFile = file instanceof File ? file : new File([file], 'avatar')
-    const res = await uploadAvatarApi(uploadFile)
-    if (res.status === 1 && res.data) {
-      onSuccess(res)
-      handleAvatarSuccess(res)
-      return
-    }
-    onError(createUploadError(res.message || t('api.image_upload_failed')))
-  } catch (err) {
-    const message = err instanceof Error ? err.message : t('api.image_upload_failed')
-    onError(createUploadError(message))
-  }
+const onAvatarSuccess = (response: unknown) => {
+  handleAvatarSuccess(response as Result<Image | null>)
 }
 </script>
 
@@ -120,7 +118,9 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
   <MobileEntryShell>
     <div class="view-header">
       <el-button link class="back-btn-icon" @click="registerStep === 1 ? router.back() : prevRegisterStep()">
-        <el-icon :size="24"><ArrowLeft /></el-icon>
+        <el-icon :size="24">
+          <ArrowLeft />
+        </el-icon>
       </el-button>
       <h2>{{ t('auth.register') }}</h2>
       <div class="step-indicator">
@@ -131,69 +131,56 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
     </div>
 
     <div class="form-container">
-      <el-form 
-        ref="registerFormRef"
-        :model="registerForm"
-        :rules="registerFormRules"
-        class="auth-form"
-        @submit.prevent
-      >
+      <el-form ref="registerFormRef" :model="registerForm" :rules="registerFormRules" class="auth-form" @submit.prevent>
         <!-- STEP 1 -->
         <div v-if="registerStep === 1" class="step-content">
           <!-- Avatar Section -->
           <div class="avatar-section">
-             <el-upload
-                class="avatar-uploader"
-                :show-file-list="false"
-                :http-request="customUploadRequest"
-                :before-upload="beforeAvatarUpload"
-                accept="image/*"
-              >
-               <div class="avatar-wrapper">
-                  <img 
-                    v-if="registerForm.avatar.imageUrl" 
-                    :src="registerForm.avatar.imageUrl" 
-                    class="avatar-img"
-                  />
-                  <el-icon v-else class="avatar-placeholder-icon" :size="24"><Upload /></el-icon>
-                  <div class="avatar-add-btn">
-                     <el-icon class="w-3 h-3 text-white" :size="12"><Plus /></el-icon>
-                  </div>
-               </div>
-             </el-upload>
-             <p class="avatar-hint">{{ t('auth.avatar_upload_hint') }}</p>
+            <el-upload class="avatar-uploader" action="/api/auth/register/upload" :show-file-list="false"
+              :before-upload="beforeAvatarUpload" :on-success="onAvatarSuccess" accept="image/*">
+              <div class="avatar-wrapper">
+                <img v-if="registerForm.avatar.imageUrl" :src="registerForm.avatar.imageUrl" class="avatar-img" />
+                <el-icon v-else class="avatar-placeholder-icon" :size="24">
+                  <Upload />
+                </el-icon>
+                <div class="avatar-add-btn">
+                  <el-icon class="w-3 h-3 text-white" :size="12">
+                    <Plus />
+                  </el-icon>
+                </div>
+              </div>
+            </el-upload>
+            <p class="avatar-hint">{{ t('auth.avatar_upload_hint') }}</p>
           </div>
 
           <!-- Form Fields -->
           <div class="form-fields">
             <el-form-item prop="nickname">
               <div class="input-wrapper">
-                <el-icon class="input-icon" :size="20"><Postcard /></el-icon>
-                <input 
-                  v-model="registerForm.nickname"
-                  type="text" 
-                  class="custom-input" 
-                  :placeholder="t('auth.nickname_placeholder')" 
-                />
+                <el-icon class="input-icon" :size="20">
+                  <Postcard />
+                </el-icon>
+                <input v-model="registerForm.nickname" type="text" class="custom-input"
+                  :placeholder="t('auth.nickname_placeholder')" />
               </div>
             </el-form-item>
-            
+
             <el-form-item prop="username">
               <div class="input-wrapper">
-                <el-icon class="input-icon" :size="20"><User /></el-icon>
-                <input 
-                  v-model="registerForm.username"
-                  type="text" 
-                  class="custom-input" 
-                  :placeholder="t('auth.username_placeholder')" 
-                />
+                <el-icon class="input-icon" :size="20">
+                  <User />
+                </el-icon>
+                <input v-model="registerForm.username" type="text" class="custom-input"
+                  :placeholder="t('auth.username_placeholder')" />
               </div>
             </el-form-item>
           </div>
 
           <div class="form-actions">
             <el-button type="primary" size="large" class="submit-btn premium-btn w-full" @click="nextRegisterStep">
-              {{ t('common.next') }} <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+              {{ t('common.next') }} <el-icon class="el-icon--right">
+                <ArrowRight />
+              </el-icon>
             </el-button>
           </div>
         </div>
@@ -201,10 +188,7 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
         <!-- STEP 2 -->
         <div v-else class="step-content">
           <div class="user-summary">
-            <img 
-              :src="registerForm.avatar.imageUrl || ''" 
-              class="summary-avatar"
-            />
+            <img :src="registerForm.avatar.imageUrl || ''" class="summary-avatar" />
             <div class="flex flex-col">
               <span class="summary-nickname">{{ registerForm.nickname }}</span>
               <span class="summary-username">@{{ registerForm.username }}</span>
@@ -214,14 +198,13 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
           <div class="password-group">
             <el-form-item prop="password">
               <div class="input-wrapper">
-                <el-icon class="input-icon" :size="20"><Lock /></el-icon>
-                <input 
-                  v-model="registerForm.password"
-                  :type="showPassword ? 'text' : 'password'" 
-                  class="custom-input" 
-                  :placeholder="t('auth.password')" 
-                />
-                <button type="button" class="password-toggle" aria-label="Toggle password visibility" @click="showPassword = !showPassword">
+                <el-icon class="input-icon" :size="20">
+                  <Lock />
+                </el-icon>
+                <input v-model="registerForm.password" :type="showPassword ? 'text' : 'password'" class="custom-input"
+                  :placeholder="t('auth.password')" />
+                <button type="button" class="password-toggle" aria-label="Toggle password visibility"
+                  @click="showPassword = !showPassword">
                   <el-icon :size="20">
                     <View v-if="showPassword" />
                     <Hide v-else />
@@ -232,14 +215,13 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
 
             <el-form-item prop="confirmPassword">
               <div class="input-wrapper">
-                <el-icon class="input-icon" :size="20"><Lock /></el-icon>
-                <input 
-                  v-model="registerForm.confirmPassword"
-                  :type="showConfirmPassword ? 'text' : 'password'" 
-                  class="custom-input" 
-                  :placeholder="t('auth.confirm_password')" 
-                />
-                <button type="button" class="password-toggle" aria-label="Toggle confirm password visibility" @click="showConfirmPassword = !showConfirmPassword">
+                <el-icon class="input-icon" :size="20">
+                  <Lock />
+                </el-icon>
+                <input v-model="registerForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
+                  class="custom-input" :placeholder="t('auth.confirm_password')" />
+                <button type="button" class="password-toggle" aria-label="Toggle confirm password visibility"
+                  @click="showConfirmPassword = !showConfirmPassword">
                   <el-icon :size="20">
                     <View v-if="showConfirmPassword" />
                     <Hide v-else />
@@ -250,13 +232,8 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
           </div>
 
           <div class="form-actions">
-            <el-button 
-              type="primary" 
-              size="large" 
-              class="submit-btn premium-btn w-full" 
-              :loading="isRegisterLoading"
-              @click="handleRegister"
-            >
+            <el-button type="primary" size="large" class="submit-btn premium-btn w-full" :loading="isRegisterLoading"
+              @click="handleRegister">
               {{ t('auth.register_btn') }}
             </el-button>
           </div>
@@ -274,9 +251,12 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
-  --spacing-group: 16px;    /* Group spacing */
-  --spacing-field: 20px;    /* Field spacing */
-  --spacing-section: 24px;  /* Section spacing */
+  --spacing-group: 16px;
+  /* Group spacing */
+  --spacing-field: 20px;
+  /* Field spacing */
+  --spacing-section: 24px;
+  /* Section spacing */
   --spacing-xl: 24px;
   --spacing-2xl: 32px;
   --spacing-3xl: 48px;
@@ -489,7 +469,8 @@ const customUploadRequest = async (options: UploadRequestOptions) => {
 .avatar-hint {
   font-size: 12px;
   color: var(--text-sub);
-  margin-top: 0; /* Handled by gap */
+  margin-top: 0;
+  /* Handled by gap */
   text-align: center;
   line-height: 1.45;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import dayjs from 'dayjs'
 import isToday from 'dayjs/plugin/isToday'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -8,9 +8,9 @@ import 'dayjs/locale/zh-cn'
 import 'dayjs/locale/zh-tw'
 import 'dayjs/locale/ko'
 import type { ChatRoom } from '@/type'
-import { useMessageStore } from '@/stores/messageStore.ts'
 import { useI18n } from 'vue-i18n'
 import Avatar from '@/components/Avatar.vue'
+import { useMessageStore } from '@/stores/messageStore.ts'
 
 const { t, locale } = useI18n()
 const messageStore = useMessageStore()
@@ -30,8 +30,6 @@ const props = withDefaults(
   { isActive: false },
 )
 
-const formattedTime = ref('')
-
 const formatDisplayTime = (timeStr?: string): string => {
   if (!timeStr) return ''
   const target = dayjs(timeStr).locale(dayjsLocaleMap[locale.value] || 'en')
@@ -45,13 +43,34 @@ const formatDisplayTime = (timeStr?: string): string => {
   return target.format('YY/MM/DD')
 }
 
+/**
+ * 格式化时间显示
+ * 使用 ref + interval 实现定时更新（相对时间如 "5分钟前" 需要刷新）
+ */
+const formattedTime = ref(formatDisplayTime(props.chat.lastActiveAt))
+
+/**
+ * 预览消息文本
+ * 使用 computed 自动追踪 lastMessage 变化，解决懒加载后不更新的问题
+ */
+const previewMessage = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  locale.value // 确保语言切换时触发更新
+  return messageStore.formatPreviewMessage(props.chat.lastMessage)
+})
+
+/**
+ * 监听时间变化和语言切换，更新时间显示
+ */
 watch([() => props.chat.lastActiveAt, locale], () => {
   formattedTime.value = formatDisplayTime(props.chat.lastActiveAt)
-}, { immediate: true })
+})
 
 let timer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
-  timer = setInterval(() => { formattedTime.value = formatDisplayTime(props.chat.lastActiveAt) }, 60000)
+  timer = setInterval(() => {
+    formattedTime.value = formatDisplayTime(props.chat.lastActiveAt)
+  }, 60000)
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
@@ -69,7 +88,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       </div>
 
       <div class="row2">
-        <div class="last-message">{{ messageStore.formatPreviewMessage(chat.lastMessage) }}</div>
+        <div class="last-message">{{ previewMessage || t('chat.new_message') }}</div>
         <div class="badge-wrapper" v-if="(chat.unreadCount || 0) > 0">
           <el-badge :value="chat.unreadCount || 0" :max="99" class="unread-badge" />
         </div>

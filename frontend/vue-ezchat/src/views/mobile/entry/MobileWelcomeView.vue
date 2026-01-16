@@ -8,42 +8,84 @@
  * - 访客快速入口按钮
  * - 注册链接跳转
  *
- * 路由：/m
+ * 路由：/（移动端设备通过HomeView动态渲染）
+ *       /m（兼容别名，重定向到/）
  *
  * 依赖：
  * - useLogin: 登录逻辑
  * - MobileEntryShell: 布局壳组件
  */
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { User, Search, ArrowRight } from '@element-plus/icons-vue'
 import MobileEntryShell from './MobileEntryShell.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
 import useLogin from '@/composables/useLogin'
+import { onMounted } from 'vue'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 
 // Login logic
 const { loginForm, isLoading, login } = useLogin()
 
+/**
+ * 处理用户登录逻辑
+ *
+ * 功能：
+ * - 调用 useLogin 的 login() 方法
+ * - 登录成功后，useLogin 会自动处理用户状态和路由跳转
+ * - 失败时由全局错误处理器处理
+ */
 const handleLogin = async () => {
   await login()
 }
 
+/**
+ * 导航到访客加入页面
+ *
+ * 功能：
+ * - 用户点击访客快速入口时调用
+ * - 路由跳转到移动端访客加入页
+ */
 const goToGuest = () => {
   router.push('/m/guest')
 }
 
+/**
+ * 导航到用户注册页面
+ *
+ * 功能：
+ * - 用户点击注册链接时调用
+ * - 路由跳转到移动端注册页
+ */
 const goToRegister = () => {
   router.push('/m/register')
 }
+
+/**
+ * 组件挂载时的初始化逻辑
+ *
+ * 功能：
+ * - 检查URL查询参数中是否有用户名
+ * - 如果有用户名，预填充到登录表单
+ * - 清除查询参数以避免URL泄露用户名
+ */
+onMounted(() => {
+  const username = route.query.username
+  if (username && typeof username === 'string') {
+    loginForm.username = username
+    // 清除查询参数以避免URL泄露用户名
+    router.replace({ query: { ...route.query, username: undefined } })
+  }
+})
 </script>
 
 <template>
   <MobileEntryShell>
     <div class="welcome-container">
-      <!-- Guest Quick Access -->
+      <!-- 访客快速入口 -->
       <div class="guest-quick-access">
         <button class="guest-btn" @click="goToGuest">
           <el-icon :size="18"><Search /></el-icon>
@@ -52,7 +94,7 @@ const goToRegister = () => {
         </button>
       </div>
 
-      <!-- Login Section -->
+       <!-- 登录区域 -->
       <div class="login-section">
         <div class="section-header">
           <h2>{{ t('auth.login') }}</h2>
