@@ -453,7 +453,12 @@
     "avatar_upload_success": "아바타 업로드 성공",
     "avatar_upload_failed": "아바타 업로드 실패",
     "avatar_format_error": "아바타 이미지는 JPG 또는 PNG 형식이어야 합니다!",
-    "avatar_size_error": "아바타 이미지 크기는 2MB를 초과할 수 없습니다!"
+    "avatar_size_error": "아바타 이미지 크기는 2MB를 초과할 수 없습니다!",
+    "nickname_label": "닉네임",
+    "bio_label": "자기소개",
+    "username_label": "계정",
+    "password_label": "비밀번호",
+    "confirm_password_label": "비밀번호 확인"
   },
   "system": {
     "room_created": "룸이 생성되었습니다",

@@ -476,7 +476,12 @@
     "avatar_upload_success": "Avatar uploaded successfully",
     "avatar_upload_failed": "Avatar upload failed",
     "avatar_format_error": "Avatar picture must be JPG or PNG format!",
-    "avatar_size_error": "Avatar picture size can not exceed 2MB!"
+    "avatar_size_error": "Avatar picture size can not exceed 2MB!",
+    "nickname_label": "Nickname",
+    "bio_label": "Bio",
+    "username_label": "Username",
+    "password_label": "Password",
+    "confirm_password_label": "Confirm Password"
   },
   "system": {
     "room_created": "Room created",

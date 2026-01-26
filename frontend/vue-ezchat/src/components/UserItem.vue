@@ -8,7 +8,7 @@
  * - 设置按钮入口
  *
  * Props：
- * - avatar: 头像 URL
+ * - avatar: 头像（Image 对象或 URL 字符串，支持图片退避机制）
  * - nickname: 用户昵称
  * - uid: 用户 UID
  * - isOnline: 在线状态
@@ -25,7 +25,7 @@ import Avatar from '@/components/Avatar.vue'
 import type { Image } from '@/type'
 
 interface Props {
-  avatar?: string
+  avatar?: Image | string
   nickname?: string
   uid?: string | number
   isOnline?: boolean
@@ -34,18 +34,24 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  avatar: '', nickname: 'User', uid: '00000000', isOnline: false, showBadge: true, clickable: true
+  nickname: 'User', uid: '00000000', isOnline: false, showBadge: true, clickable: true
 })
 
-const buildAvatarImage = (avatarUrl?: string): Image => ({
-  imageName: '',
-  imageUrl: avatarUrl || '',
-  imageThumbUrl: avatarUrl || '',
-  blobUrl: '',
-  blobThumbUrl: '',
+/**
+ * 构建用于 Avatar 组件的 Image 对象
+ * 支持传入 Image 对象或单个 URL 字符串
+ */
+const avatarImage = computed<Image | undefined>(() => {
+  if (!props.avatar) return undefined
+  if (typeof props.avatar === 'string') {
+    return {
+      imageName: '',
+      imageUrl: props.avatar,
+      imageThumbUrl: props.avatar,
+    }
+  }
+  return props.avatar
 })
-
-const avatarImage = computed(() => buildAvatarImage(props.avatar))
 
 const emit = defineEmits<{
   (e: 'click'): void

@@ -14,8 +14,8 @@ import { useRegister } from '@/composables/useRegister.ts'
 import { useI18n } from 'vue-i18n'
 import useLogin from '@/composables/useLogin.ts'
 import PasswordInput from '@/components/PasswordInput.vue'
+import Avatar from '@/components/Avatar.vue'
 import { useImageStore } from '@/stores/imageStore'
-import { ElMessage } from 'element-plus'
 import { createAppError, ErrorType, ErrorSeverity } from '@/error/ErrorTypes.ts'
 import type { Result, Image } from '@/type'
 
@@ -77,6 +77,21 @@ const progressPercentage = computed(() => {
 // 页面加载时生成默认头像 URL（仅用于展示）
 onMounted(() => {
   defaultAvatarUrl.value = imageStore.generateDefaultAvatarUrl('user')
+})
+
+/**
+ * 构建用于 Avatar 组件的 Image 对象
+ * 优先使用用户上传的头像，否则使用默认头像 URL
+ */
+const avatarImage = computed<Image>(() => {
+  if (registerForm.value.avatar.imageThumbUrl || registerForm.value.avatar.imageUrl) {
+    return registerForm.value.avatar
+  }
+  return {
+    imageName: '',
+    imageUrl: defaultAvatarUrl.value,
+    imageThumbUrl: defaultAvatarUrl.value,
+  }
 })
 
 // ==================== 卡片翻转控制 ====================
@@ -332,24 +347,8 @@ const handleRegister = async () => {
                 -->
                 <el-upload class="avatar-uploader-large" action="/api/auth/register/upload" :show-file-list="false"
                   :on-success="onAvatarSuccess" :before-upload="beforeAvatarUpload">
-                  <!-- 已上传头像预览 -->
-                  <div v-if="registerForm.avatar.imageThumbUrl" class="avatar-preview-lg"><img
-                      :src="registerForm.avatar.imageThumbUrl" class="avatar-img" />
-                    <div class="edit-mask-lg"><el-icon>
-                        <Camera />
-                      </el-icon><span>{{ t('common.change') }}</span></div>
-                  </div>
-                  <!-- 默认头像预览 -->
-                  <div v-else-if="defaultAvatarUrl" class="avatar-preview-lg"><img :src="defaultAvatarUrl"
-                      class="avatar-img" />
-                    <div class="edit-mask-lg"><el-icon>
-                        <Camera />
-                      </el-icon><span>{{ t('common.change') }}</span></div>
-                  </div>
-                  <!-- 未选择头像占位符 -->
-                  <div v-else class="placeholder-square-lg"><el-icon size="40">
-                      <Picture />
-                    </el-icon><span>{{ t('auth.select_image') }}</span></div>
+                  <!-- 使用 Avatar 组件显示头像（支持图片退避机制） -->
+                  <Avatar :image="avatarImage" :size="150" shape="square" :editable="true" :icon-size="40" />
                 </el-upload>
                 <div class="avatar-info-area">
                   <!-- 点击上传头像 -->

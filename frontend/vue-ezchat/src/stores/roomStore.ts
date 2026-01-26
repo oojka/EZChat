@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore, storeToRefs } from 'pinia'
-import type { ChatRoom, ChatMember, Message, Image, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, LoginUserInfo } from '@/type'
+import type { ChatRoom, ChatMember, Message, JoinChatReq, ValidateChatJoinReq, MemberLeaveBroadcastPayload, MemberRemovedBroadcastPayload, OwnerTransferBroadcastPayload, RoomDisbandBroadcastPayload, LoginUserInfo } from '@/type'
 import { initApi } from '@/api/AppInit.ts'
 import { getChatMembersApi, joinChatApi } from '@/api/Chat'
 import { validateChatJoinApi } from '@/api/Auth'

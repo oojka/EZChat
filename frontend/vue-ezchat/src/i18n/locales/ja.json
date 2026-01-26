@@ -453,7 +453,12 @@
     "avatar_upload_success": "アバターのアップロードに成功しました",
     "avatar_upload_failed": "アバターのアップロードに失敗しました",
     "avatar_format_error": "アバター画像はJPGまたはPNG形式である必要があります！",
-    "avatar_size_error": "アバター画像のサイズは2MBを超えることはできません！"
+    "avatar_size_error": "アバター画像のサイズは2MBを超えることはできません！",
+    "nickname_label": "ニックネーム",
+    "bio_label": "自己紹介",
+    "username_label": "アカウント",
+    "password_label": "パスワード",
+    "confirm_password_label": "パスワード確認"
   },
   "system": {
     "room_created": "ルームが作成されました",

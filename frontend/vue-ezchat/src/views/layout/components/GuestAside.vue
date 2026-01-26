@@ -13,6 +13,17 @@ import { upgradeUserApi } from '@/api/User'
 import { uploadAvatarApi } from '@/api/Auth'
 import type { RegisterInfo } from '@/type'
 import { isValidUsername, isValidNickname, isValidPassword } from '@/utils/validators'
+import type { InternalRuleItem } from 'async-validator'
+
+/** 表单验证器回调类型 */
+type ValidatorCallback = (error?: Error) => void
+
+/** 自定义上传请求参数类型 */
+interface UploadRequestOptions {
+    file: File
+    onSuccess: (response: unknown) => void
+    onError: (err: unknown) => void
+}
 
 const { t } = useI18n()
 const roomStore = useRoomStore()
@@ -69,8 +80,8 @@ const emptyAvatar = {
 }
 
 // 校验规则
-const validatePass2 = (rule: any, value: any, callback: any) => {
-    if (value === '') {
+const validatePass2 = (_rule: InternalRuleItem, value: unknown, callback: ValidatorCallback) => {
+    if (typeof value !== 'string' || value === '') {
         callback(new Error(t('validation.confirm_password_required')))
     } else if (value !== form.password) {
         callback(new Error(t('validation.password_mismatch')))
@@ -83,7 +94,7 @@ const rules = reactive<FormRules>({
     username: [
         { required: true, message: t('validation.username_required'), trigger: 'blur' },
         {
-            validator: (rule: any, value: any, callback: any) => {
+            validator: (_rule: InternalRuleItem, value: unknown, callback: ValidatorCallback) => {
                 if (!isValidUsername(value)) {
                     callback(new Error(t('validation.username_format')))
                 } else {
@@ -95,7 +106,7 @@ const rules = reactive<FormRules>({
     password: [
         { required: true, message: t('validation.password_required'), trigger: 'blur' },
         {
-            validator: (rule: any, value: any, callback: any) => {
+            validator: (_rule: InternalRuleItem, value: unknown, callback: ValidatorCallback) => {
                 if (!isValidPassword(value)) {
                     callback(new Error(t('validation.password_format')))
                 } else {
@@ -110,7 +121,7 @@ const rules = reactive<FormRules>({
     nickname: [
         { required: true, message: t('validation.nickname_required'), trigger: 'blur' },
         {
-            validator: (rule: any, value: any, callback: any) => {
+            validator: (_rule: InternalRuleItem, value: unknown, callback: ValidatorCallback) => {
                 if (!isValidNickname(value)) {
                     callback(new Error(t('validation.nickname_format')))
                 } else {
@@ -147,7 +158,7 @@ const submitUpgrade = async (formEl: FormInstance | undefined) => {
                 } else {
                     ElMessage.error(res.message || t('upgrade.failed'))
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error(error)
                 // 错误已经在 request.ts 拦截处理，这里防止未捕获异常
             } finally {
@@ -181,7 +192,7 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 }
 
 // 自定义上传请求 Request
-const customUploadRequest = async (options: any) => {
+const customUploadRequest = async (options: UploadRequestOptions) => {
     const { file, onSuccess, onError } = options
     try {
         const res = await uploadAvatarApi(file)
@@ -263,11 +274,11 @@ const customUploadRequest = async (options: any) => {
                     <!-- Moved Profile Inputs -->
                     <div class="left-col-inputs">
                         <el-form-item prop="nickname">
-                            <span class="input-label">昵称</span>
+                            <span class="input-label">{{ t('upgrade.nickname_label') }}</span>
                             <el-input v-model="form.nickname" :placeholder="t('upgrade.nickname_placeholder')" size="large" />
                         </el-form-item>
                         <el-form-item prop="bio">
-                            <span class="input-label">个人简介</span>
+                            <span class="input-label">{{ t('upgrade.bio_label') }}</span>
                             <el-input v-model="form.bio" type="textarea" :rows="3" :placeholder="t('upgrade.bio_placeholder')"
                                 resize="none" size="large" />
                         </el-form-item>
@@ -285,16 +296,16 @@ const customUploadRequest = async (options: any) => {
                         <el-form-item prop="avatar" class="hidden-item" />
 
                         <el-form-item prop="username">
-                            <span class="input-label">账号</span>
+                            <span class="input-label">{{ t('upgrade.username_label') }}</span>
                             <el-input v-model="form.username" :placeholder="t('upgrade.username_placeholder')" size="large" />
                         </el-form-item>
 
                         <el-form-item prop="password">
-                            <span class="input-label">密码</span>
+                            <span class="input-label">{{ t('upgrade.password_label') }}</span>
                             <PasswordInput v-model="form.password" :placeholder="t('upgrade.password_placeholder')" size="large" />
                         </el-form-item>
                         <el-form-item prop="confirmPassword">
-                            <span class="input-label">确认密码</span>
+                            <span class="input-label">{{ t('upgrade.confirm_password_label') }}</span>
                             <PasswordInput v-model="form.confirmPassword" :placeholder="t('upgrade.confirm_password_placeholder')" size="large" />
                         </el-form-item>
                     </div>

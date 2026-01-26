@@ -33,9 +33,13 @@ export const useRoomMemberManagement = () => {
   const roomStore = useRoomStore()
   const { currentRoom, currentRoomCode, roomSettingsDialogVisible } = storeToRefs(roomStore)
 
+  /** 当前选中的成员 UID 列表（用于批量踢出） */
   const selectedUids = ref<string[]>([])
+  /** 选中的房主转让目标 UID */
   const transferTargetUid = ref('')
+  /** 踢出操作进行中状态 */
   const isKicking = ref(false)
+  /** 转让操作进行中状态 */
   const isTransferring = ref(false)
 
   const members = computed<ChatMember[]>(() => currentRoom.value?.chatMembers || [])
@@ -45,6 +49,13 @@ export const useRoomMemberManagement = () => {
     members.value.filter((m) => m.uid !== ownerUid.value)
   )
 
+  /**
+   * 同步选中状态
+   *
+   * 业务逻辑：
+   * - 当成员列表变化时（如有人退出），移除已不在房间内的选中 UID
+   * - 确保转让目标仍然在房间内，且不是房主自己
+   */
   const syncSelections = () => {
     const validUids = new Set(members.value.map((m) => m.uid))
     selectedUids.value = selectedUids.value.filter((uid) => validUids.has(uid) && uid !== ownerUid.value)
@@ -64,6 +75,15 @@ export const useRoomMemberManagement = () => {
     await roomStore.fetchRoomMembers(currentRoomCode.value)
   })
 
+  /**
+   * 批量踢出选中的成员
+   *
+   * 业务逻辑：
+   * 1. 过滤掉无效 UID 和房主自己
+   * 2. 弹出确认对话框
+   * 3. 调用批量踢出 API
+   * 4. 成功后清空选中状态并刷新成员列表
+   */
   const kickSelected = () => {
     if (!currentRoom.value) return
     const targets = selectedUids.value.filter((uid) => uid && uid !== ownerUid.value)
@@ -97,6 +117,17 @@ export const useRoomMemberManagement = () => {
     })
   }
 
+  /**
+   * 转让房主权限
+   *
+   * 业务逻辑：
+   * 1. 确定目标 UID（参数传入或从选中状态获取）
+   * 2. 弹出确认对话框（显示目标昵称）
+   * 3. 调用转让 API
+   * 4. 成功后更新本地 Store 中的房主信息
+   *
+   * @param targetUid 目标成员 UID（可选）
+   */
   const transferOwner = (targetUid?: string) => {
     if (!currentRoom.value) return
     const resolvedUid = targetUid || transferTargetUid.value
@@ -136,6 +167,11 @@ export const useRoomMemberManagement = () => {
     })
   }
 
+  /**
+   * 踢出单个成员
+   *
+   * @param uid 成员 UID
+   */
   const kickMember = (uid: string) => {
     if (!currentRoom.value) return
     if (!uid || uid === ownerUid.value) return

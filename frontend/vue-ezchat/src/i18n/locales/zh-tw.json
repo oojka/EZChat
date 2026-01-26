@@ -453,7 +453,12 @@
     "avatar_upload_success": "頭像上傳成功",
     "avatar_upload_failed": "頭像上傳失敗",
     "avatar_format_error": "頭像圖片必須是 JPG 或 PNG 格式！",
-    "avatar_size_error": "頭像圖片大小不能超過 2MB！"
+    "avatar_size_error": "頭像圖片大小不能超過 2MB！",
+    "nickname_label": "暱稱",
+    "bio_label": "個人簡介",
+    "username_label": "帳號",
+    "password_label": "密碼",
+    "confirm_password_label": "確認密碼"
   },
   "system": {
     "room_created": "房間已建立",

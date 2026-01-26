@@ -65,7 +65,7 @@ const handleSettingClick = () => {
     <!-- 3. 用户信息区域 -->
     <div class="aside-footer">
       <UserItem
-        :avatar="userStore.loginUserInfo?.avatar?.blobThumbUrl || userStore.loginUserInfo?.avatar?.imageThumbUrl || userStore.loginUserInfo?.avatar?.blobUrl || userStore.loginUserInfo?.avatar?.imageUrl"
+        :avatar="userStore.loginUserInfo?.avatar"
         :nickname="userStore.loginUserInfo?.nickname" :uid="userStore.loginUserInfo?.uid"
         :is-online="websocketStore.status === 'OPEN'" class="footer-user-card" @setting="handleSettingClick" />
     </div>

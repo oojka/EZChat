@@ -32,11 +32,16 @@ export const useRoomPasswordSettings = () => {
   const roomStore = useRoomStore()
   const { currentRoom, roomSettingsDialogVisible } = storeToRefs(roomStore)
 
+  /** 保存中状态 */
   const isSaving = ref(false)
+  /** 是否处于编辑模式 */
   const isEditing = ref(false)
+  /** 是否有密码错误 */
   const hasPasswordError = ref(false)
+  /** 密码错误提示信息 */
   const passwordErrorMessage = ref('')
 
+  /** 密码表单数据模型 */
   const passwordForm = ref({
     joinEnableByPassword: 0 as 0 | 1,
     password: '',
@@ -45,6 +50,14 @@ export const useRoomPasswordSettings = () => {
 
   const isStringValue = (value: unknown): value is string => typeof value === 'string'
 
+  /**
+   * 密码字段校验器
+   *
+   * 业务逻辑：
+   * - 若未开启密码保护 (joinEnableByPassword=0)，则跳过校验
+   * - 若开启，则必填
+   * - 触发确认密码的联动校验
+   */
   const validatePassword = (_rule: unknown, value: unknown, callback: (error?: Error) => void) => {
     if (!isStringValue(value)) {
       return callback(new Error(t('validation.password_required')))
@@ -68,6 +81,13 @@ export const useRoomPasswordSettings = () => {
     return callback()
   }
 
+  /**
+   * 确认密码校验器
+   *
+   * 业务逻辑：
+   * - 校验必填
+   * - 校验是否与密码字段一致
+   */
   const validatePasswordConfirm = (_rule: unknown, value: unknown, callback: (error?: Error) => void) => {
     if (!isStringValue(value)) {
       return callback(new Error(t('validation.confirm_password_required')))
@@ -99,6 +119,7 @@ export const useRoomPasswordSettings = () => {
     passwordConfirm: [{ validator: validatePasswordConfirm, trigger: ['blur', 'change'] }],
   })
 
+  /** 表单实例引用 */
   const passwordFormRef = ref<FormInstance | null>(null)
 
   const clearPasswordFields = () => {
@@ -114,6 +135,9 @@ export const useRoomPasswordSettings = () => {
     isEditing.value = false
   }
 
+  /**
+   * 从 Store 同步密码开关状态
+   */
   const syncFromRoom = () => {
     const joinEnabled = currentRoom.value?.passwordEnabled
     if (joinEnabled === 0 || joinEnabled === 1) {
@@ -150,6 +174,15 @@ export const useRoomPasswordSettings = () => {
     }
   })
 
+  /**
+   * 处理密码开关切换
+   *
+   * 业务逻辑：
+   * - 切换到开启 (1)：仅更新本地状态，等待用户输入密码后保存
+   * - 切换到关闭 (0)：立即调用 API 关闭密码保护
+   *
+   * @param value 目标状态 (0=关闭, 1=开启)
+   */
   const handleToggle = async (value: 0 | 1) => {
     if (value === 1) {
       return
@@ -179,6 +212,9 @@ export const useRoomPasswordSettings = () => {
     }
   }
 
+  /**
+   * 打开编辑模式（仅当密码已开启时有效）
+   */
   const openEditor = () => {
     if (passwordForm.value.joinEnableByPassword === 0) return
     isEditing.value = true
@@ -192,6 +228,14 @@ export const useRoomPasswordSettings = () => {
     passwordFormRef.value?.clearValidate()
   }
 
+  /**
+   * 保存密码设置
+   *
+   * 业务逻辑：
+   * 1. 校验密码强度和一致性
+   * 2. 调用更新 API
+   * 3. 成功后更新 Store
+   */
   const savePasswordSettings = async () => {
     const chatCode = currentRoom.value?.chatCode
     if (!chatCode) return

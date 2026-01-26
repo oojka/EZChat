@@ -11,16 +11,12 @@ import { useAppStore } from '@/stores/appStore'
 import { useWebsocketStore } from '@/stores/websocketStore'
 import { processInviteRoute } from '@/services/inviteService'
 import i18n from '@/i18n'
-
-const MobileFriendsView = () => import('@/views/mobile/FriendsView.vue')
-const MobileSettingsView = () => import('@/views/mobile/SettingsView.vue')
-const MobileWelcomeView = () => import('@/views/mobile/entry/MobileWelcomeView.vue')
-const MobileGuestJoinView = () => import('@/views/mobile/entry/MobileGuestJoinView.vue')
-const MobileRegisterView = () => import('@/views/mobile/entry/MobileRegisterView.vue')
-
+import MobileFriendsView from '@/views/mobile/FriendsView.vue'
+import MobileSettingsView from '@/views/mobile/SettingsView.vue'
+import MobileGuestJoinView from '@/views/mobile/entry/MobileGuestJoinView.vue'
+import MobileRegisterView from '@/views/mobile/entry/MobileRegisterView.vue'
 
 const { t } = i18n.global
-
 
 /**
  * 路由配置
@@ -123,7 +119,7 @@ const router = createRouter({
       name: 'NotFound',
       component: NotFoundView,
       meta: { title: '404 Not Found' },
-    }
+    },
   ],
 })
 
@@ -152,8 +148,10 @@ router.beforeEach(async (to, from) => {
   // 逻辑：如果去往 /chat 相关页面（需要登录态），且当前 Store 或 localStorage 中没有 Token（说明也是刚刷新或未初始化）
   // 则尝试执行“恢复登录态初始化”
   // 如果失败，说明 Token 已过期，弹出提示并重定向到首页
-  const isChatTarget = to.name === 'ChatRoom' || to.name === 'Welcome' || to.name === 'GuestChatRoom'
-  const isChatSource = from.name === 'ChatRoom' || from.name === 'Welcome' || from.name === 'GuestChatRoom'
+  const isChatTarget =
+    to.name === 'ChatRoom' || to.name === 'Welcome' || to.name === 'GuestChatRoom'
+  const isChatSource =
+    from.name === 'ChatRoom' || from.name === 'Welcome' || from.name === 'GuestChatRoom'
   if (isChatTarget && !isChatSource) {
     if (!userStore.restoreLoginStateIfNeeded('formal', { loadUserInfo: false })) {
       await userStore.logout({ showDialog: true })
@@ -187,8 +185,12 @@ router.beforeEach(async (to, from) => {
     const initText = t('common.initializing')
     const loadingText = t('common.loading')
     appStore.loadingText = isEnterChat
-      ? (typeof initText === 'string' ? initText : '')
-      : (typeof loadingText === 'string' ? loadingText : '')
+      ? typeof initText === 'string'
+        ? initText
+        : ''
+      : typeof loadingText === 'string'
+        ? loadingText
+        : ''
   }
 
   // 处理邀请链接验证
@@ -201,7 +203,8 @@ router.beforeEach(async (to, from) => {
       return await processInviteRoute(to)
     } else {
       // 其他来源（如直接访问链接）显示全屏 "Verifying invitation..."
-      return appStore.runWithLoading(loadingText, () => processInviteRoute(to))
+      return appStore
+        .runWithLoading(loadingText, () => processInviteRoute(to))
         .catch(() => {
           return { name: 'Error', replace: true }
         })

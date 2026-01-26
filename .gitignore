@@ -43,3 +43,6 @@ Thumbs.db
 !.cursorignore
 .cursorrules
 .cursor/
+.agent/
+.sisyphus/
+AGENTS.md

@@ -50,10 +50,10 @@ export const useConfigStore = defineStore(
     const NO_TOKEN_APIS = [
       '/auth/login',
       '/auth/register',
+      '/auth/register/upload',
       '/auth/guest',
       '/auth/join',
       '/auth/validate',
-      // 可以继续添加不需要 token 的 API 路径
     ]
 
     /**

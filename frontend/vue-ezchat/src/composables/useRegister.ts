@@ -3,9 +3,12 @@
  *
  * 核心职责：
  * - 管理注册表单状态和验证规则
- * - 处理头像上传（含去重检查和压缩）
+ * - 处理头像上传（仅压缩，不检查去重）
  * - 执行用户注册 API 调用
  * - 提供表单重置功能
+ *
+ * 注意：注册时用户未登录，无法调用需要认证的 /media/check 接口，
+ * 因此跳过前端去重检查，直接压缩后上传。后端会处理去重。
  *
  * 使用示例：
  * ```vue
@@ -21,9 +24,6 @@ import { useI18n } from 'vue-i18n'
 import { getPasswordReg, REGEX_USERNAME } from '@/utils/validators.ts'
 import { compressImage } from '@/utils/imageCompressor'
 import { isAllowedImageFile } from '@/utils/fileTypes'
-import { calculateObjectHash } from '@/utils/objectHash'
-
-import { checkObjectExistsApi } from '@/api/Media'
 import { MAX_IMAGE_SIZE_MB } from '@/constants/imageUpload'
 import { useImageStore } from '@/stores/imageStore'
 
@@ -72,7 +72,6 @@ export function useRegister() {
   })
 
   const beforeAvatarUpload = async (rawFile: File) => {
-    // 放宽图片类型限制：允许常见 image/*（并用扩展名兜底）
     if (!isAllowedImageFile(rawFile)) {
       ElMessage.error(t('validation.image_format'))
       return false
@@ -83,33 +82,9 @@ export function useRegister() {
       return false
     }
 
-    try {
-      // 计算原始对象哈希（在压缩之前，确保是真正的原始对象）
-      const rawHash = await calculateObjectHash(rawFile)
-
-      // 调用比对接口，检查对象是否已存在
-      try {
-        const checkResult = await checkObjectExistsApi(rawHash)
-
-        if (checkResult.status === 1 && checkResult.data) {
-          // 对象已存在，直接使用返回的 Image 对象
-          handleAvatarSuccess(checkResult)
-          // 返回 false 阻止 el-upload 实际上传对象
-          return false
-    }
-      } catch (error) {
-        console.error('[ERROR] [beforeAvatarUpload] Failed to check object existence:', error)
-        // 比对接口失败，降级为正常上传流程（继续上传）
-      }
-
-      // 对象不存在或比对失败，继续正常上传流程
-    // 前端压缩：失败则回退原图
+    // 注册时用户未登录，跳过 /media/check 去重检查，直接压缩上传
+    // 后端 uploadAvatar 会处理去重（通过 normalized hash）
     return await compressImage(rawFile)
-    } catch (error) {
-      console.error('[ERROR] [beforeAvatarUpload] Failed to calculate hash:', error)
-      // 哈希计算失败，降级为正常上传流程
-      return await compressImage(rawFile)
-    }
   }
 
   const handleAvatarSuccess = (response: Result<Image | null>) => {

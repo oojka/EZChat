@@ -16,12 +16,13 @@
  * - useRegister: 注册逻辑
  * - MobileEntryShell: 布局壳组件
  */
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft, ArrowRight, Upload, User, Postcard, Lock, Plus, View, Hide } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import MobileEntryShell from './MobileEntryShell.vue'
+import Avatar from '@/components/Avatar.vue'
 import { useRegister } from '@/composables/useRegister'
 import type { Result, Image } from '@/type'
 
@@ -112,6 +113,17 @@ const handleRegister = async () => {
 const onAvatarSuccess = (response: unknown) => {
   handleAvatarSuccess(response as Result<Image | null>)
 }
+
+/**
+ * 构建用于 Avatar 组件的 Image 对象
+ * 直接使用 registerForm.avatar（已包含完整的 Image 信息）
+ */
+const avatarImage = computed<Image | undefined>(() => {
+  if (registerForm.value.avatar.imageUrl || registerForm.value.avatar.imageThumbUrl) {
+    return registerForm.value.avatar
+  }
+  return undefined
+})
 </script>
 
 <template>
@@ -139,7 +151,7 @@ const onAvatarSuccess = (response: unknown) => {
             <el-upload class="avatar-uploader" action="/api/auth/register/upload" :show-file-list="false"
               :before-upload="beforeAvatarUpload" :on-success="onAvatarSuccess" accept="image/*">
               <div class="avatar-wrapper">
-                <img v-if="registerForm.avatar.imageUrl" :src="registerForm.avatar.imageUrl" class="avatar-img" />
+                <Avatar v-if="avatarImage" :image="avatarImage" :size="80" shape="square" class="avatar-img" />
                 <el-icon v-else class="avatar-placeholder-icon" :size="24">
                   <Upload />
                 </el-icon>
@@ -188,7 +200,7 @@ const onAvatarSuccess = (response: unknown) => {
         <!-- STEP 2 -->
         <div v-else class="step-content">
           <div class="user-summary">
-            <img :src="registerForm.avatar.imageUrl || ''" class="summary-avatar" />
+            <Avatar :image="avatarImage" :size="48" shape="square" class="summary-avatar" :text="registerForm.nickname" />
             <div class="flex flex-col">
               <span class="summary-nickname">{{ registerForm.nickname }}</span>
               <span class="summary-username">@{{ registerForm.username }}</span>

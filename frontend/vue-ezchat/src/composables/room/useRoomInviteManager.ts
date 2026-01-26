@@ -41,14 +41,22 @@ export const useRoomInviteManager = () => {
   const { currentRoom, roomSettingsDialogVisible } = storeToRefs(roomStore)
   const { t } = useI18n()
 
+  /** 邀请链接列表数据 */
   const inviteList = ref<ChatInvite[]>([])
+  /** 加载状态 */
   const isLoading = ref(false)
+  /** 创建中状态 */
   const isCreating = ref(false)
+  /** 当前正在撤销的邀请ID */
   const revokingId = ref<number | null>(null)
 
+  /** 自定义过期日期选择 */
   const selectedDate = ref<Date | null>(null)
+  /** 预设过期时间选项 (1/7/30天) */
   const selectedDateRadio = ref<1 | 7 | 30 | null>(7)
+  /** 是否为一次性链接开关 */
   const oneTimeLink = ref(false)
+  /** 最终计算的过期时间（分钟） */
   const joinLinkExpiryMinutes = ref<number | null>(DEFAULT_EXPIRY_MINUTES)
 
   /** 二维码弹窗可见状态 */
@@ -114,6 +122,9 @@ export const useRoomInviteManager = () => {
     return `${year}-${month}-${day} ${hours}:${minutes}`
   }
 
+  /**
+   * 获取房间的所有有效邀请链接
+   */
   const fetchInvites = async () => {
     const chatCode = currentRoom.value?.chatCode
     if (!chatCode) return
@@ -131,9 +142,20 @@ export const useRoomInviteManager = () => {
     }
   }
 
+  /**
+   * 创建新的邀请链接
+   *
+   * 业务逻辑：
+   * - 检查当前活跃链接数量是否达标
+   * - 根据一次性开关设置最大使用次数
+   * - 计算过期时间（分钟）
+   *
+   * @returns Promise<boolean> 创建是否成功
+   */
   const createInvite = async (): Promise<boolean> => {
     const chatCode = currentRoom.value?.chatCode
     if (!chatCode) return false
+    // 1. 检查数量上限
     if (inviteCount.value >= MAX_ACTIVE_INVITES) {
       ElMessage.warning(tf('room_settings.invite_limit_reached', '已达到邀请码上限'))
       return false
@@ -141,8 +163,11 @@ export const useRoomInviteManager = () => {
 
     isCreating.value = true
     try {
+      // 2. 准备参数：一次性标记和过期时间
       const maxUses = oneTimeLink.value ? 1 : 0
       const expiryMinutes = joinLinkExpiryMinutes.value ?? DEFAULT_EXPIRY_MINUTES
+      
+      // 3. 调用创建 API
       const res = await createChatInviteApi(chatCode, {
         joinLinkExpiryMinutes: expiryMinutes,
         maxUses,
@@ -151,6 +176,8 @@ export const useRoomInviteManager = () => {
       if (!isChatInvite(data)) {
         throw new Error('Invalid invite response')
       }
+      
+      // 4. 更新列表（新创建的排在最前）
       inviteList.value = [data, ...inviteList.value]
       ElMessage.success(tf('room_settings.invite_create_success', '邀请链接已创建'))
       return true
@@ -163,6 +190,11 @@ export const useRoomInviteManager = () => {
     }
   }
 
+  /**
+   * 确认撤销邀请链接弹窗
+   *
+   * @param inviteId 邀请链接 ID
+   */
   const confirmRevoke = (inviteId: number) => {
     if (revokingId.value !== null) return
     showConfirmDialog({
@@ -177,6 +209,11 @@ export const useRoomInviteManager = () => {
     })
   }
 
+  /**
+   * 执行撤销操作
+   *
+   * @param inviteId 邀请链接 ID
+   */
   const revokeInvite = async (inviteId: number) => {
     const chatCode = currentRoom.value?.chatCode
     if (!chatCode) return
@@ -194,6 +231,11 @@ export const useRoomInviteManager = () => {
     }
   }
 
+  /**
+   * 复制邀请链接到剪贴板
+   *
+   * @param inviteCode 邀请码
+   */
   const copyInviteUrl = async (inviteCode: string) => {
     if (!inviteCode) return
     try {
