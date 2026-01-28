@@ -46,3 +46,7 @@ Thumbs.db
 .agent/
 .sisyphus/
 AGENTS.md
+
+=== Local development files ===
+file/
+docs/
