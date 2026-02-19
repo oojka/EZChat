@@ -3,6 +3,7 @@ package hal.th50743.controller;
 import hal.th50743.pojo.Image;
 import hal.th50743.pojo.Result;
 import hal.th50743.service.AssetService;
+import hal.th50743.utils.CurrentHolder;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -45,7 +46,8 @@ public class AssetController {
      */
     @GetMapping("/url")
     public Result<Image> getImageUrl(@RequestParam String objectName) {
-        Image image = assetService.getImageUrlWithAssetId(objectName);
+        Integer userId = CurrentHolder.getCurrentId();
+        Image image = assetService.getImageUrlWithAssetId(objectName, userId);
         return Result.success(image);
     }
 

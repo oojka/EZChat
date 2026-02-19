@@ -163,6 +163,16 @@ public interface ChatMemberMapper {
     int deleteChatMembersByChatIdAndUserIds(@Param("chatId") Integer chatId, @Param("userIds") List<Integer> userIds);
 
     /**
+     * 按用户删除其所有聊天室成员关系
+     *
+     * <p>用于访客清理或账号清理场景，避免软删除用户后成员统计偏差。
+     *
+     * @param userId 用户内部 ID
+     * @return 影响行数
+     */
+    int deleteChatMembersByUserId(@Param("userId") Integer userId);
+
+    /**
      * 统计聊天室成员数
      *
      * <p>用于加入校验（判断是否已达人数上限）。

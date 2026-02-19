@@ -221,9 +221,6 @@ public class MessageServiceImpl implements MessageService {
         // log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
         chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
 
-        // log.info("User:{} updat LastSeenAt:{}", userId, LocalDateTime.now());
-        chatMemberMapper.updateLastSeenAt(userId, chatId, LocalDateTime.now());
-
         // 4. 使用 Assembler 填充附件信息
         messageAssembler.fillMessageAssets(messageList);
 

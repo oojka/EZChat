@@ -171,11 +171,19 @@
         </foreach>
     </delete>
 
+    <!-- 按用户删除其所有成员关系（访客清理使用） -->
+    <delete id="deleteChatMembersByUserId">
+        DELETE FROM chat_members
+        WHERE user_id = #{userId}
+    </delete>
+
     <!-- 统计聊天室成员数（用于加入校验） -->
     <select id="countMembersByChatId" resultType="int">
         SELECT COUNT(*)
-        FROM chat_members
-        WHERE chat_id = #{chatId}
+        FROM chat_members cm
+        JOIN users u ON cm.user_id = u.id
+        WHERE cm.chat_id = #{chatId}
+          AND u.is_deleted = 0
     </select>
 
 </mapper>

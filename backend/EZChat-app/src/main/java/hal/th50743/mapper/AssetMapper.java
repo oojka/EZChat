@@ -2,6 +2,7 @@ package hal.th50743.mapper;
 
 import hal.th50743.pojo.Asset;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -173,4 +174,19 @@ public interface AssetMapper {
      * @return 资产实体，不存在返回 null
      */
     Asset selectByNormalizedHashAndActive(String normalizedHash);
+
+    /**
+     * 校验用户是否有权访问指定资产
+     *
+     * <p>访问规则：
+     * <ul>
+     *   <li>public 对象：任何登录用户可访问</li>
+     *   <li>private 对象：仅消息所属聊天室成员可访问</li>
+     * </ul>
+     *
+     * @param userId    当前用户 ID
+     * @param assetName 对象名
+     * @return true=有权限，false=无权限
+     */
+    boolean canUserAccessAsset(@Param("userId") Integer userId, @Param("assetName") String assetName);
 }

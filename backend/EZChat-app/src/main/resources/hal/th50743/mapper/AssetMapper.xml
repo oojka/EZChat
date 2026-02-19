@@ -153,4 +153,23 @@
         LIMIT 1
     </select>
 
+    <!--
+      校验用户是否有权访问资产
+
+      访问规则：
+      - public/**：允许访问
+      - private/**：仅消息所属聊天室成员可访问
+      - 仅允许 status=1 的已激活资产
+    -->
+    <select id="canUserAccessAsset" resultType="java.lang.Boolean">
+        SELECT IF(COUNT(*) > 0, 1, 0)
+        FROM assets a
+        LEFT JOIN messages m ON a.message_id = m.id
+        LEFT JOIN chat_members cm ON m.chat_id = cm.chat_id
+            AND cm.user_id = #{userId}
+        WHERE a.asset_name = #{assetName}
+          AND a.status = 1
+          AND (a.asset_name LIKE 'public/%' OR cm.user_id IS NOT NULL)
+    </select>
+
 </mapper>

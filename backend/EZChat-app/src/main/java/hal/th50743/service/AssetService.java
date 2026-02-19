@@ -86,6 +86,21 @@ public interface AssetService {
     Image getImageUrlWithAssetId(String objectName);
 
     /**
+     * 获取图片访问 URL（包含 objectId，带访问权限校验）
+     *
+     * <p>权限规则：
+     * <ul>
+     *   <li>public 对象：允许访问</li>
+     *   <li>private 对象：仅允许该消息所属聊天室成员访问</li>
+     * </ul>
+     *
+     * @param objectName MinIO 对象名
+     * @param userId     当前请求用户 ID
+     * @return Image 对象（包含最新 URL 和 objectId）
+     */
+    Image getImageUrlWithAssetId(String objectName, Integer userId);
+
+    /**
      * 检查对象是否已存在（基于原始哈希）
      * <p>
      * 业务目的：前端计算原始对象哈希后，先调用此接口比对，避免不必要的对象上传。

@@ -701,10 +701,10 @@ class AuthServiceImplTest {
     }
 
     /**
-     * 在线用户刷新 - 跳过令牌匹配检查直接颁发新令牌
+     * 在线用户刷新 - 仍需校验令牌一致性，不匹配时抛出 UNAUTHORIZED 异常
      */
     @Test
-    void refreshTokenOnlineSkipsMismatchChecks() {
+    void refreshTokenOnlineMismatchThrows() {
         RefreshTokenReq req = new RefreshTokenReq("refresh-token");
         Claims claims = Jwts.claims(Map.<String, Object>of(
                 "tokenType", "refresh",
@@ -718,13 +718,11 @@ class AuthServiceImplTest {
         user.setUserType(1);
         when(userService.getUserById(1)).thenReturn(user);
         when(presenceService.isOnline(1)).thenReturn(true);
-        when(jwtUtils.generateJwt(anyMap(), anyLong())).thenReturn("new-access", "new-refresh");
+        when(formalUserService.getRefreshTokenByUserId(1)).thenReturn("other-token");
 
-        LoginVO result = authService.refreshToken(req);
+        BusinessException ex = assertThrows(BusinessException.class, () -> authService.refreshToken(req));
 
-        assertEquals("new-access", result.getAccessToken());
-        assertEquals("refresh-token", result.getRefreshToken());
-        verify(formalUserService, never()).getRefreshTokenByUserId(anyInt());
+        assertEquals(ErrorCode.UNAUTHORIZED.getCode(), ex.getCode());
         verify(cacheService, never()).getGuestRefreshToken(anyInt());
     }
 }

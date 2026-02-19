@@ -93,6 +93,53 @@ public class FriendServiceImpl implements FriendService {
     private final ChatService chatService;
 
     /**
+     * 校验当前用户是否为正式用户
+     *
+     * @param userId 当前用户 ID
+     * @return 用户实体
+     */
+    private User requireFormalUser(Integer userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+        User user = userMapper.selectUserById(userId);
+        if (user == null || Integer.valueOf(1).equals(user.getIsDeleted())) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+        if (!Integer.valueOf(1).equals(user.getUserType())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only formal users can use friend features");
+        }
+        return user;
+    }
+
+    /**
+     * 校验目标用户是否为正式用户
+     *
+     * @param target 目标用户
+     */
+    private void requireFormalTarget(User target) {
+        if (target == null || Integer.valueOf(1).equals(target.getIsDeleted())) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        }
+        if (!Integer.valueOf(1).equals(target.getUserType())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Target user is not a formal user");
+        }
+    }
+
+    /**
+     * 校验双方是否好友关系
+     *
+     * @param userId   当前用户 ID
+     * @param targetId 目标用户 ID
+     */
+    private void requireFriendRelation(Integer userId, Integer targetId) {
+        Friendship friendship = friendshipMapper.selectByUserIdAndFriendId(userId, targetId);
+        if (friendship == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Only friends can create private chat");
+        }
+    }
+
+    /**
      * 根据 assetId 获取头像 Image 对象
      *
      * @param assetId 资产 ID
@@ -117,6 +164,7 @@ public class FriendServiceImpl implements FriendService {
      */
     @Override
     public List<FriendVO> getFriendList(Integer currentUserId) {
+        requireFormalUser(currentUserId);
         List<Friendship> friendships = friendshipMapper.selectByUserId(currentUserId);
         if (friendships.isEmpty()) {
             return new ArrayList<>();
@@ -152,6 +200,7 @@ public class FriendServiceImpl implements FriendService {
      */
     @Override
     public List<FriendRequestVO> getPendingRequests(Integer currentUserId) {
+        requireFormalUser(currentUserId);
         List<FriendRequest> requests = friendRequestMapper.selectPendingByReceiverId(currentUserId);
         List<FriendRequestVO> vos = new ArrayList<>();
         
@@ -193,10 +242,12 @@ public class FriendServiceImpl implements FriendService {
     @Override
     @Transactional
     public void sendFriendRequest(Integer currentUserId, String targetUid) {
+        requireFormalUser(currentUserId);
         User target = userMapper.selectUserByUid(targetUid);
         if (target == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
         }
+        requireFormalTarget(target);
         if (target.getId().equals(currentUserId)) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Cannot add yourself");
         }
@@ -256,6 +307,7 @@ public class FriendServiceImpl implements FriendService {
     @Override
     @Transactional
     public void handleFriendRequest(Integer currentUserId, Integer requestId, Boolean accept) {
+        requireFormalUser(currentUserId);
         FriendRequest req = friendRequestMapper.selectById(requestId);
         if (req == null) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Request not found");
@@ -295,6 +347,7 @@ public class FriendServiceImpl implements FriendService {
     @Override
     @Transactional
     public void removeFriend(Integer currentUserId, String friendUid) {
+        requireFormalUser(currentUserId);
         User friend = userMapper.selectUserByUid(friendUid);
         if (friend == null) return;
         friendshipMapper.deleteBiDirectional(currentUserId, friend.getId());
@@ -310,6 +363,7 @@ public class FriendServiceImpl implements FriendService {
     @Override
     @Transactional
     public void updateAlias(Integer currentUserId, String friendUid, String alias) {
+        requireFormalUser(currentUserId);
         User friend = userMapper.selectUserByUid(friendUid);
         if (friend == null) return;
         friendshipMapper.updateAlias(currentUserId, friend.getId(), alias);
@@ -329,8 +383,11 @@ public class FriendServiceImpl implements FriendService {
     @Override
     @Transactional
     public String getOrCreatePrivateChat(Integer currentUserId, String targetUid) {
+        requireFormalUser(currentUserId);
         User target = userMapper.selectUserByUid(targetUid);
         if (target == null) throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found");
+        requireFormalTarget(target);
+        requireFriendRelation(currentUserId, target.getId());
         
         String existingChatCode = chatMapper.selectPrivateChatCodeBetweenUsers(currentUserId, target.getId());
         if (existingChatCode != null) {

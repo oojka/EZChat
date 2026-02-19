@@ -1,6 +1,7 @@
 package hal.th50743.service.impl;
 
 import hal.th50743.mapper.UserMapper;
+import hal.th50743.mapper.ChatMemberMapper;
 import hal.th50743.service.PresenceService;
 import hal.th50743.service.CacheService;
 import jakarta.websocket.Session;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class GuestCleanupService {
 
     private final UserMapper userMapper;
+    private final ChatMemberMapper chatMemberMapper;
     private final CacheService cacheService;
     private final PresenceService presenceService;
 
@@ -48,6 +50,7 @@ public class GuestCleanupService {
             }
             cacheService.evictAccessToken(userId);
             cacheService.evictGuestRefreshToken(userId);
+            chatMemberMapper.deleteChatMembersByUserId(userId);
             userMapper.updateUserDeleted(userId, 1);
             log.info("Cleaned up offline guest: userId={}", userId);
         }

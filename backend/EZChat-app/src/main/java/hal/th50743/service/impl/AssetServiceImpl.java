@@ -284,6 +284,24 @@ public class AssetServiceImpl implements AssetService {
      * {@inheritDoc}
      */
     @Override
+    public Image getImageUrlWithAssetId(String assetName, Integer userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+        if (assetName == null || assetName.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "assetName 不能为空");
+        }
+        boolean canAccess = assetMapper.canUserAccessAsset(userId, assetName);
+        if (!canAccess) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "No permission to access this asset");
+        }
+        return getImageUrlWithAssetId(assetName);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Image checkAssetExists(String rawHash) {
         // 1. 先查询原始对象哈希
         Asset existingAsset = findActiveAssetByRawHash(rawHash);

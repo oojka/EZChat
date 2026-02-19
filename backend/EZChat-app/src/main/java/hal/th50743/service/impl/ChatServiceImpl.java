@@ -483,7 +483,11 @@ public class ChatServiceImpl implements ChatService {
         Integer chatId = getChatId(userId, chatCode);
         Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
         if (!ownerId.equals(userId)) throw new BusinessException(ErrorCode.FORBIDDEN);
-        
+
+        // 先清理聊天室下的关联业务数据，避免遗留孤儿记录
+        chatInviteMapper.deleteByChatId(chatId);
+        messageMapper.deleteMessagesByChatId(chatId);
+        messageMapper.deleteChatSequence(chatId);
         chatMemberMapper.deleteChatMembersByChatId(chatId);
         chatMapper.deleteChatById(chatId);
     }
@@ -527,12 +531,24 @@ public class ChatServiceImpl implements ChatService {
         Integer chatId = getChatId(userId, chatCode);
         Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
         if (!ownerId.equals(userId)) throw new BusinessException(ErrorCode.FORBIDDEN);
-        
-        // Convert uids to userIds
-        List<Integer> targetIds = new ArrayList<>();
-        for (String uid : req.getMemberUids()) {
-            Integer uidId = Integer.valueOf(userMapper.selectIdByUid(uid).toString());
+
+        if (req == null || req.getMemberUids() == null || req.getMemberUids().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "memberUids is required");
+        }
+
+        // 去重并保持请求顺序
+        Set<String> targetUids = new LinkedHashSet<>(req.getMemberUids());
+        List<Integer> targetIds = new ArrayList<>(targetUids.size());
+        for (String uid : targetUids) {
+            Integer uidId = resolveUserIdByUid(uid);
+            if (Objects.equals(uidId, ownerId)) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "Owner cannot be kicked");
+            }
+            ensureMemberInChat(chatId, uidId);
             targetIds.add(uidId);
+        }
+        if (targetIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "No valid members to kick");
         }
         chatMemberMapper.deleteChatMembersByChatIdAndUserIds(chatId, targetIds);
     }
@@ -544,8 +560,15 @@ public class ChatServiceImpl implements ChatService {
         Integer chatId = getChatId(userId, chatCode);
         Integer ownerId = chatMapper.selectOwnerIdByChatId(chatId);
         if (!ownerId.equals(userId)) throw new BusinessException(ErrorCode.FORBIDDEN);
-        
-        Integer newOwnerId = Integer.valueOf(userMapper.selectIdByUid(req.getNewOwnerUid()).toString());
+
+        if (req == null || req.getNewOwnerUid() == null || req.getNewOwnerUid().isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "newOwnerUid is required");
+        }
+        Integer newOwnerId = resolveUserIdByUid(req.getNewOwnerUid());
+        if (Objects.equals(newOwnerId, ownerId)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "New owner must be a different member");
+        }
+        ensureMemberInChat(chatId, newOwnerId);
         chatMapper.updateChatOwner(chatId, newOwnerId);
     }
 
@@ -625,5 +648,34 @@ public class ChatServiceImpl implements ChatService {
         
         chatInviteService.consumeInvite(chatInvite.getChatId(), chatInvite.getCodeHash());
         return chatMapper.selectJoinInfoByChatId(chatInvite.getChatId());
+    }
+
+    /**
+     * 通过 UID 解析用户 ID（带空值与格式校验）
+     *
+     * @param uid 用户 UID
+     * @return 用户内部 ID
+     */
+    private Integer resolveUserIdByUid(String uid) {
+        if (uid == null || uid.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "uid is required");
+        }
+        Integer userId = userMapper.selectIdByUid(uid);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found: " + uid);
+        }
+        return userId;
+    }
+
+    /**
+     * 校验用户是否属于指定聊天室
+     *
+     * @param chatId 聊天室 ID
+     * @param userId 用户 ID
+     */
+    private void ensureMemberInChat(Integer chatId, Integer userId) {
+        if (!chatMapper.isValidChatId(userId, chatId)) {
+            throw new BusinessException(ErrorCode.NOT_A_MEMBER, "Target user is not a member of this chat");
+        }
     }
 }

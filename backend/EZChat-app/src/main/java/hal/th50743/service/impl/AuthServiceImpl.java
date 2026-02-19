@@ -458,7 +458,7 @@ public class AuthServiceImpl implements AuthService {
      * <p>Token 刷新流程：
      * <ol>
      *     <li>解析并验证 RefreshToken（签名、类型、过期时间）</li>
-     *     <li>若用户不在线，校验 RefreshToken 是否与存储的一致</li>
+     *     <li>在服务层统一校验 RefreshToken 是否与存储的一致</li>
      *     <li>签发新的 AccessToken，RefreshToken 保持不变</li>
      *     <li>更新 AccessToken 缓存</li>
      * </ol>
@@ -502,7 +502,6 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "User not found");
         }
 
-        // 若用户不在线，则必须校验 RefreshToken 是否匹配
         User user = userService.getUserById(userId);
         if (user == null) {
             log.warn("RefreshToken exchange failed: User not found userId={}", userId);
@@ -510,19 +509,23 @@ public class AuthServiceImpl implements AuthService {
         }
         Integer userType = user.getUserType();
 
-        if (!presenceService.isOnline(userId)) {
-            if (userType != null && userType == 1) {
-                String storedToken = formalUserService.getRefreshTokenByUserId(userId);
-                if (storedToken == null || !storedToken.equals(req.getRefreshToken())) {
-                    log.warn("RefreshToken exchange failed: Formal user token mismatch userId={}", userId);
-                    throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
-                }
-            } else {
-                String cachedToken = cacheService.getGuestRefreshToken(userId);
-                if (cachedToken == null || !cachedToken.equals(req.getRefreshToken())) {
-                    log.warn("RefreshToken exchange failed: Guest token mismatch userId={}", userId);
-                    throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
-                }
+        // 在线状态仅用于审计，不影响刷新令牌一致性校验
+        boolean online = presenceService.isOnline(userId);
+        if (online) {
+            log.debug("RefreshToken exchange for online user userId={}, enforcing token match", userId);
+        }
+
+        if (userType != null && userType == 1) {
+            String storedToken = formalUserService.getRefreshTokenByUserId(userId);
+            if (storedToken == null || !storedToken.equals(req.getRefreshToken())) {
+                log.warn("RefreshToken exchange failed: Formal user token mismatch userId={}", userId);
+                throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
+            }
+        } else {
+            String cachedToken = cacheService.getGuestRefreshToken(userId);
+            if (cachedToken == null || !cachedToken.equals(req.getRefreshToken())) {
+                log.warn("RefreshToken exchange failed: Guest token mismatch userId={}", userId);
+                throw new BusinessException(ErrorCode.UNAUTHORIZED, "RefreshToken mismatch");
             }
         }
 
