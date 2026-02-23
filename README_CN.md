@@ -25,7 +25,7 @@
 - **图片优化**：前端预压缩（提升上传体验）+ 后端规范化（兼容/隐私）
 - **刷新体验优化**：refresh 时优先加载 chatList，成员/消息按需并行加载，减少黑屏与等待
 - **国际化**：`zh/en/ja/ko/zh-tw` 全面覆盖（含系统消息与错误提示）
-- **类型安全**：Zod 运行时校验 + TypeScript 严格模式
+- **类型安全**：运行时校验（自定义 type guard）+ TypeScript 严格模式
 - **暗黑模式**：Element Plus 暗黑变量
 
 ---
@@ -149,7 +149,6 @@ export DB_USERNAME='root'
 export DB_PASSWORD='your_password'
 
 export JWT_SECRET='your_jwt_secret_key_at_least_256_bits'
-export JWT_EXPIRATION='86400000'
 
 export OSS_ENDPOINT='http://localhost:9000'
 export OSS_ACCESS_KEY='minioadmin'
@@ -211,17 +210,17 @@ npm run dev
 
 2. **访客用户**：
    - 无 `username`，仅记录 `nickname`
-   - 通过 `POST /auth/guest`（Room ID + 密码）或 `POST /auth/invite`（邀请码）创建
-   - 可后续通过 `POST /auth/register` 转正（提供 `userUid` 参数）
+   - 通过 `POST /auth/join` 创建（密码模式：`chatCode + password`；邀请码模式：`inviteCode`）
+   - 可后续通过 `POST /user/upgrade` 转正
 
 ### 图片上传与去重机制
 
 #### 上传流程
 
 **前端预处理**：
-1. 使用 Web Crypto API 计算原始文件的 SHA-256 哈希（`raw_object_hash`）
+1. 使用 Web Crypto API 计算原始文件的 SHA-256 哈希（`raw_asset_hash`）
 2. 调用 `GET /media/check?rawHash=...` 检查是否已存在
-3. 如果已存在，直接复用现有对象（返回 `objectId`），跳过上传
+3. 如果已存在，直接复用现有对象（返回 `assetId`），跳过上传
 4. 如果不存在，进行前端预压缩（`browser-image-compression`），然后上传
 
 **后端处理**：
@@ -233,10 +232,10 @@ npm run dev
      - 统一输出 JPEG（质量约 0.85，最大边 2048）
 2. 计算哈希（用于去重比对）：
    - **GIF 文件**：使用原始文件内容的 SHA-256 哈希
-   - **其他图片**：使用规范化后内容的 SHA-256 哈希（`normalized_object_hash`）
+   - **其他图片**：使用规范化后内容的 SHA-256 哈希（`normalized_asset_hash`）
 3. 查询是否存在相同哈希的对象（status=1）
 4. 如果存在，复用现有对象（不重复上传到 MinIO）
-5. 如果不存在，上传到 MinIO 并写入 `objects` 表（status=0, PENDING）
+5. 如果不存在，上传到 MinIO 并写入 `assets` 表（status=0, PENDING）
 
 ### 对象关联设计
 

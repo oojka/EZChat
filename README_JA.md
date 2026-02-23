@@ -25,7 +25,7 @@
 - **画像最適化**: クライアント側の圧縮（アップロード体験の向上）+ サーバー側の正規化（互換性/プライバシー）
 - **リフレッシュUX**: リフレッシュ時にチャットリストを優先的にロード、メンバーとメッセージは遅延/並列ロードして空白画面と待機時間を短縮
 - **国際化 / i18n**: `zh/en/ja/ko/zh-tw` をフルカバー（システムメッセージとエラー通知を含む）
-- **型安全性**: Zod ランタイム検証 + TypeScript ストリクトモード
+- **型安全性**: ランタイム検証（カスタム type guard）+ TypeScript ストリクトモード
 - **ダークモード**: Element Plus ダークテーマ変数
 
 ---
@@ -149,7 +149,6 @@ export DB_USERNAME='root'
 export DB_PASSWORD='your_password'
 
 export JWT_SECRET='your_jwt_secret_key_at_least_256_bits'
-export JWT_EXPIRATION='86400000'
 
 export OSS_ENDPOINT='http://localhost:9000'
 export OSS_ACCESS_KEY='minioadmin'
@@ -211,17 +210,17 @@ npm run dev
 
 2. **ゲストユーザー / Guest Users**:
    - `username` なし、`nickname` のみ記録
-   - `POST /auth/guest`（ルームID + パスワード）または `POST /auth/invite`（招待コード）で作成
-   - 後に `POST /auth/register` で正式ユーザーに移行可能（`userUid` パラメータを提供）
+   - `POST /auth/join` で作成（パスワードモード：`chatCode + password`、招待コードモード：`inviteCode`）
+   - 後に `POST /user/upgrade` で正式ユーザーに移行可能
 
 ### 画像アップロードと重複排除メカニズム / Image Upload & Deduplication
 
 #### アップロードフロー
 
 **フロントエンド前処理**:
-1. Web Crypto API を使用して元ファイルの SHA-256 ハッシュ（`raw_object_hash`）を計算
+1. Web Crypto API を使用して元ファイルの SHA-256 ハッシュ（`raw_asset_hash`）を計算
 2. `GET /media/check?rawHash=...` を呼び出して存在確認
-3. 既に存在する場合、既存のオブジェクトを再利用（`objectId` を返す）し、アップロードをスキップ
+3. 既に存在する場合、既存のオブジェクトを再利用（`assetId` を返す）し、アップロードをスキップ
 4. 存在しない場合、フロントエンドで事前圧縮（`browser-image-compression`）を行い、アップロード
 
 **バックエンド処理**:
@@ -233,10 +232,10 @@ npm run dev
      - 統一JPEG出力（品質約 0.85、最大辺 2048）
 2. ハッシュ計算（重複排除比較用）：
    - **GIF ファイル**: 元ファイル内容の SHA-256 ハッシュを使用
-   - **その他の画像**: 正規化後の内容の SHA-256 ハッシュ（`normalized_object_hash`）を使用
+   - **その他の画像**: 正規化後の内容の SHA-256 ハッシュ（`normalized_asset_hash`）を使用
 3. 同じハッシュのオブジェクトが存在するか照会（status=1）
 4. 存在する場合、既存のオブジェクトを再利用（MinIOへの重複アップロードなし）
-5. 存在しない場合、MinIOにアップロードし `objects` テーブルに書き込み（status=0, PENDING）
+5. 存在しない場合、MinIOにアップロードし `assets` テーブルに書き込み（status=0, PENDING）
 
 ### オブジェクト関連設計 / Object Association Design
 

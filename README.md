@@ -25,7 +25,7 @@ A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket m
 - **Image optimization**: client-side compression + server-side normalization
 - **Refresh UX**: load chat list first on refresh; members & messages are lazy/parallel to reduce blank screen
 - **i18n**: Full coverage (incl. system messages & error toasts)
-- **Type Safety**: Runtime validation (Zod) + TS strict mode
+- **Type Safety**: Runtime validation (custom type guards) + TS strict mode
 - **Dark mode**: Element Plus dark theme vars
 
 ---
@@ -149,7 +149,6 @@ export DB_USERNAME='root'
 export DB_PASSWORD='your_password'
 
 export JWT_SECRET='your_jwt_secret_key_at_least_256_bits'
-export JWT_EXPIRATION='86400000'
 
 export OSS_ENDPOINT='http://localhost:9000'
 export OSS_ACCESS_KEY='minioadmin'
@@ -209,22 +208,22 @@ Open: `http://localhost:5173`
 
 2. **Guest Users**:
    - No `username`, only `nickname`
-   - Created via `POST /auth/guest` or `POST /auth/invite`
-   - Can convert to formal via `POST /auth/register`
+   - Created via `POST /auth/join` (password mode: `chatCode + password`, invite mode: `inviteCode`)
+   - Can convert to formal via `POST /user/upgrade`
 
 ### Image Upload & Deduplication
 
 #### Upload Flow
 
 **Frontend**:
-1. Calculate SHA-256 hash (`raw_object_hash`)
+1. Calculate SHA-256 hash (`raw_asset_hash`)
 2. Check existence via `GET /media/check`
-3. If exists, reuse `objectId`
+3. If exists, reuse `assetId`
 4. If not, compress and upload
 
 **Backend**:
 1. Normalize image (rotate, strip EXIF, convert to JPEG)
-2. Calculate hash (`normalized_object_hash`)
+2. Calculate hash (`normalized_asset_hash`)
 3. Check existence
 4. If exists, reuse
 5. If not, upload to MinIO and save to DB
