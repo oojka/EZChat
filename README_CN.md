@@ -1,5 +1,7 @@
 [English](./README.md) | [日本語](./README_JA.md)
 
+[项目介绍演示文稿](https://docs.google.com/presentation/d/19wA4NcV5kGtBhwuXb1izy-9jDld5c72h/edit?usp=sharing&ouid=114840490722396441688&rtpof=true&sd=true)
+
 # EZChat
 
 一个基于 **Spring Boot 3 + Vue 3** 的现代化实时聊天系统：支持 WebSocket 实时消息、好友系统、私聊、访客/注册登录、在线状态、图片上传与缩略图、国际化与暗黑模式。

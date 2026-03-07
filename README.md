@@ -1,5 +1,7 @@
 [简体中文](./README_CN.md) | [日本語](./README_JA.md)
 
+[项目介绍演示文稿](https://docs.google.com/presentation/d/19wA4NcV5kGtBhwuXb1izy-9jDld5c72h/edit?usp=sharing&ouid=114840490722396441688&rtpof=true&sd=true)
+
 # EZ Chat
 
 A modern real-time chat system built with **Spring Boot 3 + Vue 3**: WebSocket messaging, friend system, direct messaging, guest/registered auth, presence, image upload + thumbnails, i18n, and dark mode.
